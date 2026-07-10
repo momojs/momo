@@ -1,0 +1,45 @@
+---
+title: Slider
+description: 带 motion 动画与键盘交互的滑块控件。
+icon: SlidersHorizontal
+---
+
+`Slider` 提供受控/非受控数值选择，支持拖拽、点击定位与键盘微调。内部使用 motion 驱动填充与手柄动画，并在 coarse 步进（≤10 档）时显示刻度线。
+
+<SliderPlayground />
+
+## 使用
+
+```tsx
+import { Slider } from "@momots/design/components/slider";
+
+<Slider
+  label="Opacity"
+  value={opacity}
+  onValueChange={setOpacity}
+  min={0}
+  max={1}
+  step={0.01}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `label` | `string` | 轨道内左侧标签 |
+| `value` | `number` | 受控值 |
+| `defaultValue` | `number` | 非受控默认值，默认为 `min` |
+| `onValueChange` | `(value: number) => void` | 值变化回调 |
+| `min` | `number` | 最小值，默认 `0` |
+| `max` | `number` | 最大值，默认 `1` |
+| `step` | `number` | 最小步进，默认 `0.01` |
+| `formatValue` | `(value: number) => string` | 自定义右侧显示格式 |
+| `className` | `string` | 容器追加 Tailwind class |
+| `aria-label` | `string` | 无障碍名称，默认使用 `label` |
+
+## 交互说明
+
+- **拖拽**：超出边界时有 rubber band 回弹效果（尊重 `prefers-reduced-motion`）。
+- **点击**：步进 ≤10 档时吸附到最近 step；连续滑块会吸附到最近 10% 刻度。
+- **键盘**：`ArrowLeft`/`ArrowRight` 按 `step` 微调；`Shift` + 方向键按 `10 × step` 快速调整；`Home`/`End` 跳到最小/最大值。

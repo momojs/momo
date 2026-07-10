@@ -1,0 +1,82 @@
+---
+title: momo
+description: Bun 优先的函数式 React 工具链，用于构建可组合的应用。
+icon: Rocket
+---
+
+momo 是一套 **Bun 优先**、面向函数式的、类型安全的、可组合的 React 工具链。它由多个独立、可按需引入、支持 tree-shaking 的工具库组成，覆盖从纯数据处理、浏览器运行时能力、HTTP 请求驱动到测试 CLI 的完整链路。
+
+## 名字与读音
+
+**momo** 读作 **mo-mo**：两个轻短的 `mo`，像一个容易喊出口的小工具名。
+
+这个名字故意保持轻巧。momo 不想成为一个宏大的框架，也不试图接管你的应用架构；它更像一组放在手边的积木，在你需要处理值、适配宿主环境、组织请求流程或搭建脚手架时，可以自然地拿起来组合。
+
+## 初衷
+
+React 项目里有很多代码并不属于组件本身：类型守卫、数据归一、URL 与 Storage、DOM / CSS / Blob、请求中间件、测试与脚手架。这些能力常常散落在业务目录里，久了以后会变成难以复用、难以 tree-shaking、也难以迁移的“项目私货”。
+
+momo 的初衷是把这些能力从业务代码中提炼出来，按语义边界拆成稳定的小包：
+
+- `@momots/core`：不依赖宿主环境的纯函数与类型工具。
+- `@momots/host`：浏览器、Web Platform 与运行时相关的工具。
+- `@momots/drive`：围绕 Fetch 的 HTTP 客户端、中间件编排与响应解析。
+- `@momots/design`：基于 motion、Base UI 与 Tailwind CSS 的 React 组件库。
+- `@momots/cli`：面向 Bun 与真实运行环境的命令行能力。
+
+## 目的与愿景
+
+momo 的目标不是替代 React、TanStack、Remeda 或 Effect，而是成为它们旁边的一层**可组合工具基座**。
+
+它希望帮助你在 React 项目中获得三件事：
+
+- **更清楚的边界**：纯函数、宿主能力、请求驱动、CLI 分层放置。
+- **更轻的引入成本**：每个包、每个子路径都应该可以按需使用。
+- **更长期的可维护性**：工具函数先有语义，再有实现；先能组合，再谈封装。
+
+## 设计思路
+
+momo 的设计偏向函数式，但不追求概念炫技。它更关心 API 是否稳定、命名是否贴近语义、模块是否能被独立理解。
+
+- **小函数优先**：一个函数只表达一个清楚的变换、守卫或投影。
+- **子路径优先**：鼓励从 `@momots/core/eliminate`、`@momots/host/fetch` 这类入口导入。
+- **组合而非接管**：提供编排模型，但不强迫你放弃原框架或其他三方插件。
+- **Bun 优先**：测试、构建、WebView 相关能力优先围绕 Bun 的现代运行时体验设计。
+
+## 工具库一览
+
+<Cards>
+  <Card title="@momots/core" href="/docs/core">
+    纯函数数据工具：大小写转换、树结构操作、守卫、单例、惰性求值等，零运行时副作用。
+  </Card>
+  <Card title="@momots/host" href="/docs/host">
+    浏览器 / 运行时能力：环境探测守卫、存储封装、URL、二进制、CSS
+    颜色、指纹、fetch→cURL。
+  </Card>
+  <Card title="@momots/drive" href="/docs/drive">
+    基于 Fetch 的 HTTP 客户端：洋葱模型中间件、路径匹配、请求编码与响应解析。
+  </Card>
+  <Card title="@momots/design" href="/docs/design">
+    React 组件库：Base UI 交互原语、motion 动效与 Tailwind CSS 样式组合。
+  </Card>
+  <Card title="@momots/cli" href="/docs/cli">
+    momo 命令行工具：在真实的 Bun.WebView 浏览器环境中运行测试。
+  </Card>
+</Cards>
+
+## 安装
+
+```bash
+# 选择你需要的包
+bun add @momots/core
+bun add @momots/host
+bun add @momots/drive
+bun add @momots/design
+bun add -d @momots/cli
+```
+
+`@momots/host` 与 `@momots/drive` 以 `@momots/core`、`remeda`、`type-fest` 作为 peer dependencies，请一并安装：
+
+```bash
+bun add remeda type-fest
+```

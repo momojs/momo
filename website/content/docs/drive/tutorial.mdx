@@ -1,0 +1,217 @@
+---
+title: 教程
+description: 使用 @momots/drive 构造 API 客户端，并理解请求编码、响应解析、超时与下载进度。
+icon: GraduationCap
+---
+
+本章对应 [阅读顺序](/docs/drive/index#4-阅读顺序) 中的第 3 步。阅读前，请先完成 [概述](/docs/drive) 与 [理念](/docs/drive/philosophy) 的学习。
+
+本章将通过一个完整示例，演示如何构造 Drive 实例、注册中间件、发起请求，并理解请求编码、响应解析、超时与下载进度。
+
+## 第 1 步：创建 Drive 实例
+
+建议在独立模块中创建 Drive 实例，并在该模块内注册所需的中间件：
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const drive = new Drive()
+  // 对 /api/** 路径下的请求附加身份验证头
+  .use("/api/**", async (ctx, next) => {
+    ctx.req.headers.set("Authorization", "Bearer <token>");
+    await next();
+  })
+  // 对非公开接口记录请求日志（前缀 ! 表示取反匹配）
+  .use("!/api/public/**", async (ctx, next) => {
+    const start = Date.now();
+    await next();
+    console.log(
+      `[${ctx.req.id}] ${ctx.path} -> ${ctx.res.status} (${Date.now() - start}ms)`,
+    );
+  });
+```
+
+`use(pattern, middleware)` 用于注册按路径或谓词条件生效的中间件，支持链式调用。中间件采用 `(ctx, next)` 签名，一般应调用 `await next()` 将控制权传递给内层处理逻辑，除非有意短路后续流程。
+
+> `ctx.req.id` 为每次请求自动生成的 8 位标识符（由 `stamp` 函数生成），可用于请求追踪与日志关联。
+
+## 第 2 步：使用谓词函数进行条件匹配
+
+除路径通配字符串外，`DrivePattern` 还可以是接收上下文快照的谓词函数：
+
+```ts
+drive.use(
+  (ctx) => ctx.req.method === "POST",
+  async (ctx, next) => {
+    // 仅对 POST 方法生效
+    await next();
+  },
+);
+```
+
+## 第 3 步：发起 HTTP 请求
+
+`get`、`post` 等快捷方法返回 `Promise<T>`，其中 `T` 由调用方指定；`request` 方法返回 `DriveFetchedContext<T>`，其中包含 `status`、`headers`、`raw` 及可选的 `body`：
+
+```ts
+import { drive } from "./api/client";
+
+type User = { id: string; name: string };
+
+const user = await drive.get<User>("https://example.com/api/users/1");
+
+const created = await drive.post<User>("https://example.com/api/users", {
+  name: "Grace",
+});
+
+const ctx = await drive.request<User>({
+  api: "https://example.com/api/users/1",
+});
+ctx.res.status;
+ctx.res.body; // User | undefined
+ctx.res.raw;
+```
+
+是否在 HTTP 错误状态码时抛出异常，由应用代码或上层库（Effect、TanStack Query）决定；
+
+## 第 4 步：单次请求的选项
+
+部分选项仅对单次调用生效，可通过 `request` 方法或 HTTP 快捷方法的第三个参数传入：
+
+```ts
+const ctx = await drive.request<User>({
+  api: "https://example.com/api/users",
+  data: { name: "Grace" },
+  timeout: 10_000, // 与用户传入的 signal 合并
+  middlewares: [
+    async (ctx, next) => {
+      ctx.req.headers.set("X-Trace", "1"); // 仅对本次请求生效
+      await next();
+    },
+  ],
+});
+```
+
+`timeout` 单位为毫秒。若传入负数，Drive 会将其视为未设置超时，不会创建额外的 `AbortSignal`。
+
+## 第 5 步：理解请求编码与响应解析
+
+Drive 在 HTTP 请求的两个时间点执行编解码操作：
+
+1. **请求发送前**：将 `api`、`data` 与请求头编码为 Fetch API 可接受的格式；
+2. **响应返回后**：根据响应头信息将 `Response` 解析为 `res.body`。
+
+请求体的序列化通过 `stringifier` 配置；响应体的解析通过 `parser` 配置。二者均可在实例级或单次请求级替换。
+
+`data` 参数的类型决定其编码方式：
+
+| data 类型                                                               | 编码行为                                                             |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `URLSearchParams`                                                       | 合并至 URL 查询字符串                                                |
+| `Blob` / `FormData` / `ArrayBuffer` / `ReadableStream` 等原生 body 类型 | 原样作为 `req.body`                                                  |
+| 普通对象或数组                                                          | 经 `stringifier` 序列化，并默认设置 `Content-Type: application/json` |
+| `undefined`                                                             | 不设置请求体                                                         |
+
+若未显式指定 HTTP 方法，Drive 将根据是否存在请求体进行推断：有请求体时使用 `POST`，否则使用 `GET`。通过 `get`、`post` 等快捷方法发起的请求，其 HTTP 方法由方法名固定，不受上述推断影响。
+
+```ts
+await drive.get("/api/users?active=1", new URLSearchParams({ page: "2" }));
+// 等价于 fetch('/api/users?page=2&active=1', { method: 'GET' })
+
+await drive.post("/api/users", { name: "Ada" });
+// 等价于 fetch('/api/users', { method: 'POST', body: '{"name":"Ada"}' })
+```
+
+**注意**：不应向 `get()` 传入普通对象作为 `data`。根据 Fetch 规范，GET 与 HEAD 请求不应携带请求体；查询参数应使用 `URLSearchParams` 或直接拼入 URL。
+
+默认 `send` 阶段会根据响应头调用 `ctx.decode()`，写入 `ctx.res.type` 与 `ctx.res.charset`。随后默认 `parser()` 写入 `ctx.res.status` 与 `ctx.res.headers`，再按下列条件填充 `ctx.res.body`：
+
+| 条件                                                    | 解析方式                                         |
+| ------------------------------------------------------- | ------------------------------------------------ |
+| 响应成功，包含 `Content-Length`，且提供了 `receiver`    | 流式读取，通过回调报告进度；不填充 `res.body`    |
+| `Content-Disposition` 包含 `attachment`                 | 调用 `response.blob()`                           |
+| `Content-Type` 识别为 JSON（包括 `application/*+json`） | 读取文本并解析为 JSON；空 body 不填充 `res.body` |
+| 无内容类型或属于原始文本类型                            | 调用 `response.text()`                           |
+
+原始文本类型包括 `txt`、`css`、`xml`、`html`、`plain`、`richtext` 与 `javascript`。快捷方法的返回类型为调用方指定的 `T`；若业务允许空响应，可显式写成 `T | undefined`，或使用 `request()` 读取可选的 `ctx.res.body`。
+
+```ts
+const text = await drive.get<string>("/api/ping");
+```
+
+需要读取状态码、响应头或原始 `Response` 对象时，应使用 `request()`：
+
+```ts
+const ctx = await drive.request<{ id: string }>({
+  api: "/api/users/1",
+});
+
+ctx.res.status;
+ctx.res.headers;
+ctx.res.raw;
+ctx.res.body;
+```
+
+## 第 6 步：下载进度报告
+
+当响应状态为成功（`ok`）、包含 `Content-Length` 头，且调用方提供了 `receiver` 回调时，Drive 将以流式方式读取响应体并报告进度：
+
+```ts
+await drive.request({
+  api: "https://example.com/files/large.bin",
+  receiver: ({ percentage, done }) => {
+    console.log(`${percentage.toFixed(1)}%`, done ? "完成" : "");
+  },
+});
+```
+
+> **注意**：在流式下载模式下，`res.body` 不会被填充；进度信息通过 `receiver` 回调传递，原始流保存在 `res.raw` 中。
+
+## 第 7 步：自定义解析、序列化与请求标识
+
+构造 Drive 实例时，可替换默认的 `stamp`（请求标识生成）、`stringifier`（请求体序列化）与 `parser`（响应解析）：
+
+```ts
+export const drive = new Drive({
+  stamp: () => `req-${Date.now()}`,
+  middlewares: [
+    [
+      "/api/**",
+      async (ctx, next) => {
+        await next();
+      },
+    ],
+  ],
+});
+```
+
+也可以在单次请求中覆盖默认解析逻辑：
+
+```ts
+const body = await drive.post<{ code: number; data: unknown }>(
+  "/api/rpc",
+  { method: "user.info" },
+  {
+    parser: () => async (response, context) => {
+      const text = await response.text();
+      context.res.body = JSON.parse(text.slice(5)) as never;
+    },
+  },
+);
+```
+
+自定义 parser 须自行向 `context.res.body` 写入解析结果。若仍需 `status` 与 `headers` 字段，也须在 parser 中显式赋值；若自定义 `send` 阶段且仍需 `type` / `charset`，应调用 `context.decode(response)` 或自行写入。
+
+普通对象与数组默认经 `JSON.stringify` 序列化。若需要自定义序列化逻辑，可替换 `stringifier`：
+
+```ts
+await drive.post("/api/events", payload, {
+  stringifier: () => (value) => JSON.stringify(value, null, 2),
+});
+```
+
+## 小结
+
+完成上述步骤后，即得到一个具备身份验证、日志记录、超时控制与下载进度功能的 API 客户端。建议继续阅读：
+
+- [向导](/docs/drive/guide) — 完整接口说明

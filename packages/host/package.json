@@ -1,0 +1,88 @@
+{
+  "name": "@momots/host",
+  "version": "0.1.0-alpha.1",
+  "description": "Bun-first Web Platform and host environment utilities for MomoTS packages and apps.",
+  "keywords": [
+    "momots",
+    "browser",
+    "web-platform",
+    "typescript",
+    "utilities"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./buffer": {
+      "types": "./dist/buffer.d.ts",
+      "import": "./dist/buffer.js"
+    },
+    "./canvas": {
+      "types": "./dist/canvas.d.ts",
+      "import": "./dist/canvas.js"
+    },
+    "./css/*": {
+      "types": "./dist/css/*.d.ts",
+      "import": "./dist/css/*.js"
+    },
+    "./fingerprint": {
+      "types": "./dist/fingerprint.d.ts",
+      "import": "./dist/fingerprint.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch/index.d.ts",
+      "import": "./dist/fetch/index.js"
+    },
+    "./fetch/*": {
+      "types": "./dist/fetch/*.d.ts",
+      "import": "./dist/fetch/*.js"
+    },
+    "./guard/*": {
+      "types": "./dist/guard/*.d.ts",
+      "import": "./dist/guard/*.js"
+    },
+    "./nearest": {
+      "types": "./dist/nearest.d.ts",
+      "import": "./dist/nearest.js"
+    },
+    "./persistent": {
+      "types": "./dist/persistent.d.ts",
+      "import": "./dist/persistent.js"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "import": "./dist/storage.js"
+    },
+    "./url": {
+      "types": "./dist/url.d.ts",
+      "import": "./dist/url.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
+  "scripts": {
+    "build": "momo build",
+    "test": "bun test src",
+    "test:webview": "bun ../cli/src/bin.ts test",
+    "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "types": "tsc --project tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@momots/cli": "workspace:*"
+  },
+  "peerDependencies": {
+    "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
+    "remeda": "^2.32.0",
+    "type-fest": "5.4.4"
+  }
+}

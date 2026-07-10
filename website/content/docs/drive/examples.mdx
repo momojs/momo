@@ -1,0 +1,225 @@
+---
+title: 示例
+description: "@momots/drive 常见用法的参考实现。"
+icon: Code
+---
+
+本章提供若干可直接使用的代码片段。推荐的项目结构为：在独立模块中创建 `Drive` 实例并注册中间件，再按业务域导出 API 函数。
+
+## 共享的 API 客户端
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const drive = new Drive({ stamp: () => `req-${Date.now()}` }).use(
+  "/api/**",
+  async (ctx, next) => {
+    const token = localStorage.getItem("token");
+    if (token) ctx.req.headers.set("Authorization", `Bearer ${token}`);
+    await next();
+  },
+);
+
+type Todo = { id: string; title: string; done: boolean };
+
+export const TodoApi = {
+  list: () => drive.get<Todo[]>("/api/todos"),
+  create: (title: string) => drive.post<Todo>("/api/todos", { title }),
+  toggle: (id: string, done: boolean) =>
+    drive.put<Todo>(`/api/todos/${id}`, { done }),
+  remove: (id: string) => drive.delete(`/api/todos/${id}`),
+};
+```
+
+## 401 响应时刷新令牌并重试
+
+下列写法仅适用于无请求体或请求体可安全重放的请求；`ReadableStream` 等一次性 body 被消费后不能直接复用。
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const drive = new Drive().use("/api/**", async (ctx, next) => {
+  await next();
+  if (ctx.res.status === 401) {
+    await refreshToken();
+    ctx.req.headers.set("Authorization", `Bearer ${getToken()}`);
+    const retry = await fetch(ctx.api, ctx.req);
+    ctx.res.raw = retry;
+    ctx.res.headers = retry.headers;
+    ctx.res.status = retry.status;
+    ctx.decode(retry);
+    ctx.res.body = (await retry.json()) as never;
+  }
+});
+```
+
+## 错误处理
+
+Drive 默认不因 4xx 或 5xx 状态码抛出异常。若项目需要在 HTTP 错误时统一抛错，可通过中间件实现；
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const drive = new Drive().use("*", async (ctx, next) => {
+  await next();
+  if (ctx.res.status && ctx.res.status >= 400) {
+    throw new Error(`HTTP ${ctx.res.status} @ ${ctx.path}`);
+  }
+});
+```
+
+亦可交由 TanStack Query 处理。
+
+```ts
+import { useQuery } from "@tanstack/react-query";
+import { drive } from "./api/client";
+
+type User = { id: string; name: string };
+
+export function useUser(id: string) {
+  return useQuery({
+    queryKey: ["user", id],
+    queryFn: async () => {
+      const ctx = await drive.request<User>({ api: `/api/users/${id}` });
+      if (!ctx.res.status || ctx.res.status >= 400) {
+        throw new Error(`Failed to load user: ${ctx.res.status}`);
+      }
+      if (!ctx.res.body) throw new Error("Empty response body");
+      return ctx.res.body;
+    },
+    retry: 2,
+  });
+}
+```
+
+Effect TS 也是一个不错的选择。
+
+```ts
+import { Effect } from "effect";
+import { drive } from "./api/client";
+
+type User = { id: string; name: string };
+
+const fetchUser = (id: string) =>
+  Effect.tryPromise({
+    try: async () => {
+      const ctx = await drive.request<User>({ api: `/api/users/${id}` });
+      if (!ctx.res.status || ctx.res.status >= 400) {
+        throw new Error(`HTTP ${ctx.res.status}`);
+      }
+      return ctx.res.body;
+    },
+    catch: (cause) => new HttpError({ cause, path: `/api/users/${id}` }),
+  });
+```
+
+## 仅对写操作附加 CSRF 头（谓词匹配）
+
+```ts
+import { Drive } from "@momots/drive";
+
+const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+export const drive = new Drive().use(
+  (ctx) => writeMethods.has((ctx.req.method ?? "GET").toUpperCase()),
+  async (ctx, next) => {
+    ctx.req.headers.set("X-CSRF-Token", getCsrfToken());
+    await next();
+  },
+);
+```
+
+## 大文件下载进度
+
+```ts
+import { Drive } from "@momots/drive";
+
+const drive = new Drive();
+
+async function download(url: string, onProgress: (pct: number) => void) {
+  await drive.request({
+    api: url,
+    receiver: ({ percentage, done }) => {
+      onProgress(percentage);
+      if (done) onProgress(100);
+    },
+  });
+}
+```
+
+## 单次请求超时
+
+```ts
+import { drive } from "./api/client";
+
+const data = await drive.get<unknown>("/api/slow", undefined, {
+  timeout: 5_000,
+});
+```
+
+## 自定义 RPC 响应解析
+
+```ts
+import { drive } from "./api/client";
+
+type RpcBody<T> = {
+  code: number;
+  data: T;
+  message?: string;
+};
+
+const user = await drive.post<RpcBody<{ id: string; name: string }>>(
+  "/api/rpc",
+  { method: "user.detail", params: { id: "u1" } },
+  {
+    parser: () => async (response, context) => {
+      const body = (await response.json()) as RpcBody<unknown>;
+      if (body.code !== 0) {
+        throw new Error(body.message ?? "RPC failed");
+      }
+      context.res.status = response.status;
+      context.res.headers = response.headers;
+      context.res.body = body as never;
+    },
+  },
+);
+```
+
+## 多实例隔离不同业务域
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const appDrive = new Drive().use("/api/**", async (ctx, next) => {
+  ctx.req.headers.set("Authorization", `Bearer ${getAppToken()}`);
+  await next();
+});
+
+export const reportDrive = new Drive().use("/reports/**", async (ctx, next) => {
+  ctx.req.headers.set("X-Report-Tenant", getTenantId());
+  await next();
+});
+
+export const ReportApi = {
+  export: (id: string) => reportDrive.get<Blob>(`/reports/${id}/export`),
+};
+```
+
+## 利用完整上下文记录审计日志
+
+```ts
+import { Drive } from "@momots/drive";
+
+const drive = new Drive();
+
+async function audited<T>(api: string, data?: object) {
+  const ctx = await drive.request<T>({ api, data });
+  await saveAuditLog({
+    id: ctx.req.id,
+    path: ctx.path,
+    status: ctx.res.status,
+    at: Date.now(),
+  });
+  return ctx.res.body;
+}
+```

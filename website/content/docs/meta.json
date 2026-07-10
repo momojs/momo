@@ -1,0 +1,5 @@
+{
+  "title": "momo",
+  "root": true,
+  "pages": ["index", "core", "host", "drive", "design", "cli"]
+}

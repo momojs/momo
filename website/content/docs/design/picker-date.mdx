@@ -1,0 +1,38 @@
+---
+title: PickerDate
+description: 年、月、日三列日期选择器。
+icon: CalendarDays
+---
+
+`PickerDate` 基于 `PickerCore` 生成 year/month/day 三列。默认 fallback 使用 Tailwind 实现；需要接入 `@ncdai/wheel-picker` 时，把适配组件传给 `adapter`。
+
+<PickerDatePlayground />
+
+## 使用
+
+```tsx
+import { PickerDate } from "@momots/design/components/picker-date";
+
+<PickerDate value={date} onChange={setDate} />
+```
+
+## 接入 @ncdai/wheel-picker
+
+```tsx
+import { WheelPicker } from "@ncdai/wheel-picker";
+import { PickerDate } from "@momots/design/components/picker-date";
+
+<PickerDate value={date} onChange={setDate} adapter={WheelPicker} />
+```
+
+如果内部包的 props 与 `PickerCore` 的 `WheelPickerAdapterProps` 不一致，可以在应用侧写一层 adapter。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `string` | `YYYY-MM-DD` |
+| `startYear` | `number` | 起始年份 |
+| `endYear` | `number` | 结束年份 |
+| `adapter` | `WheelPickerAdapter` | 手动接入的 wheel picker |
+| `onChange` | `(value: string) => void` | 日期变化回调 |

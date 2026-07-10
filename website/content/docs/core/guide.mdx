@@ -1,0 +1,906 @@
+---
+title: 向导
+description: "@momots/core 全部公开函数的用法说明。"
+icon: BookOpen
+---
+
+欢迎查阅 `@momots/core` 的 API 参考。下文按 [能力地图](/docs/core#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。所有 API 均可从根入口或对应子路径导入。
+
+```ts
+import { eliminate } from '@momots/core';
+import { unflat } from '@momots/core/tree/unflat';
+```
+
+需要可复制的实战片段，请前往 [示例](/docs/core/examples)。
+
+## 数组
+
+子路径：`as/array`、`compact`
+
+### asArray
+
+将单个值或数组归一化为数组形态。传入值已是数组时返回原引用；否则用 `Array.of` 包成单元素数组。**不会**展开字符串、Iterable 或类数组对象。
+
+```ts
+const asArray = <T>(value: MaybeArray<T>): readonly T[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `MaybeArray<T>` | 单个值、可变数组或只读数组 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `readonly T[]` | 归一化后的只读数组 |
+
+```ts
+import { asArray } from '@momots/core/as/array';
+
+asArray('momo');          // => ['momo']
+asArray(['momo', 'kit']); // => 原数组引用
+```
+
+### compact
+
+从数组中移除所有 emptyish 值。emptyish 语义来自 Remeda，包括 `null`、`undefined`、空字符串、空数组、空普通对象等。返回新数组，不修改原数组。
+
+```ts
+function compact<T>(source: ReadonlyArray<T>): NonEmptyish<T>[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `source` | `ReadonlyArray<T>` | 待压缩的输入数组 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `NonEmptyish<T>[]` | 移除 emptyish 后的新数组 |
+
+```ts
+import { compact } from '@momots/core/compact';
+
+compact([0, 1, '', 'momo', null, undefined, [], {}, [1], { a: 1 }]);
+// => [0, 1, 'momo', [1], { a: 1 }]
+```
+
+## 集合基数
+
+子路径：`cardinality`
+
+### cardinality
+
+获取离散集合或容器的基数。支持数组、字符串、`Map`、`Set` 和普通对象（按可枚举键数量计算）。不支持 Blob、ArrayBuffer、TypedArray 等宿主或二进制对象。
+
+```ts
+const cardinality = (data: unknown): number;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待计算基数的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `number` | 集合大小；不支持的值返回 `0` |
+
+```ts
+import { cardinality } from '@momots/core/cardinality';
+
+cardinality([1, 2, 3]);            // => 3
+cardinality('momo');               // => 4
+cardinality(new Set(['a', 'b']));  // => 2
+cardinality(null);                 // => 0
+```
+
+## 键名大小写
+
+子路径：`casing/*`
+
+以下函数均只转换**顶层键**（非递归），值按引用保留。
+
+### toCamelCaseKeys
+
+将对象**顶层**可枚举键转换为 camelCase。不递归处理嵌套对象；值按原引用保留。底层基于 Remeda 的 `mapKeys` 与 `toCamelCase`。
+
+```ts
+const toCamelCaseKeys = <T extends object>(data: T): CamelCasedProperties<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T extends object` | 待转换键名的对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `CamelCasedProperties<T>` | 键名转为 camelCase 的新对象 |
+
+```ts
+import { toCamelCaseKeys } from '@momots/core/casing/toCamelCaseKeys';
+
+toCamelCaseKeys({ user_name: 'John', user_age: 30 });
+// => { userName: 'John', userAge: 30 }
+```
+
+### toPascalCaseKeys
+
+将对象**顶层**可枚举键转换为 PascalCase。不递归；值按原引用保留。
+
+```ts
+const toPascalCaseKeys = <T extends object>(data: T): PascalCasedProperties<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T extends object` | 待转换键名的对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `PascalCasedProperties<T>` | 键名转为 PascalCase 的新对象 |
+
+```ts
+import { toPascalCaseKeys } from '@momots/core/casing/toPascalCaseKeys';
+
+toPascalCaseKeys({ user_name: 'John' });
+// => { UserName: 'John' }
+```
+
+### toSnakeCaseKeys
+
+将对象**顶层**可枚举键转换为 snake_case。不递归；值按原引用保留。数字分段遵循 `splitOnNumbers: true`。
+
+```ts
+const toSnakeCaseKeys = <T extends object>(data: T): SnakeCasedProperties<T, { splitOnNumbers: true }>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T extends object` | 待转换键名的对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `SnakeCasedProperties<T>` | 键名转为 snake_case 的新对象 |
+
+```ts
+import { toSnakeCaseKeys } from '@momots/core/casing/toSnakeCaseKeys';
+
+toSnakeCaseKeys({ userName: 'John' });
+// => { user_name: 'John' }
+```
+
+### toKebabCaseKeys
+
+将对象**顶层**可枚举键转换为 kebab-case。不递归；值按原引用保留。
+
+```ts
+const toKebabCaseKeys = <T extends object>(data: T): KebabCasedProperties<T, { splitOnNumbers: true }>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T extends object` | 待转换键名的对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `KebabCasedProperties<T>` | 键名转为 kebab-case 的新对象 |
+
+```ts
+import { toKebabCaseKeys } from '@momots/core/casing/toKebabCaseKeys';
+
+toKebabCaseKeys({ USER_NAME: 'John' });
+// => { 'user-name': 'John' }
+```
+
+### toUpperCaseKeys
+
+将对象**顶层**可枚举键转换为大写。不递归；值按原引用保留。
+
+```ts
+const toUpperCaseKeys = <T extends object>(data: T): UpperCasedProperties<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T extends object` | 待转换键名的对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `UpperCasedProperties<T>` | 键名转为大写的新对象 |
+
+```ts
+import { toUpperCaseKeys } from '@momots/core/casing/toUpperCaseKeys';
+
+toUpperCaseKeys({ userName: 'John' });
+// => { USER_NAME: 'John' }
+```
+
+### toLowerCaseKeys
+
+将对象**顶层**可枚举键转换为小写。不递归；值按原引用保留。
+
+```ts
+const toLowerCaseKeys = <T extends object>(data: T): LowerCasedProperties<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T extends object` | 待转换键名的对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `LowerCasedProperties<T>` | 键名转为小写的新对象 |
+
+```ts
+import { toLowerCaseKeys } from '@momots/core/casing/toLowerCaseKeys';
+
+toLowerCaseKeys({ AppID: 'wx7f3f0032b6e6f0cc' });
+// => { appid: 'wx7f3f0032b6e6f0cc' }
+```
+
+### toPascalCase
+
+将**字符串本身**转换为 PascalCase。先按 Remeda 的 `toCamelCase` 转换，再将首字母大写。
+
+```ts
+const toPascalCase = <T extends string>(
+  str: T,
+  options?: CamelCaseOptions,
+): PascalCase<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `str` | `T extends string` | 待转换的字符串 |
+| `options` | `CamelCaseOptions` | 传给 `toCamelCase` 的选项（可选） |
+
+| 返回 | 说明 |
+| --- | --- |
+| `PascalCase<T>` | PascalCase 字符串 |
+
+```ts
+import { toPascalCase } from '@momots/core/casing/toPascalCase';
+
+toPascalCase('hello world'); // => 'HelloWorld'
+toPascalCase('momo-kit');    // => 'MomoKit'
+```
+
+## 值替换
+
+子路径：`eliminate`
+
+### eliminate
+
+当 `Object.is(source, sentinel)` 为真时，把 `source` 替换为 `otherwise`（默认 `undefined`），否则原样返回。省略 `sentinel` 时默认为 `false`，便于处理 `cond && value` 短路结果。基于 `Object.is`，能区分 `-0` 与 `0`、识别 `NaN`。
+
+```ts
+function eliminate<const T, const P = false, D = undefined>(
+  source: T,
+  sentinel?: P,
+  otherwise?: D,
+): T extends P ? Exclude<T, P> | D : T;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `source` | `T` | 待消除的输入值 |
+| `sentinel` | `P` | 需要被替换的哨兵值，默认 `false` |
+| `otherwise` | `D` | 命中哨兵时返回的替代值，默认 `undefined` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `Exclude<T, P> \| D \| T` | 命中哨兵时返回 `otherwise`，否则返回 `source` |
+
+```ts
+import { eliminate } from '@momots/core/eliminate';
+
+eliminate(false, false);                   // => undefined
+eliminate(false, false, 'fallback');       // => 'fallback'
+eliminate(Number.NaN, Number.NaN, 'nan');  // => 'nan'
+```
+
+多条件组合时，可替代嵌套三元运算符。例如埋点参数需同时满足「模块可见」「还有更多数据」「流水号有效」：
+
+```ts
+const trackPayload = eliminate(
+  moduleVisible && hasMore && flowID && { flowID, pageSize },
+);
+// 全部满足 => { flowID, pageSize }
+// 任一不满足 => undefined
+```
+
+`&&` 链在任一条件为假时短路为 `false`；`eliminate` 再把 `false` 规范为 `undefined`。
+
+## 惰性求值
+
+子路径：`realize`
+
+### realize
+
+将惰性值具体化。若 `realizable` 是函数则用 `args` 调用并返回结果；否则直接返回。**函数值会被视为 thunk/resolver，而不是普通值。**
+
+```ts
+const realize = <T, Args extends unknown[]>(
+  realizable: Realizable<T, Args>,
+  ...args: Args
+): T;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `realizable` | `Realizable<T, Args>` | 普通值或返回普通值的函数 |
+| `...args` | `Args` | 当 `realizable` 为函数时传入的参数 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `T` | 具体化后的结果 |
+
+```ts
+import { realize } from '@momots/core/realize';
+
+realize('momo');                            // => 'momo'
+realize((a, b) => `${a}-${b}`, 'a', 'b');   // => 'a-b'
+```
+
+## 类型守卫
+
+子路径：`guard/*`
+
+### isPropertyKey
+
+判断目标值是否是 JavaScript 属性键（`string`、`number` 或 `symbol`）。`bigint` 不能作为对象属性键。
+
+```ts
+function isPropertyKey(data: unknown): data is PropertyKey;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is PropertyKey` | 可作为属性键使用时为 `true` |
+
+```ts
+import { isPropertyKey } from '@momots/core/guard/isPropertyKey';
+
+isPropertyKey('name');   // => true
+isPropertyKey(42n);      // => false
+```
+
+### isStringArray
+
+判断目标值是否是字符串数组。空数组也视为合法字符串数组。
+
+```ts
+function isStringArray(data: unknown): data is string[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is string[]` | 数组且每一项均为字符串时为 `true` |
+
+```ts
+import { isStringArray } from '@momots/core/guard/isStringArray';
+
+isStringArray(['momo', 'kit']); // => true
+isStringArray(['momo', 1]);     // => false
+```
+
+### isUndefined
+
+判断目标值是否为 `undefined`。基于 Remeda 的 `isNot(isDefined)` 实现。
+
+```ts
+const isUndefined: (data: unknown) => data is undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is undefined` | 值为 `undefined` 时为 `true` |
+
+```ts
+import { isUndefined } from '@momots/core/guard/isUndefined';
+
+isUndefined(undefined); // => true
+isUndefined(null);      // => false
+```
+
+## 单例缓存
+
+子路径：`singleton`
+
+### singleton
+
+在指定 `scope`（默认 `globalThis`）上按 key 创建或读取缓存实例；`factory` 每个 key/scope 只执行一次，除非 `pass` 跳过缓存。适用于 SDK 被多次打包后仍需全局唯一实例的场景；**不要**用它缓存请求相关状态（token、用户态等）。
+
+```ts
+interface SingletonOptions {
+  pass?: boolean | (() => boolean);
+  scope?: Record<PropertyKey, unknown>;
+}
+
+const singleton = <T>(
+  key: PropertyKey,
+  factory: () => T,
+  options?: SingletonOptions,
+): T;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `key` | `PropertyKey` | 全局唯一 key，推荐 `Symbol.for("@scope/name")` |
+| `factory` | `() => T` | 不存在实例时的构造函数，每个 key/scope 只调用一次 |
+| `options.pass` | `boolean \| (() => boolean)` | 为真时跳过缓存，直接执行 `factory` |
+| `options.scope` | `Record<PropertyKey, unknown>` | 挂载作用域，默认 `globalThis` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `T` | 缓存或新创建的实例 |
+
+```ts
+import { singleton } from '@momots/core/singleton';
+
+const scope: Record<PropertyKey, unknown> = {};
+const key = Symbol('momo');
+
+singleton(key, () => ({ count: 1 }), { scope }); // => { count: 1 }
+singleton(key, () => ({ count: 2 }), { scope }); // => 仍是 { count: 1 }
+```
+
+## 模板插值
+
+子路径：`substitute`
+
+### substitute
+
+替换字符串模板中的 `{{name}}` 与 `{{name|fallback}}` 占位符。值通过 `.toString()` 序列化；缺失的键使用 fallback，没有 fallback 则保留原始字段名。
+
+```ts
+function substitute(
+  data: string,
+  interpolation: Record<
+    string,
+    string | number | boolean | bigint | null | undefined | Stringifiable
+  >,
+): string;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `string` | 包含占位符的模板字符串 |
+| `interpolation` | `Record<string, …>` | 插值映射表 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `string` | 替换后的字符串 |
+
+```ts
+import { substitute } from '@momots/core/substitute';
+
+substitute('hello {{name}}', { name: 'momo' });    // => 'hello momo'
+substitute('hello {{name|friend}}', {});           // => 'hello friend'
+substitute('hello {{name}}', {});                  // => 'hello name'
+```
+
+## 数位求和
+
+子路径：`sumdig`
+
+### sumdig
+
+把输入转为字符串后对每个字符求数位和；含非数字字符时返回 `NaN`。
+
+```ts
+const sumdig = (digits: string | number): number;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `digits` | `string \| number` | 待求和的数字或数字字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `number` | 各位数字之和；含非数字字符时为 `NaN` |
+
+```ts
+import { sumdig } from '@momots/core/sumdig';
+
+sumdig(1234);  // => 10
+sumdig('909'); // => 18
+sumdig('12x'); // => NaN
+```
+
+## 树结构
+
+子路径：`tree/*`
+
+节点形状为 `TreeNode<T, C> = T & Record<C, TreeNode<T, C>[]>`，默认字段名为 `id` / `parent` / `children`。所有函数都支持 `params.names` 自定义字段名。
+
+### unflat
+
+将带 `id`/`parent` 关系的扁平列表还原为树。`parent` 为空值的节点作为根节点。遇到找不到父节点的孤儿节点时，行为由 `orphan` 控制。
+
+```ts
+function unflat<
+  T extends PlainObject,
+  const C extends string = 'children',
+>(
+  data: T[],
+  params?: {
+    names?: Names<T, C>;
+    orphan?: OrphanStrategy;
+  },
+): TreeNode<T, C>[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `T[]` | 待还原的扁平节点列表 |
+| `params.names` | `Names<T, C>` | 自定义 `id`、`parent`、`children` 字段名 |
+| `params.orphan` | `'root' \| 'throw' \| 'discard'` | 孤儿节点策略，默认 `'root'`（提升为根） |
+
+| 返回 | 说明 |
+| --- | --- |
+| `TreeNode<T, C>[]` | 还原后的树（森林） |
+
+```ts
+import { unflat } from '@momots/core/tree/unflat';
+
+const tree = unflat([
+  { id: 'root', parent: null },
+  { id: 'a', parent: 'root' },
+]);
+// => [{ id: 'root', parent: null, children: [{ id: 'a', parent: 'root', children: [] }] }]
+```
+
+### flat
+
+将树结构扁平化为列表。输出项移除 `children` 字段，并补充 `parent` 字段指向父节点 id；根节点的 `parent` 为 `undefined`。
+
+```ts
+function flat<
+  T extends PlainObject,
+  const C extends string = 'children',
+  P extends string = 'parent',
+>(
+  tree: TreeNode<T, C>[],
+  params?: { names?: Names<T, C, P> },
+): (T & { [K in P]?: PropertyKey })[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `tree` | `TreeNode<T, C>[]` | 待扁平化的树 |
+| `params.names` | `Names<T, C, P>` | 自定义字段名 |
+
+| 返回 | 说明 |
+| --- | --- |
+| 扁平节点数组 | 每项含 `parent`，不含 `children` |
+
+```ts
+import { flat, unflat } from '@momots/core';
+
+const tree = unflat([
+  { id: 'root', parent: null },
+  { id: 'a', parent: 'root' },
+]);
+
+flat(tree);
+// => [
+//   { id: 'root', parent: undefined },
+//   { id: 'a', parent: 'root' },
+// ]
+```
+
+### visit
+
+广度优先遍历整棵树。回调接收当前节点、深度（根为 `0`）和父节点；返回遍历过程中遇到的最大深度。
+
+```ts
+function visit<
+  T extends PlainObject,
+  const C extends string = 'children',
+  P extends string = 'parent',
+>(
+  tree: TreeNode<T, C>[],
+  callback?: (
+    item: TreeNode<T, C>,
+    depth: number,
+    parent?: TreeNode<T, C>,
+  ) => void,
+  params?: { names?: Names<T, C, P> },
+): number;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `tree` | `TreeNode<T, C>[]` | 待遍历的树 |
+| `callback` | 访问回调 | 每个节点触发一次（可选） |
+| `params.names` | `Names<T, C, P>` | 自定义字段名 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `number` | 最大深度 |
+
+```ts
+import { visit, unflat } from '@momots/core';
+
+const tree = unflat([
+  { id: 'root', parent: null },
+  { id: 'a', parent: 'root' },
+]);
+
+visit(tree, (node, depth) => {
+  console.log(node.id, depth);
+});
+// root 0, a 1
+```
+
+### height
+
+返回树的最大深度。根节点深度为 `0`；空树返回 `0`。
+
+```ts
+function height<
+  T extends PlainObject,
+  const C extends string = 'children',
+  P extends string = 'parent',
+>(
+  tree: TreeNode<T, C>[],
+  params?: { names?: Names<T, C, P> },
+): number;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `tree` | `TreeNode<T, C>[]` | 待计算深度的树 |
+| `params.names` | `Names<T, C, P>` | 自定义字段名 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `number` | 最深节点的深度 |
+
+```ts
+import { height, unflat } from '@momots/core';
+
+height(unflat([
+  { id: 'root', parent: null },
+  { id: 'a', parent: 'root' },
+])); // => 1
+```
+
+### leaves
+
+广度优先收集所有叶节点。没有 `children`，或 `children` 为 emptyish 的节点视为叶节点。
+
+```ts
+function leaves<
+  T extends PlainObject,
+  const C extends string = 'children',
+  P extends string = 'parent',
+>(
+  tree: TreeNode<T, C>[],
+  params?: { names?: Names<T, C, P> },
+): TreeNode<T, C>[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `tree` | `TreeNode<T, C>[]` | 待查找叶节点的树 |
+| `params.names` | `Names<T, C, P>` | 自定义字段名 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `TreeNode<T, C>[]` | 叶节点列表，按 BFS 顺序 |
+
+```ts
+import { leaves, unflat } from '@momots/core';
+
+leaves(unflat([
+  { id: 'root', parent: null },
+  { id: 'a', parent: 'root' },
+])).map((n) => n.id);
+// => ['a']
+```
+
+### cascade
+
+按层级从树中选择一条级联路径。每一层从当前兄弟列表中取**第一个**让 `predicate` 返回真值的节点，去掉 `children` 后加入结果，再下钻到其子节点。
+
+```ts
+function cascade<
+  T extends PlainObject,
+  const C extends string = 'children',
+  P extends string = 'parent',
+>(
+  tree: TreeNode<T, C>[],
+  predicate: (
+    curr: TreeNode<T, C>,
+    index: number,
+    depth: number,
+    parent?: TreeNode<T, C>,
+  ) => unknown,
+  params?: { names?: Names<T, C, P> },
+): Omit<TreeNode<T, C>, C>[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `tree` | `TreeNode<T, C>[]` | 待查找的树 |
+| `predicate` | 谓词函数 | 选择每一层节点；接收节点、索引、深度、父节点 |
+| `params.names` | `Names<T, C, P>` | 自定义字段名 |
+
+| 返回 | 说明 |
+| --- | --- |
+| 路径数组 | 从根到最后命中节点；每项不含 `children` |
+
+```ts
+import { cascade, unflat } from '@momots/core';
+
+cascade(
+  unflat([
+    { id: 'root', parent: null },
+    { id: 'a', parent: 'root' },
+    { id: 'b', parent: 'root' },
+  ]),
+  (node) => node.id === 'a' || node.id === 'root',
+);
+// => [{ id: 'root', parent: null }, { id: 'a', parent: 'root' }]
+```
+
+### prune
+
+自底向上裁剪树。先递归处理子节点；剪枝后仍有子节点的父节点会被保留，否则由 `predicate` 决定是否保留。输入树会先克隆，**不修改**原树。
+
+```ts
+function prune<
+  T extends PlainObject,
+  const C extends string = 'children',
+>(
+  tree: TreeNode<T, C>[],
+  predicate: (val: TreeNode<T, C>, parent?: TreeNode<T, C>) => unknown,
+  params?: { names?: Names<T, C>; parent?: TreeNode<T, C> },
+): TreeNode<T, C>[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `tree` | `TreeNode<T, C>[]` | 待剪枝的树 |
+| `predicate` | 谓词函数 | 判断叶节点或空父节点是否保留 |
+| `params.names` | `Names<T, C>` | 自定义字段名 |
+| `params.parent` | `TreeNode<T, C>` | 内部递归用，调用方通常省略 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `TreeNode<T, C>[]` | 剪枝后的新树 |
+
+```ts
+import { prune, unflat } from '@momots/core';
+
+const tree = unflat([
+  { id: 'root', parent: null },
+  { id: 'a', parent: 'root' },
+  { id: 'b', parent: 'root' },
+]);
+
+prune(tree, (n) => n.id === 'a' || n.id === 'root');
+// 仅保留 id 为 'a' 的路径及其祖先
+```
+
+## 类型工具
+
+子路径：`types`
+
+以下类型从 `@momots/core/types` 导入（根入口也会重新导出），均为编译期工具，无运行时开销。
+
+### Nil
+
+```ts
+type Nil = undefined | null;
+```
+
+表示空值：`null` 或 `undefined`。
+
+### Cast
+
+```ts
+type Cast<A, B> = A extends B ? A : B;
+```
+
+若 `A` 可赋给 `B` 则保留 `A`，否则回退为 `B`。
+
+### PartialPick
+
+```ts
+type PartialPick<T, K extends keyof T> = { [P in K]?: T[P] };
+```
+
+将对象类型中指定键变为可选。
+
+### RequiredPick
+
+```ts
+type RequiredPick<T, K extends keyof T> = { [P in K]-?: T[P] };
+```
+
+将对象类型中指定键变为必填。
+
+### PartialRecord
+
+```ts
+type PartialRecord<K extends PropertyKey, T> = { [P in K]?: T };
+```
+
+所有键可选的 `Record`。
+
+### PlainObject
+
+```ts
+type PlainObject<T = unknown> = Record<PropertyKey, T>;
+```
+
+普通对象形状，树工具的基础约束。
+
+### OmitOf
+
+```ts
+type OmitOf<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+```
+
+从对象类型中排除指定键。
+
+### Realizable
+
+```ts
+type Realizable<T, Args extends unknown[] = []> = T | ((...args: Args) => T);
+```
+
+普通值或返回普通值的可具体化形式，供 `realize` 使用。
+
+### MaybeArray
+
+```ts
+type MaybeArray<Type> = Type | Type[] | readonly Type[];
+```
+
+单个值或数组值，供 `asArray` 使用。
+
+### Emptyish
+
+```ts
+type Emptyish<T> = /* 按 Remeda emptyish 语义推导 */;
+```
+
+根据 Remeda emptyish 语义推导出的空值类型。
+
+### NonEmptyish
+
+```ts
+type NonEmptyish<T> = Exclude<T, Emptyish<T>>;
+```
+
+从类型中排除 emptyish 成员，供 `compact` 等使用。
+
+### Stringifiable
+
+```ts
+type Stringifiable = { toString(): string };
+```
+
+具备 `toString()` 的值，供 `substitute` 插值使用。
+
+```ts
+import type { MaybeArray, Realizable, NonEmptyish } from '@momots/core/types';
+
+type Names = MaybeArray<string>;                    // string | string[] | readonly string[]
+type Thunk = Realizable<number, [string]>;           // number | ((s: string) => number)
+type Clean = NonEmptyish<string | '' | null>;       // string
+```

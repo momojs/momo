@@ -1,0 +1,35 @@
+---
+title: Segmented
+description: 分段控制器，适合模式切换和视图切换。
+icon: PanelsTopLeft
+---
+
+Segmented 不再是独立组件，而是 `ToggleGroup` 的 `segmented` 视觉变体，适合展示列表/网格/配置等互斥模式。
+
+<SegmentedPlayground />
+
+## 使用
+
+```tsx
+import { ToggleGroup } from "@momots/design/components/toggle-group";
+
+<ToggleGroup
+  variant="segmented"
+  value={view}
+  onChange={setView}
+  options={[
+    { value: "list", label: "List" },
+    { value: "grid", label: "Grid" },
+  ]}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `T` | 当前值 |
+| `defaultValue` | `T` | 非受控默认值 |
+| `options` | `ControlOption<T>[]` | 分段选项 |
+| `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
+| `onChange` | `(value: T) => void` | 切换回调 |

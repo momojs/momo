@@ -1,0 +1,47 @@
+---
+title: Calendar
+description: 基于 react-day-picker 的月历面板，适合日期选择与展示。
+icon: CalendarDays
+---
+
+`Calendar` 封装 `react-day-picker`，用 Tailwind 默认主题定制月历样式，支持单选、周数、标题布局与翻页按钮变体。
+
+<CalendarPlayground />
+
+## 使用
+
+```tsx
+import { Calendar } from "@momots/design/components/calendar";
+
+const [date, setDate] = useState<Date | undefined>(new Date());
+
+<Calendar
+  selected={date}
+  onSelect={setDate}
+/>
+```
+
+## 变体
+
+```tsx
+<Calendar
+  caption={{ layout: "dropdown" }}
+  pager={{ variant: "outline" }}
+  showWeekNumber
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `selected` | `Date` | 当前选中日期 |
+| `onSelect` | `(date: Date \| undefined) => void` | 日期变化回调 |
+| `showOutsideDays` | `boolean` | 是否显示相邻月份的日期 |
+| `showWeekNumber` | `boolean` | 是否显示周数列 |
+| `caption.layout` | `"label" \| "dropdown" \| "dropdown-months" \| "dropdown-years"` | 标题布局 |
+| `pager.variant` | `"default" \| "outline" \| "ghost" \| ...` | 翻页按钮样式 |
+| `locale` | `Partial<Locale>` | 本地化配置 |
+| `numberOfMonths` | `number` | 同时展示的月份数量 |
+
+其余 `react-day-picker` 的导航、禁用与格式化 props 也可透传，详见 [DayPicker API](https://daypicker.dev/api)。

@@ -1,0 +1,36 @@
+---
+title: PickerTime
+description: 小时、分钟和秒选择器。
+icon: Clock
+---
+
+`PickerTime` 基于 `PickerCore` 生成 hour/minute 列，可选 second 列。`minuteStep` 用于限制分钟粒度。
+
+<PickerTimePlayground />
+
+## 使用
+
+```tsx
+import { PickerTime } from "@momots/design/components/picker-time";
+
+<PickerTime value={time} minuteStep={5} onChange={setTime} />
+```
+
+## 接入 @ncdai/wheel-picker
+
+```tsx
+import { WheelPicker } from "@ncdai/wheel-picker";
+import { PickerTime } from "@momots/design/components/picker-time";
+
+<PickerTime value={time} onChange={setTime} adapter={WheelPicker} />
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `string` | `HH:mm` 或 `HH:mm:ss` |
+| `minuteStep` | `number` | 分钟步进，默认 `1` |
+| `withSeconds` | `boolean` | 是否显示秒列 |
+| `adapter` | `WheelPickerAdapter` | 手动接入的 wheel picker |
+| `onChange` | `(value: string) => void` | 时间变化回调 |

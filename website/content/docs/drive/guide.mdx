@@ -1,0 +1,796 @@
+---
+title: 向导
+description: "@momots/drive 的类、函数与类型说明。"
+icon: BookOpen
+---
+
+本章提供 `@momots/drive` 的完整 API 说明。建议先阅读 [理念](/docs/drive/philosophy) 与 [教程](/docs/drive/tutorial)，再查阅本章各节的函数签名与类型定义。
+
+## Drive
+
+`Drive` 是可注册中间件的 HTTP 客户端。`use` 方法支持链式调用；每次请求时，库按 [路径匹配规则](/docs/drive/philosophy#4-路径匹配与优先级) 筛选并排序已注册的中间件。
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const drive = new Drive().use("/api/**", async (_, next) => next());
+```
+
+### 构造参数
+
+```ts
+constructor(opts?: DriveConstructorParams);
+
+type DriveParams = {
+  middlewares?: DriveMiddlewareEntry[];
+  stamp?: () => string;
+  parser?: <T>() => DriveBodyParse<T>;
+  stringifier?: () => DriveDataStringify;
+  prepare?: DrivePrepare;
+  send?: DriveSend;
+  receive?: DriveReceive;
+};
+
+type DriveConstructorParams = DriveMiddlewareEntry[] | DriveParams;
+```
+
+传入中间件条目数组时，等价于 `{ middlewares: [...] }` 的简写形式。
+
+### use
+
+注册按路径或谓词条件生效的中间件，支持链式调用。
+
+```ts
+use(pattern: DrivePattern, middleware: DriveMiddleware): this;
+```
+
+| 参数         | 类型              | 说明                                             |
+| ------------ | ----------------- | ------------------------------------------------ |
+| `pattern`    | `DrivePattern`    | 路径通配字符串，或接收 `toSnap()` 快照的谓词函数 |
+| `middleware` | `DriveMiddleware` | `(context, next) => void \| Promise<void>`       |
+
+### request
+
+发起单次 HTTP 请求，返回包含 `status`、`headers`、`raw` 及可选 `body` 的完整上下文。
+
+```ts
+request<T>(opts: DriveOpts<T>): Promise<DriveFetchedContext<T>>;
+
+type DriveOpts<T> = DriveInit<T> & {
+  api: string;
+  data?: object;
+};
+
+type DriveInit<T> = RequestInit & ExtraOptions<T>;
+```
+
+`opts.method` 显式指定 HTTP 方法；未指定时由 `encode` 根据是否存在请求体推断（有 body 为 `POST`，否则为 `GET`）。单次请求的扩展选项（`timeout`、`middlewares`、`parser`、`receiver` 等）见 [教程 · 第 4 步](/docs/drive/tutorial#第-4-步单次请求的选项)。
+
+### get
+
+以 `GET` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+get<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明                                            |
+| ------ | ------------------------------ | ----------------------------------------------- |
+| `api`  | `string`                       | 请求地址                                        |
+| `data` | `object`                       | 可选；`URLSearchParams` 会合并至 URL 查询字符串 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选；`RequestInit` 与单次请求扩展选项的合并体  |
+
+不应向 `get` 传入普通对象或数组作为 `data`——根据 Fetch 规范，GET 请求不应携带请求体；查询参数应使用 `URLSearchParams` 或直接拼入 URL。
+
+```ts
+await drive.get<User>("/api/users/1");
+await drive.get("/api/users", new URLSearchParams({ page: "2" }));
+```
+
+### post
+
+以 `POST` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+post<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明                                                      |
+| ------ | ------------------------------ | --------------------------------------------------------- |
+| `api`  | `string`                       | 请求地址                                                  |
+| `data` | `object`                       | 可选；普通对象或数组经 `stringifier` 序列化为 JSON 请求体 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选                                                      |
+
+```ts
+await drive.post<User>("/api/users", { name: "Bob" });
+```
+
+### put
+
+以 `PUT` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+put<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明                         |
+| ------ | ------------------------------ | ---------------------------- |
+| `api`  | `string`                       | 请求地址                     |
+| `data` | `object`                       | 可选；编码规则与 `post` 相同 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选                         |
+
+### patch
+
+以 `PATCH` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+patch<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明                         |
+| ------ | ------------------------------ | ---------------------------- |
+| `api`  | `string`                       | 请求地址                     |
+| `data` | `object`                       | 可选；编码规则与 `post` 相同 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选                         |
+
+### delete
+
+以 `DELETE` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+delete<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明           |
+| ------ | ------------------------------ | -------------- |
+| `api`  | `string`                       | 请求地址       |
+| `data` | `object`                       | 可选；通常省略 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选           |
+
+```ts
+await drive.delete("/api/users/1");
+```
+
+### head
+
+以 `HEAD` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+head<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明                                            |
+| ------ | ------------------------------ | ----------------------------------------------- |
+| `api`  | `string`                       | 请求地址                                        |
+| `data` | `object`                       | 可选；`URLSearchParams` 会合并至 URL 查询字符串 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选                                            |
+
+HEAD 响应通常无 body；若需读取状态码或响应头，应使用 `request()`。
+
+### trace
+
+以 `TRACE` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+trace<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明     |
+| ------ | ------------------------------ | -------- |
+| `api`  | `string`                       | 请求地址 |
+| `data` | `object`                       | 可选     |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选     |
+
+### connect
+
+以 `CONNECT` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+connect<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明     |
+| ------ | ------------------------------ | -------- |
+| `api`  | `string`                       | 请求地址 |
+| `data` | `object`                       | 可选     |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选     |
+
+### options
+
+以 `OPTIONS` 方法发起请求，返回经解析的 `res.body`。
+
+```ts
+options<T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+): Promise<T>;
+```
+
+| 参数   | 类型                           | 说明     |
+| ------ | ------------------------------ | -------- |
+| `api`  | `string`                       | 请求地址 |
+| `data` | `object`                       | 可选     |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选     |
+
+以上快捷方法均返回 `Promise<T>`——`T` 由调用方泛型指定，表示经 parser 解析后的响应体类型。Drive 不在快捷方法类型中替业务方追加 `undefined`；若某个接口允许空响应，可由调用方显式写成 `T | undefined`。需要读取 `status`、`headers`、原始 `Response`，或精确判断 `body` 是否存在时，应改用 `request()`。
+
+## DriveContext
+
+`DriveContext` 是单次请求的上下文对象，贯穿中间件、`prepare`、`send` 与 `receive` 各阶段。中间件通过 `(context, next)` 签名读写该对象；`Drive.request()` 在请求完成后将其作为 `DriveFetchedContext<T>` 返回。
+
+```ts
+import { DriveContext } from "@momots/drive";
+```
+
+### 构造参数
+
+```ts
+constructor(
+  api: string,
+  params?: RequestInit & {
+    id?: string;
+    data?: object;
+  },
+);
+```
+
+| 参数     | 类型                           | 说明                                                                                       |
+| -------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `api`    | `string`                       | 请求地址；绝对 URL 会解析为 `url` 与 `path`，相对路径则 `url` 为 `null`、`path` 等于 `api` |
+| `params` | `RequestInit & { id?; data? }` | 可选；`data` 写入实例属性，其余字段合并至 `req`；`id` 默认由 `stamp()` 生成                |
+
+### api
+
+编码后的请求地址。`encode` 阶段若 `data` 为 `URLSearchParams`，会将查询参数合并至此字段。
+
+```ts
+api: string;
+```
+
+| 写入时机    | 说明                      |
+| ----------- | ------------------------- |
+| 构造时      | 初始化为传入的 `api` 参数 |
+| `encode` 后 | 可能因查询参数合并而更新  |
+
+### url
+
+由 `api` 解析得到的 `URL` 对象；相对路径或非 URL 字符串时为 `null`。
+
+```ts
+url: URL | null;
+```
+
+### path
+
+用于中间件路径匹配的路径名。绝对 URL 取 `url.pathname`；否则等于原始 `api` 字符串。
+
+```ts
+path: string;
+```
+
+### req
+
+Fetch 请求初始化项，附带唯一请求标识。
+
+```ts
+req: DriveRequest;
+
+type DriveRequest = {
+  id: string;
+  headers: Headers;
+} & Omit<RequestInit, "headers">;
+```
+
+| 字段      | 类型          | 说明                                                                    |
+| --------- | ------------- | ----------------------------------------------------------------------- |
+| `id`      | `string`      | 8 位请求标识，由 `stamp` 生成，可用于日志关联                           |
+| `headers` | `Headers`     | 请求头；中间件可读写                                                    |
+| 其余字段  | `RequestInit` | `method`、`body`、`signal` 等；`encode` 阶段可能写入 `method` 与 `body` |
+
+### data
+
+调用方传入的业务数据，供 `encode` 编码为 URL 查询参数或请求体。
+
+```ts
+data?: object;
+```
+
+`data` 的类型决定编码行为，详见 [教程 · 第 5 步](/docs/drive/tutorial#第-5-步理解请求编码与响应解析)。
+
+### res
+
+响应侧的可变容器；各字段在不同阶段逐步写入。
+
+```ts
+res: {
+  type?: string;
+  charset?: string;
+  raw?: Response;
+  headers?: Headers;
+  status?: number;
+  body?: T;
+};
+```
+
+| 字段      | 类型       | 写入时机                | 说明                                                       |
+| --------- | ---------- | ----------------------- | ---------------------------------------------------------- |
+| `type`    | `string`   | `send` 阶段 `decode` 后 | 由 `Content-Type` 推断的 MIME 类别（如 `json`、`txt`）     |
+| `charset` | `string`   | `send` 阶段 `decode` 后 | 响应字符集                                                 |
+| `raw`     | `Response` | `send` 阶段             | 原生 Fetch 响应对象                                        |
+| `headers` | `Headers`  | `receive` 阶段          | 响应头                                                     |
+| `status`  | `number`   | `receive` 阶段          | HTTP 状态码                                                |
+| `body`    | `T`        | `receive` 阶段          | 经 parser 解析后的响应体；流式 `receiver` 模式下可能不赋值 |
+
+请求完成后的 `res` 形态见 [DriveFetchedContext](#drivefetchedcontext)。
+
+### encode
+
+在 `prepare` 阶段调用，负责 URL、请求体与请求头的编码，以及 HTTP 方法的推断。
+
+```ts
+encode(options?: { stringify?: DriveDataStringify }): this;
+```
+
+| 参数                | 类型                 | 说明                                             |
+| ------------------- | -------------------- | ------------------------------------------------ |
+| `options.stringify` | `DriveDataStringify` | 可选；序列化普通对象/数组，默认 `JSON.stringify` |
+
+编码规则：
+
+1. `data` 为 `URLSearchParams` 时，合并至 `api` 查询字符串；
+2. `req.body` 未设置时，按 `data` 类型编码请求体（原生 body 类型原样传递，对象/数组经 `stringify` 序列化）；
+3. 为 JSON 请求体自动补充 `Content-Type: application/json`（若尚未设置）；
+4. `req.method` 未设置时，有请求体推断为 `POST`，否则为 `GET`。
+
+返回 `this`，支持链式调用。
+
+### decode
+
+在 `send` 阶段收到 `Response` 后调用，从响应头写入 `res.type` 与 `res.charset`。
+
+```ts
+decode(response: Response): void;
+```
+
+| 参数       | 类型       | 说明                |
+| ---------- | ---------- | ------------------- |
+| `response` | `Response` | 原生 Fetch 响应对象 |
+
+不读取响应体；`status`、`headers` 与 `body` 由默认 `parser` 在 `receive` 阶段写入。
+
+### toSnap
+
+返回上下文的浅拷贝快照，供谓词类型的 `DrivePattern` 读取，避免中间件直接修改原始上下文。
+
+```ts
+toSnap(): DriveContextSnap<T>;
+
+type DriveContextSnap<T = unknown> = {
+  api: string;
+  url: URL | null;
+  path: string;
+  res: { type?; charset?; raw?; headers?; status?; body?: T };
+  data?: object;
+  req: DriveRequest;
+};
+```
+
+快照中的 `req.headers` 为独立副本，修改不会影响原上下文；`data` 与 `res` 经浅克隆。
+
+```ts
+drive.use(
+  (snap) => snap.req.method === "POST",
+  async (ctx, next) => {
+    await next();
+  },
+);
+```
+
+## parser
+
+默认响应解析器的行为：
+
+1. 写入 `status` 与 `headers`；
+2. 按 `Content-Type` 选择解析方式并填充 `body`；
+3. 在流式 `receiver` 模式下不填充 `body`。
+
+## 类型
+
+本节列出 `@momots/drive` 从根入口导出的全部类型。类 `Drive`、`DriveContext` 与函数 `parser` 见上文各节。
+
+### DrivePattern
+
+中间件匹配模式：路径通配字符串，或基于上下文快照的谓词函数。
+
+```ts
+type DrivePattern = string | DrivePredicate;
+```
+
+| 形态 | 说明 |
+| --- | --- |
+| `string` | 路径通配字符串；支持 `*`、`**` 与 `!` 前缀取反，详见 [路径匹配规则](/docs/drive/philosophy#4-路径匹配与优先级) |
+| `DrivePredicate` | 接收 `DriveContextSnap` 快照、返回布尔值的函数 |
+
+### DrivePredicate
+
+谓词型 `DrivePattern` 的函数签名。参数为 `toSnap()` 返回的快照，避免中间件直接修改原始上下文。
+
+```ts
+type DrivePredicate = (snap: DriveContextSnap) => boolean;
+```
+
+### DriveNext
+
+洋葱式中间件的 `next` 函数；调用后将控制权传递给内层中间件。
+
+```ts
+type DriveNext = () => Promise<void>;
+```
+
+中间件须 `await next()` 才能继续执行后续阶段；不调用或提前返回可短路请求链。
+
+### DriveMiddleware
+
+中间件函数签名。
+
+```ts
+type DriveMiddleware<T = unknown> = (
+  context: DriveContext<T>,
+  next: DriveNext,
+) => void | Promise<void>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `context` | `DriveContext<T>` | 当前请求的上下文，可读写 `req.headers` 等字段 |
+| `next` | `DriveNext` | 传递至下一层中间件 |
+
+### DriveMiddlewareEntry
+
+注册到 `Drive` 实例上的中间件条目：匹配模式与中间件函数的元组。
+
+```ts
+type DriveMiddlewareEntry<T = unknown> = [
+  DrivePattern,
+  DriveMiddleware<T>,
+];
+```
+
+构造 `Drive` 时可直接传入 `DriveMiddlewareEntry[]` 作为简写形式。
+
+### DriveContextSnap
+
+`DriveContext.toSnap()` 的返回类型，供谓词型 `DrivePattern` 读取。
+
+```ts
+type DriveContextSnap<T = unknown> = {
+  api: string;
+  url: URL | null;
+  path: string;
+  res: {
+    type?: string;
+    charset?: string;
+    raw?: Response;
+    headers?: Headers;
+    status?: number;
+    body?: T;
+  };
+  data?: object;
+  req: DriveRequest;
+};
+```
+
+快照中的 `req.headers` 为独立副本；`data` 与 `res` 经浅克隆。详见 [toSnap](#tosnap)。
+
+### DriveRequest
+
+`DriveContext.req` 的类型：Fetch `RequestInit` 与唯一请求标识的合并体。
+
+```ts
+type DriveRequest = {
+  id: string;
+  headers: Headers;
+} & Omit<RequestInit, "headers">;
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 8 位请求标识，由 `stamp` 生成 |
+| `headers` | 请求头 |
+| 其余字段 | `method`、`body`、`signal` 等标准 `RequestInit` 属性 |
+
+### DriveInit
+
+单次请求的初始化项：`RequestInit` 与 Drive 扩展选项的合并体，作为快捷方法第三个参数或 `DriveOpts` 的基类。
+
+```ts
+type DriveInit<T> = RequestInit & ExtraOptions<T>;
+
+type ExtraOptions<T> = {
+  timeout?: number;
+  middlewares?: DriveMiddleware<T>[];
+  parser?: Realizable<DriveBodyParse<T>>;
+  receiver?: Realizable<DriveReceiver<T>>;
+} & Pick<
+  DriveParams,
+  "stringifier" | "prepare" | "send" | "receive"
+>;
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `timeout` | `number` | 超时后中断请求（毫秒） |
+| `middlewares` | `DriveMiddleware<T>[]` | 仅对本次请求生效的额外中间件 |
+| `parser` | `Realizable<DriveBodyParse<T>>` | 响应解析器或其工厂函数 |
+| `receiver` | `Realizable<DriveReceiver<T>>` | 下载进度回调或其工厂函数 |
+| `stringifier` | `Realizable<DriveDataStringify>` | 请求体序列化器或其工厂函数 |
+| `prepare` | `DrivePrepare` | 替换本次请求的 `prepare` 阶段 |
+| `send` | `DriveSend` | 替换本次请求的 `send` 阶段 |
+| `receive` | `DriveReceive` | 替换本次请求的 `receive` 阶段 |
+
+`Realizable<T>` 表示值本身或其零参工厂函数：`T | (() => T)`。
+
+### DriveOpts
+
+`Drive.request()` 的完整参数类型。
+
+```ts
+type DriveOpts<T> = DriveInit<T> & {
+  api: string;
+  data?: object;
+};
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `api` | `string` | 请求地址 |
+| `data` | `object` | 可选；业务数据，由 `encode` 编码 |
+| 其余字段 | `DriveInit<T>` | `method`、`headers`、`timeout` 等 |
+
+### DriveFetchedResponse
+
+请求完成后的响应对象；`send` 与 `receive` 阶段已写入各字段。
+
+```ts
+type DriveFetchedResponse<T> = {
+  type?: string;
+  charset?: string;
+  raw: Response;
+  headers: Headers;
+  status: number;
+  body?: T;
+};
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `type` | `string` | MIME 类别，由 `decode` 从 `Content-Type` 推断 |
+| `charset` | `string` | 响应字符集 |
+| `raw` | `Response` | 原生 Fetch 响应；`send` 阶段写入 |
+| `headers` | `Headers` | 响应头；`receive` 阶段写入 |
+| `status` | `number` | HTTP 状态码 |
+| `body` | `T` | 经 parser 解析后的响应体；流式 `receiver` 模式下可能为 `undefined` |
+
+### DriveFetchedContext
+
+Fetch 完成后的上下文类型；`Drive.request()` 的返回类型。与 `DriveContext<T>` 相比，`res` 字段收窄为 `DriveFetchedResponse<T>`，其中 `raw`、`headers` 与 `status` 均为必填。
+
+```ts
+type DriveFetchedContext<T> = Omit<DriveContext<T>, "res"> & {
+  res: DriveFetchedResponse<T>;
+};
+```
+
+### DriveParams
+
+`Drive` 构造函数的完整配置对象形态。
+
+```ts
+type DriveParams = {
+  middlewares?: DriveMiddlewareEntry[];
+  stamp?: () => string;
+  parser?: <T>() => DriveBodyParse<T>;
+  stringifier?: () => DriveDataStringify;
+  prepare?: DrivePrepare;
+  send?: DriveSend;
+  receive?: DriveReceive;
+};
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `middlewares` | `DriveMiddlewareEntry[]` | 预注册的中间件条目 |
+| `stamp` | `() => string` | 请求标识生成器，默认 8 位随机字符串 |
+| `parser` | `<T>() => DriveBodyParse<T>` | 响应解析器工厂 |
+| `stringifier` | `() => DriveDataStringify` | 请求体序列化器工厂 |
+| `prepare` | `DrivePrepare` | 替换默认 `prepare` 阶段实现 |
+| `send` | `DriveSend` | 替换默认 `send` 阶段实现 |
+| `receive` | `DriveReceive` | 替换默认 `receive` 阶段实现 |
+
+### DriveConstructorParams
+
+`Drive` 构造函数接受的参数类型。
+
+```ts
+type DriveConstructorParams = DriveMiddlewareEntry[] | DriveParams;
+```
+
+传入中间件条目数组时，等价于 `{ middlewares: [...] }` 的简写形式。
+
+### DrivePrepare
+
+`prepare` 阶段中间件工厂：编码请求体、设置超时等。
+
+```ts
+type DrivePrepare = <T>(options: {
+  stringify: DriveDataStringify;
+  timeout?: number;
+}) => DriveMiddleware<T>;
+```
+
+默认实现调用 `context.encode()` 并按 `timeout` 合并 `AbortSignal`。可通过构造参数或单次请求的 `prepare` 字段替换。
+
+### DriveSend
+
+`send` 阶段中间件工厂：发起网络请求。
+
+```ts
+type DriveSend = <T>() => DriveMiddleware<T>;
+```
+
+默认实现调用 `fetch(context.api, context.req)`，写入 `context.res.raw` 并调用 `context.decode()`。
+
+### DriveReceive
+
+`receive` 阶段中间件工厂：解析响应体。
+
+```ts
+type DriveReceive = <T>(options: {
+  parse: DriveBodyParse<T>;
+  receiver?: DriveReceiver<T>;
+}) => DriveMiddleware<T>;
+```
+
+默认实现调用 `parse(context.res.raw, context, { receiver })`。`parse` 通常来自实例级或单次请求的 `parser` 配置。
+
+### DriveBodyParse
+
+响应解析函数；负责读取 `Response` 并向 `context.res` 写入 `status`、`headers` 与 `body`。
+
+```ts
+interface DriveBodyParse<T> {
+  (
+    response: Response,
+    context: DriveContext<T>,
+    extra?: {
+      receiver?: DriveReceiver<T>;
+    },
+  ): Promise<void>;
+}
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `response` | `Response` | 原生 Fetch 响应 |
+| `context` | `DriveContext<T>` | 当前请求上下文 |
+| `extra.receiver` | `DriveReceiver<T>` | 可选；流式下载进度回调 |
+
+默认 `parser` 的行为见 [parser](#parser) 一节。自定义 parser 须自行向 `context.res.body` 写入解析结果。
+
+### DriveDataStringify
+
+请求体序列化函数；签名与 `JSON.stringify` 兼容。
+
+```ts
+interface DriveDataStringify {
+  (
+    value: unknown,
+    replacer?: (this: unknown, key: string, value: unknown) => unknown,
+    space?: string | number,
+  ): string;
+}
+```
+
+在 `encode` 阶段用于将普通对象或数组序列化为字符串请求体；默认实现为 `JSON.stringify`。
+
+### DriveReceiver
+
+流式下载进度回调；当响应成功、包含 `Content-Length` 且提供了 `receiver` 时，默认 parser 以流式方式读取响应体并报告进度。
+
+```ts
+interface DriveReceiver<T> {
+  (params: {
+    size: number;
+    done: boolean;
+    percentage: number;
+    context: DriveContext<T>;
+    reader: ReadableStreamDefaultReader<Uint8Array>;
+    value?: Uint8Array;
+  }): void;
+}
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `size` | `number` | 已读取字节数 |
+| `done` | `boolean` | 是否读取完毕 |
+| `percentage` | `number` | 完成百分比（0–100） |
+| `context` | `DriveContext<T>` | 当前请求上下文 |
+| `reader` | `ReadableStreamDefaultReader` | 响应体流读取器 |
+| `value` | `Uint8Array` | 本次读取的数据块 |
+
+流式模式下 `res.body` 不会被填充；进度信息通过此回调传递。
+
+### DriveMethod
+
+HTTP 快捷方法（`get`、`post` 等）的共享函数签名。
+
+```ts
+type DriveMethod = <T>(
+  api: string,
+  data?: object,
+  init?: Omit<DriveInit<T>, "method">,
+) => Promise<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `api` | `string` | 请求地址 |
+| `data` | `object` | 可选；业务数据 |
+| `init` | `Omit<DriveInit<T>, "method">` | 可选；HTTP 方法由快捷方法名固定，不可通过 `init` 覆盖 |
+
+返回经 parser 解析后的 `res.body`；泛型 `T` 由调用方指定，是否包含 `undefined` 也由调用方决定。
+
+### DriveHttp
+
+`Drive` 类实现的 HTTP 快捷方法集合；键名为小写 HTTP 方法。
+
+```ts
+type DriveHttp = Record<Lowercase<FetchMethod>, DriveMethod>;
+// FetchMethod = "GET" | "PUT" | "POST" | "HEAD" | "TRACE"
+//             | "PATCH" | "DELETE" | "CONNECT" | "OPTIONS"
+```
+
+对应实例方法：`get`、`put`、`post`、`head`、`trace`、`patch`、`delete`、`connect`、`options`。各方法的说明见 [Drive](#drive) 一节。
+
+## 文档索引
+
+| 章节                             | 内容                     |
+| -------------------------------- | ------------------------ |
+| [概述](/docs/drive)              | 定位、比较、阅读顺序     |
+| [理念](/docs/drive/philosophy)   | 设计原则                 |
+| [教程](/docs/drive/tutorial)     | 分步示例、编码与解析规则 |
+| [代码示例](/docs/drive/examples) | 参考实现                 |

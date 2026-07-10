@@ -1,0 +1,61 @@
+{
+  "name": "@momots/drive",
+  "version": "0.1.0-alpha.1",
+  "description": "Bun-first Fetch API client with onion-style middleware for MomoTS packages and apps.",
+  "keywords": [
+    "momo",
+    "momots",
+    "fetch",
+    "onion",
+    "http-client",
+    "middleware",
+    "typescript"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./context": {
+      "types": "./dist/context.d.ts",
+      "import": "./dist/context.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./parser": {
+      "types": "./dist/parser.d.ts",
+      "import": "./dist/parser.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
+  "scripts": {
+    "build": "momo build",
+    "test": "bun test src",
+    "format": "biome format --write .",
+    "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "types": "tsc --project tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@momots/cli": "workspace:*"
+  },
+  "peerDependencies": {
+    "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
+    "@momots/host": ">=0.1.0-alpha.0 <0.2.0",
+    "remeda": "^2.32.0"
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "files.eol": "\n",
+  "editor.tabSize": 2,
+  "editor.indentSize": "tabSize",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.removeUnusedImports": "explicit",
+    "source.fixAll.biome": "explicit",
+    "quickfix.biome": "explicit"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "*.env": "ini",
+    "*.env.*": "ini",
+    "*.log": "vt100",
+    ".dockerignore": "ignore"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "src/**/*.d.ts": true,
+    "test/**/*.d.ts": true
+  },
+  "files.readonlyInclude": {
+    "**/*.gen.ts": true
+  },
+  "files.watcherExclude": {
+    "**/*.gen.ts": true,
+    "**/.venv/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/*.gen.ts": true
+  },
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "run.ts": "*.ts",
+    "README.md": "*.md",
+    ".env": ".env.*, env.*",
+    ".gitconfig": ".gitignore, .gitattributes",
+    "dockerfile": "dockerfile.*, .dockerignore",
+    "tsconfig.json": "biome.*, tsconfig*, global.d.ts",
+    "package.json": "bunfig.*, package.json.*, bun.*",
+    "drizzle.config.ts": "drizzle*"
+  },
+  "[svg]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.formatOnSave": true,
+    "editor.quickSuggestions": {
+      "other": "on",
+      "comments": "off",
+      "strings": true
+    },
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "git.ignoreLimitWarning": true,
+  "biome.lsp.bin": "node_modules/.bin/biome",
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "i18n-ally.localesPaths": [
+    "frontend/src/locales"
+  ],
+  "i18n-ally.sortKeys": true,
+  "i18n-ally.namespace": true,
+  "i18n-ally.keepFulfilled": true,
+  "i18n-ally.displayLanguage": "zh-CN",
+  "i18n-ally.keystyle": "nested",
+  "tailwindCSS.classFunctions": [
+    "cva",
+    "cx",
+  ],
+  "tailwindCSS.experimental.configFile": "packages/design/src/themes/anthropic.css",
+  "tailwindCSS.experimental.classRegex": [
+    "class:\\s*?[\"'`]([^\"'`]*).*?,",
+    "className:\\s*?[\"'`]([^\"'`]*).*?,"
+  ],
+  "material-icon-theme.files.associations": {
+    ".env": "console",
+    "*.env": "console",
+    ".env.*": "console",
+    "*.env.*": "console",
+    ".env.stg": "console",
+    ".env.prd": "console",
+    ".env.keys": "console",
+    ".env.local": "console",
+    ".env.stg.hk": "console",
+    ".env.zeabur-dev": "console"
+  },
+}

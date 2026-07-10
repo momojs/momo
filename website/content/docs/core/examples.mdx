@@ -1,0 +1,153 @@
+---
+title: 示例
+description: 可直接复制的 @momots/core 实战代码。
+icon: Code
+---
+
+下面是一些可以直接复制使用的实战片段。
+
+## 多条件可选载荷
+
+条件更多时差距更明显。例如埋点参数需同时满足「模块可见」「还有更多数据」「流水号有效」：
+
+```ts
+import { eliminate } from '@momots/core/eliminate';
+
+// 四层嵌套三元
+const trackPayloadNested = moduleVisible
+  ? hasMore
+    ? flowID
+      ? { flowID, pageSize }
+      : undefined
+    : undefined
+  : undefined;
+
+// 一层表达式
+const trackPayload = eliminate(
+  moduleVisible && hasMore && flowID && { flowID, pageSize },
+);
+// 全部满足 => { flowID, pageSize }
+// 任一不满足 => undefined
+```
+
+`&&` 链在条件失败时短路为 `false`，`eliminate` 将其规范为 `undefined`，避免手写层层三元，也避免把 `false` 当作有效载荷。
+
+## 安全读取可能缺省的配置
+
+用 `eliminate` 把哨兵值消除为 `otherwise`，再用 `realize` 支持惰性默认：
+
+```ts
+import { eliminate } from '@momots/core/eliminate';
+import { realize } from '@momots/core/realize';
+
+function readPort(raw: number) {
+  // sentinel 为 -1 时消除为 undefined，再回退到惰性默认
+  return eliminate(raw, -1) ?? realize(() => 3000);
+}
+
+readPort(8080); // => 8080
+readPort(-1);   // => 3000
+```
+
+## 归一化「单值或数组」参数
+
+```ts
+import { asArray } from '@momots/core/as/array';
+import type { MaybeArray } from '@momots/core/types';
+
+function watch(paths: MaybeArray<string>) {
+  for (const path of asArray(paths)) {
+    // 无论传入 'a' 还是 ['a', 'b'] 都能统一处理
+    console.log('watching', path);
+  }
+}
+
+watch('src');
+watch(['src', 'test']);
+```
+
+## 清理表单负载
+
+```ts
+import { compact } from '@momots/core/compact';
+
+const tags = ['react', '', null, 'bun', undefined, 'momo'];
+compact(tags); // => ['react', 'bun', 'momo']
+```
+
+## 适配后端 snake_case 响应
+
+```ts
+import { toCamelCaseKeys } from '@momots/core/casing/toCamelCaseKeys';
+import { toSnakeCaseKeys } from '@momots/core/casing/toSnakeCaseKeys';
+
+// 入站：snake_case -> camelCase
+const user = toCamelCaseKeys({ user_name: 'Momo', is_admin: true });
+// => { userName: 'Momo', isAdmin: true }
+
+// 出站：camelCase -> snake_case
+const payload = toSnakeCaseKeys({ userName: 'Momo', isAdmin: true });
+// => { user_name: 'Momo', is_admin: true }
+```
+
+## 国际化文案插值
+
+```ts
+import { substitute } from '@momots/core/substitute';
+
+const t = {
+  greeting: '你好，{{name|访客}}！你有 {{count}} 条新消息。',
+};
+
+substitute(t.greeting, { name: 'Momo', count: 3 });
+// => '你好，Momo！你有 3 条新消息。'
+
+substitute(t.greeting, { count: 0 });
+// => '你好，访客！你有 0 条新消息。'
+```
+
+## 进程级单例（避免 HMR 重复创建）
+
+```ts
+import { singleton } from '@momots/core/singleton';
+
+function getDB() {
+  return singleton('app:db', () => createExpensiveConnection());
+}
+
+// 多次调用始终返回同一连接实例
+getDB() === getDB(); // => true
+```
+
+## 把组织架构表渲染成树
+
+```ts
+import { unflat } from '@momots/core/tree/unflat';
+import { visit } from '@momots/core/tree/visit';
+
+const employees = [
+  { id: 'ceo', parent: null, name: '张总' },
+  { id: 'cto', parent: 'ceo', name: '李工' },
+  { id: 'dev1', parent: 'cto', name: '小王' },
+  { id: 'dev2', parent: 'cto', name: '小赵' },
+];
+
+const org = unflat(employees);
+
+visit(org, (node, depth) => {
+  console.log('  '.repeat(depth) + node.name);
+});
+// 张总
+//   李工
+//     小王
+//     小赵
+```
+
+## 校验银行卡号（Luhn 简化版数位和）
+
+```ts
+import { sumdig } from '@momots/core/sumdig';
+
+// 简单的数位和场景，例如做轻量校验或哈希分桶
+sumdig('6225880123456789') % 10; // 计算尾数特征
+```

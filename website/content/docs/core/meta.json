@@ -1,0 +1,5 @@
+{
+  "title": "@momots/core",
+  "icon": "Package",
+  "pages": ["index", "guide", "examples"]
+}

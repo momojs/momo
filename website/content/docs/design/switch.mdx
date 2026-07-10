@@ -1,0 +1,33 @@
+---
+title: Switch
+description: 表单友好的开关控件。
+icon: ToggleRight
+---
+
+`Switch` 使用 Base UI Switch 提供隐藏 input、受控/非受控状态和表单提交语义，内部图标通过 Hugeicons 渲染。
+
+<SwitchPlayground />
+
+## 使用
+
+```tsx
+import { Switch } from "@momots/design/components/switch";
+
+<Switch
+  checked={enabled}
+  onChange={setEnabled}
+  label="Notifications"
+  description="Send activity updates."
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `checked` | `boolean` | 受控开关状态 |
+| `defaultChecked` | `boolean` | 非受控默认状态 |
+| `label` | `ReactNode` | 标签内容 |
+| `description` | `ReactNode` | 辅助说明 |
+| `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
+| `onChange` | `(checked: boolean) => void` | 状态变化回调 |

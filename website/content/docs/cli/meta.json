@@ -1,0 +1,5 @@
+{
+  "title": "@momots/cli",
+  "icon": "Terminal",
+  "pages": ["index", "tutorial", "guide", "examples"]
+}

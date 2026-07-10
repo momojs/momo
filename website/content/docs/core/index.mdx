@@ -1,0 +1,77 @@
+---
+title: 开始
+description: "@momots/core —— 零副作用的纯函数数据工具集。"
+icon: Rocket
+---
+
+`@momots/core` 是 momo 的基石：一组**纯函数**数据工具，覆盖大小写转换、树结构操作、类型守卫、单例缓存、惰性求值、模板替换等常见场景。
+
+它没有任何运行时副作用（`sideEffects: false`），支持按子路径精确导入，也提供配套的 TypeScript 类型工具。
+
+## 安装
+
+```bash
+bun add @momots/core remeda type-fest
+```
+
+`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+
+## 两种导入方式
+
+所有函数都可以从根入口导入，也可以按子路径导入以获得最佳的 tree-shaking 效果：
+
+```ts
+// 从根入口导入
+import { eliminate, unflat, toCamelCaseKeys } from "@momots/core";
+
+// 按子路径导入（仅打包用到的部分）
+import { eliminate } from "@momots/core/eliminate";
+import { unflat } from "@momots/core/tree/unflat";
+import { toCamelCaseKeys } from "@momots/core/casing/toCamelCaseKeys";
+```
+
+## 能力地图
+
+| 主题       | 子路径                | 代表 API                                    |
+| ---------- | --------------------- | ------------------------------------------- |
+| 数组       | `as/array`、`compact` | `asArray`、`compact`                        |
+| 集合基数   | `cardinality`         | `cardinality`                               |
+| 键名大小写 | `casing/*`            | `toCamelCaseKeys`、`toSnakeCaseKeys` …      |
+| 值替换     | `eliminate`           | `eliminate`                                 |
+| 惰性求值   | `realize`             | `realize`                                   |
+| 类型守卫   | `guard/*`             | `isUndefined`、`isStringArray` …            |
+| 单例缓存   | `singleton`           | `singleton`                                 |
+| 模板插值   | `substitute`          | `substitute`                                |
+| 数位求和   | `sumdig`              | `sumdig`                                    |
+| 树结构     | `tree/*`              | `unflat`、`flat`、`visit`、`prune` …        |
+| 类型工具   | `types`               | `MaybeArray`、`Realizable`、`NonEmptyish` … |
+
+接下来可以阅读 [教程](/docs/core/tutorial) 完成一个完整场景，或直接查阅 [向导](/docs/core/guide) 了解每个 API。
+
+## 比较
+
+`@momots/core` **不是** Lodash、Remeda 或 Ramda 的替代品。它是从项目实践中提炼出**高频场景**的纯函数，与社区通用工具库互补：通用的 `map`、`pipe`、`merge`、`groupBy` 等仍建议使用 Remeda；`@momots/core` 仅额外提供树结构、惰性默认值、键名批量转换等 Remeda 未覆盖或少覆盖的能力。
+
+### 与社区工具库的对照
+
+| 特性                                   | **@momots/core**              | **Lodash**               | **Remeda**                | **Ramda**        | **es-toolkit**   |
+| -------------------------------------- | ----------------------------- | ------------------------ | ------------------------- | ---------------- | ---------------- |
+| 定位                                   | 场景化纯函数补充              | 通用数据工具全集         | 现代 TS 数据变换          | 函数式组合与变换 | 轻量 Lodash 替代 |
+| API 粒度                               | 单函数单语义                  | 模块 + 链式              | 数据优先、`pipe`          | 柯里化、组合     | 函数为主         |
+| TypeScript                             | 一等公民                      | 后补 `@types`            | 一等公民                  | 中等             | 一等公民         |
+| 子路径 tree-shaking                    | 设计优先（`exports` 子路径）  | 需 `lodash-es` 或插件    | 按函数导入                | 按函数导入       | 按函数导入       |
+| `sideEffects`                          | `false`                       | 传统 bundle 有副作用风险 | `false`                   | `false`          | `false`          |
+| 宿主环境依赖                           | 无                            | 无                       | 无                        | 无               | 无               |
+| 树结构（`unflat` / `visit` / `prune`） | 有                            | 无                       | 无                        | 无               | 无               |
+| 对象键名风格批量替换                   | 有（顶层键）                  | 字符串级 `camelCase` 等  | 字符串级 `toCamelCase` 等 | 无               | 部分             |
+| 模板占位替换（`substitute`）           | 有                            | `template`（不同语义）   | 无                        | 无               | 无               |
+| 内置类型工具                           | `MaybeArray`、`Realizable` …  | 无                       | 少量                      | 无               | 部分             |
+| 与 Remeda 关系                         | peer dependency，部分能力复用 | 独立                     | 被 core 依赖              | 独立             | 独立             |
+
+### 选型建议
+
+| 对比对象                | 何时用 `@momots/core`                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| **Lodash / es-toolkit** | 需要扁平列表转树、遍历裁剪、惰性默认值等场景 API 时；                                   |
+| **Remeda**              | 与 Remeda 并用：补充单元函数，Remeda 负责通用集合变换与 `pipe` 编排。                   |
+| **Ramda**               | 偏好小函数、明确命名、无柯里化约定时选 `core`；需要函数组合子或 transducer 时用 Ramda。 |

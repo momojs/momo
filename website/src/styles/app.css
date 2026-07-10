@@ -1,0 +1,96 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "../../../packages/design/src/themes/anthropic.css";
+
+@source "../../../packages/design/src";
+
+.theme-neutral {
+  color-scheme: light;
+  background: var(--momo-background);
+  color: var(--momo-foreground);
+  font-family: var(--momo-font-body);
+
+  --momo-font-display:
+    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --momo-font-body:
+    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --momo-font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  --momo-background: #ffffff;
+  --momo-foreground: #0f172a;
+  --momo-card: #ffffff;
+  --momo-card-foreground: #0f172a;
+  --momo-popover: #ffffff;
+  --momo-popover-foreground: #0f172a;
+  --momo-primary: #2563eb;
+  --momo-primary-foreground: #ffffff;
+  --momo-secondary: #f1f5f9;
+  --momo-secondary-foreground: #0f172a;
+  --momo-muted: #f1f5f9;
+  --momo-muted-foreground: #64748b;
+  --momo-accent: #f1f5f9;
+  --momo-accent-foreground: #0f172a;
+  --momo-danger: #dc2626;
+  --momo-danger-foreground: #ffffff;
+  --momo-border: #e2e8f0;
+  --momo-input: #cbd5e1;
+  --momo-ring: #2563eb;
+
+  --momo-radius-xs: 0.25rem;
+  --momo-radius-sm: 0.375rem;
+  --momo-radius-md: 0.5rem;
+  --momo-radius-lg: 0.75rem;
+  --momo-radius-xl: 1rem;
+  --momo-radius-full: 9999px;
+
+  --momo-color-primary-hover: #1d4ed8;
+  --momo-color-primary-active: #1e40af;
+  --momo-color-border-hover: #cbd5e1;
+  --momo-color-border-strong: #94a3b8;
+}
+
+.theme-neutral.dark {
+  color-scheme: dark;
+
+  --momo-background: #020617;
+  --momo-foreground: #f8fafc;
+  --momo-card: #020617;
+  --momo-card-foreground: #f8fafc;
+  --momo-popover: #020617;
+  --momo-popover-foreground: #f8fafc;
+  --momo-secondary: #1e293b;
+  --momo-secondary-foreground: #f8fafc;
+  --momo-muted: #1e293b;
+  --momo-muted-foreground: #94a3b8;
+  --momo-accent: #1e293b;
+  --momo-accent-foreground: #f8fafc;
+  --momo-border: #1e293b;
+  --momo-input: #334155;
+  --momo-ring: #60a5fa;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+.mermaid-diagram svg {
+  height: auto;
+}
+
+.mermaid-diagram .node .label,
+.mermaid-diagram .edgeLabel .label,
+.mermaid-diagram .cluster .cluster-label {
+  font-family: inherit;
+}
+
+.mermaid-diagram .edgeLabel .label {
+  padding: 0.125rem 0.375rem;
+}

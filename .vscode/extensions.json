@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "lokalise.i18n-ally",
+    "bradlc.vscode-tailwindcss",
+    "vunguyentuan.vscode-css-variables",
+    "ms-ceintl.vscode-language-pack-zh-hans",
+    "pkief.material-icon-theme",
+    "charliermarsh.ruff",
+    "dotenv.dotenvx-vscode",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "tamasfe.even-better-toml",
+    "eamodio.gitlens",
+  ]
+}

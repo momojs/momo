@@ -1,0 +1,130 @@
+---
+title: 示例
+description: 可直接复制的 @momots/host 实战代码。
+icon: Code
+---
+
+下面是一些可以直接复制使用的实战片段。
+
+## 渠道自适应跳转
+
+```ts
+import { isMobile } from '@momots/host/guard/is-mobile';
+import { isMiniprogram } from '@momots/host/guard/is-miniprogram';
+import { isWechat } from '@momots/host/guard/is-wechat';
+
+function openPayment(orderId: string) {
+  if (isMiniprogram()) return wx.navigateTo({ url: `/pay/${orderId}` });
+  if (isWechat()) return location.assign(`/wechat-pay/${orderId}`);
+  if (isMobile()) return location.assign(`/h5-pay/${orderId}`);
+  return location.assign(`/pay/${orderId}`);
+}
+```
+
+## 带过期时间的接口缓存
+
+```ts
+import { Storagefy } from '@momots/host/storage';
+
+interface Rates {
+  base: string;
+  rates: Record<string, number>;
+}
+
+const ratesCache = new Storagefy<Rates>('fx-rates');
+
+async function getRates(): Promise<Rates> {
+  const cached = ratesCache.get();
+  if (cached) return cached;
+
+  const data: Rates = await fetch('/api/fx').then((r) => r.json());
+  ratesCache.set(data, 60 * 60); // 缓存 1 小时
+  return data;
+}
+```
+
+## 跨标签页同步主题
+
+```ts
+import { Storagefy } from '@momots/host/storage';
+
+const theme = new Storagefy<'light' | 'dark'>('theme');
+
+theme.set('dark'); // 会派发 StorageEvent
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'Storagefy:theme') {
+    document.documentElement.dataset.theme = theme.get() ?? 'light';
+  }
+});
+```
+
+## 上报埋点的离线缓冲
+
+```ts
+import { PersistentBuffer } from '@momots/host/persistent';
+
+const queue = new PersistentBuffer<{ type: string; ts: number }>({ key: 'analytics' });
+
+function track(type: string) {
+  queue.push({ type, ts: Date.now() });
+  void flush();
+}
+
+async function flush() {
+  const events = queue.peekAll();
+  if (events.length === 0) return;
+  try {
+    await fetch('/api/track', { method: 'POST', body: JSON.stringify(events) });
+    queue.drain(events.length); // 上报成功才清除
+  } catch {
+    /* 失败保留，下次再试；刷新页面也不丢 */
+  }
+}
+```
+
+## 把对象拼成查询串
+
+```ts
+import { toSearchParams } from '@momots/host/url';
+
+function buildListUrl(params: { page?: number; size?: number; q?: string }) {
+  const qs = toSearchParams(params)?.toString();
+  return qs ? `/api/list?${qs}` : '/api/list';
+}
+
+buildListUrl({ page: 2, size: 20, q: undefined }); // => '/api/list?page=2&size=20'
+```
+
+## 主题色 → rgba 半透明遮罩
+
+```ts
+import { toCSSRGBVariable } from '@momots/host/css/to-css-rgb-variable';
+
+const primary = toCSSRGBVariable('--brand');
+const overlay = primary
+  ? primary.toString({ alpha: 0.16 })
+  : 'rgba(0, 0, 0, 0.16)';
+```
+
+## 一键复制为 cURL（调试面板）
+
+```ts
+import { toCurl } from '@momots/host/fetch';
+
+async function copyAsCurl(input: RequestInfo, init?: RequestInit) {
+  const command = await toCurl(input.toString(), init);
+  await navigator.clipboard.writeText(command);
+}
+```
+
+## 滚动到最近的可滚动容器顶部
+
+```ts
+import { nearestScrollable } from '@momots/host/nearest';
+
+function scrollIntoContainerTop(el: HTMLElement) {
+  const container = nearestScrollable(el);
+  container?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+```

@@ -1,0 +1,93 @@
+{
+  "name": "@momots/core",
+  "version": "0.1.0-alpha.0",
+  "description": "Bun-first functional primitives for MomoTS packages and apps.",
+  "keywords": [
+    "momots",
+    "functional",
+    "typescript",
+    "utilities",
+    "pure-function",
+    "tree"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./as/*": {
+      "types": "./dist/as/*.d.ts",
+      "import": "./dist/as/*.js"
+    },
+    "./cardinality": {
+      "types": "./dist/cardinality.d.ts",
+      "import": "./dist/cardinality.js"
+    },
+    "./casing/*": {
+      "types": "./dist/casing/*.d.ts",
+      "import": "./dist/casing/*.js"
+    },
+    "./cast/*": {
+      "types": "./dist/cast/*.d.ts",
+      "import": "./dist/cast/*.js"
+    },
+    "./compact": {
+      "types": "./dist/compact.d.ts",
+      "import": "./dist/compact.js"
+    },
+    "./eliminate": {
+      "types": "./dist/eliminate.d.ts",
+      "import": "./dist/eliminate.js"
+    },
+    "./realize": {
+      "types": "./dist/realize.d.ts",
+      "import": "./dist/realize.js"
+    },
+    "./guard/*": {
+      "types": "./dist/guard/*.d.ts",
+      "import": "./dist/guard/*.js"
+    },
+    "./singleton": {
+      "types": "./dist/singleton.d.ts",
+      "import": "./dist/singleton.js"
+    },
+    "./substitute": {
+      "types": "./dist/substitute.d.ts",
+      "import": "./dist/substitute.js"
+    },
+    "./sumdig": {
+      "types": "./dist/sumdig.d.ts",
+      "import": "./dist/sumdig.js"
+    },
+    "./tree/*": {
+      "types": "./dist/tree/*.d.ts",
+      "import": "./dist/tree/*.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
+  "scripts": {
+    "build": "momo build",
+    "test": "bun test src",
+    "format": "biome format --write .",
+    "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "types": "tsc --project tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@momots/cli": "workspace:*"
+  },
+  "peerDependencies": {
+    "remeda": "^2.32.0",
+    "type-fest": "5.4.4"
+  }
+}

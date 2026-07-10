@@ -1,0 +1,34 @@
+---
+title: Tabs
+description: 带 motion 指示器的标签页。
+icon: AppWindow
+---
+
+`Tabs` 使用 Base UI Tabs 处理键盘导航和面板关联，组件 API 使用 `options` 描述 tab 与 panel。
+
+<TabsPlayground />
+
+## 使用
+
+```tsx
+import { Tabs } from "@momots/design/components/tab";
+
+<Tabs
+  value={tab}
+  onChange={setTab}
+  options={[
+    { value: "overview", label: "Overview", content: "Overview panel" },
+    { value: "settings", label: "Settings", content: "Settings panel" },
+  ]}
+/>;
+```
+
+## Props
+
+| Prop           | 类型                         | 说明              |
+| -------------- | ---------------------------- | ----------------- |
+| `value`        | `T`                          | 当前 tab          |
+| `defaultValue` | `T`                          | 非受控默认 tab    |
+| `options`      | `TabOption<T>[]`             | tab 与 panel 描述 |
+| `orientation`  | `"horizontal" \| "vertical"` | 排列方向          |
+| `onChange`     | `(value: T) => void`         | 切换回调          |

@@ -1,0 +1,36 @@
+---
+title: ToggleGroup
+description: 图标工具组，适合单选工具栏和编辑器控制。
+icon: MousePointerClick
+---
+
+`ToggleGroup` 使用 Base UI ToggleGroup 提供键盘和选择语义，用 motion 绘制选中态指示器，支持 `button`、`segmented` 与 `tabbar` 视觉变体。
+
+<ToggleGroupPlayground />
+
+## 使用
+
+```tsx
+import { ToggleGroup } from "@momots/design/components/toggle-group";
+
+<ToggleGroup
+  value={align}
+  onChange={setAlign}
+  options={[
+    { value: "left", title: "Left", icon: <LeftIcon /> },
+    { value: "center", title: "Center", icon: <CenterIcon /> },
+    { value: "right", title: "Right", icon: <RightIcon /> },
+  ]}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `T` | 当前选中值 |
+| `defaultValue` | `T` | 非受控默认值 |
+| `options` | `ControlOption<T>[]` | 选项列表，支持 `label`、`icon`、`disabled`、`className`、`style` |
+| `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
+| `variant` | `"button" \| "segmented" \| "tabbar"` | 视觉变体 |
+| `onChange` | `(value: T) => void` | 选中项变化回调 |

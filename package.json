@@ -1,0 +1,26 @@
+{
+  "name": "momots",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.13",
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "templates/*",
+    "website"
+  ],
+  "scripts": {
+    "build": "bun run --filter './packages/cli' build && bun run --filter './packages/core' build && bun run --filter './packages/host' build && bun run --filter './packages/drive' build",
+    "check": "bun run lint && bun run typecheck",
+    "dev": "bun run --filter './examples/*' dev",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "typecheck": "bun run --filter './packages/*' typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
+    "@types/bun": "^1.3.14",
+    "typescript": "^5.8.0"
+  }
+}

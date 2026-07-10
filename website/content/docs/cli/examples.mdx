@@ -1,0 +1,119 @@
+---
+title: 示例
+description: 可直接复制的 @momots/cli 实战代码。
+icon: Code
+---
+
+下面是一些可以直接复制使用的实战片段。
+
+## 最小配置
+
+```ts
+import { defineConfig } from '@momots/cli';
+
+export default defineConfig({
+  test: { include: ['src/**/*.webview.spec.ts'] },
+});
+```
+
+## 完整配置
+
+```ts
+import { defineConfig } from '@momots/cli';
+
+export default defineConfig({
+  test: {
+    include: ['src/**/webview.spec.ts'],
+    exclude: ['src/**/fixtures/**'],
+    width: 1024,
+    height: 768,
+    backend: 'webkit',
+    html: '<div id="root"></div>',
+  },
+});
+```
+
+## 测试滚动与布局（需要真实渲染）
+
+```ts
+import { beforeEach, afterEach, describe, expect, test } from '@momots/cli/test';
+import { isScrollable } from '@momots/host/guard/is-scrollable';
+
+let app: HTMLElement;
+
+beforeEach(() => {
+  app = document.querySelector('#app')!;
+});
+
+afterEach(() => {
+  app.innerHTML = '';
+});
+
+describe('滚动检测', () => {
+  test('内容超高的容器是可滚动的', () => {
+    const box = document.createElement('div');
+    box.style.cssText = 'height:100px;overflow:auto';
+    box.innerHTML = '<div style="height:1000px"></div>';
+    app.appendChild(box);
+
+    expect(isScrollable(box)).toBe(true);
+  });
+});
+```
+
+## 测试触摸与媒体查询
+
+```ts
+import { describe, expect, test } from '@momots/cli/test';
+import { isTouchDevice } from '@momots/host/guard/is-touch-device';
+
+describe('设备能力', () => {
+  test('isTouchDevice 返回布尔值', () => {
+    expect(typeof isTouchDevice()).toBe('boolean');
+  });
+});
+```
+
+## 异步与抛错断言
+
+```ts
+import { describe, expect, test } from '@momots/cli/test';
+
+describe('断言风格', () => {
+  test('异步解析', async () => {
+    await expect(Promise.resolve(1)).resolves; // 也可：const v = await ...; expect(v).toBe(1)
+    const v = await Promise.resolve(1);
+    expect(v).toBe(1);
+  });
+
+  test('同步抛错', () => {
+    expect(() => JSON.parse('{')).toThrow();
+  });
+
+  test('取反', () => {
+    expect('momo').not.toMatch(/kit/);
+  });
+});
+```
+
+## package.json 双轨脚本
+
+```json
+{
+  "scripts": {
+    "test": "bun test src",
+    "test:webview": "momo test",
+    "test:all": "bun test src && momo test"
+  }
+}
+```
+
+## 在 CI 中运行
+
+```yaml
+# .github/workflows/test.yml 片段
+- uses: oven-sh/setup-bun@v2
+- run: bun install
+- run: bun test src         # 快速的 Node/Bun 测试
+- run: bunx momo test       # 真实浏览器测试（需 WebView 环境）
+```

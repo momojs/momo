@@ -1,0 +1,19 @@
+{
+  "title": "@momots/design",
+  "icon": "Palette",
+  "pages": [
+    "index",
+    "theme",
+    "button",
+    "tween-number",
+    "toggle-group",
+    "segmented",
+    "switch",
+    "select",
+    "slider",
+    "tabs",
+    "calendar",
+    "picker-date",
+    "picker-time"
+  ]
+}

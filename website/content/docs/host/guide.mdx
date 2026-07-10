@@ -1,0 +1,945 @@
+---
+title: API 向导
+description: "@momots/host 全部公开函数的用法说明。"
+icon: BookOpen
+---
+
+欢迎查阅 `@momots/host` 的 API 参考。下文按 [能力地图](/docs/host#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。除特别说明外，所有 API 均可从根入口或对应子路径导入。
+
+```ts
+import { isMobile, measureText, Storagefy } from '@momots/host';
+import { toSearchParams } from '@momots/host/url';
+```
+
+需要可复制的实战片段，请前往 [示例](/docs/host/examples)。
+
+## 守卫
+
+子路径：`guard/is-*`
+
+守卫统一放在 `guard/is-*` 子路径下，覆盖环境探测、DOM/元素类型、Body/二进制类型、字符串格式等场景。
+
+UA 类守卫默认读取 `navigator.userAgent`（或 `location.hostname`），也可传入字符串以便在 SSR 或单元测试中注入。
+
+### isAndroid
+
+断言 UA 是否表示 Android 系统。
+
+```ts
+const isAndroid = (ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | UA 含 `android`（不区分大小写）时为 `true` |
+
+```ts
+import { isAndroid } from '@momots/host/guard/is-android';
+
+isAndroid(); // 当前环境
+```
+
+### isIOS
+
+根据 UA 判断是否 iOS 系统。
+
+```ts
+function isIOS(ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | UA 匹配 `ip(hone\|ad\|od)` 或 `ios` 时为 `true` |
+
+```ts
+import { isIOS } from '@momots/host/guard/is-ios';
+
+isIOS('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'); // => true
+```
+
+### isMobile
+
+根据 UA 判断是否移动端。
+
+```ts
+function isMobile(ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | UA 匹配 `android\|iphone\|ipad\|ipod\|mobile` 时为 `true` |
+
+```ts
+import { isMobile } from '@momots/host/guard/is-mobile';
+
+isMobile(); // 当前环境
+```
+
+### isWechat
+
+断言是否处于微信内置浏览器（公众号 WebView）。
+
+```ts
+const isWechat = (ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent`（小写） |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | UA 含 `micromessenger` 时为 `true` |
+
+```ts
+import { isWechat } from '@momots/host/guard/is-wechat';
+
+isWechat(); // 是否在微信内
+```
+
+### isMiniprogram
+
+断言是否处于微信小程序 WebView。UA 含 `miniprogram`，或 `window.__wxjs_environment === 'miniprogram'` 时返回 `true`。
+
+```ts
+const isMiniprogram = (ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent`（小写） |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | 微信小程序环境时为 `true` |
+
+```ts
+import { isMiniprogram } from '@momots/host/guard/is-miniprogram';
+
+isMiniprogram(); // 是否在小程序 webview
+```
+
+### isAndroidWeb
+
+断言是否为 Android 系统浏览器（排除微信与小程序）。
+
+```ts
+const isAndroidWeb = (ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | `isAndroid && !isWechat && !isMiniprogram` |
+
+### isIOSWeb
+
+断言是否为 iOS 系统浏览器（排除微信与小程序）。
+
+```ts
+const isIOSWeb = (ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | `isIOS && !isWechat && !isMiniprogram` |
+
+### isWechatWeb
+
+断言是否为微信内置浏览器且非小程序。
+
+```ts
+const isWechatWeb = (ua?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `ua` | `string` | 可选 UA 字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | `isWechat && !isMiniprogram` |
+
+### isLocalhost
+
+断言 hostname 是否为本地开发环境。
+
+```ts
+const isLocalhost = (hostname?: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `hostname` | `string` | 可选主机名，默认 `location.hostname` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | hostname 含 `localhost` 或 `127.0.0.1` 时为 `true` |
+
+```ts
+import { isLocalhost } from '@momots/host/guard/is-localhost';
+
+isLocalhost('127.0.0.1:3000'); // => true
+```
+
+### isSSR
+
+断言当前是否为 SSR 环境（无 `window` 或 `document`）。
+
+```ts
+function isSSR(): boolean;
+```
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | `window` 或 `document` 为 `undefined` 时为 `true` |
+
+```ts
+import { isSSR } from '@momots/host/guard/is-ssr';
+
+if (isSSR()) return 'desktop'; // 服务端安全默认值
+```
+
+### isTouchDevice
+
+断言当前是否为触摸设备。检测 `pointer: coarse` 媒体查询或 `ontouchstart` + `TouchEvent`。
+
+```ts
+function isTouchDevice(): boolean;
+```
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | 触摸设备时为 `true`；无 `window` 时为 `false` |
+
+DOM / 元素类守卫接受 `unknown` 或 `HTMLElement` 输入，用于跨 realm 和真实布局场景下的类型与状态判断。
+
+### isElement
+
+断言目标值是否为 `Element` 实例。
+
+```ts
+const isElement = (target: unknown): target is Element;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `target` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `target is Element` | `instanceof Element` 时为 `true`；无 `Element` 全局时为 `false` |
+
+### isHTMLElement
+
+断言目标值是否为 `HTMLElement` 实例。
+
+```ts
+const isHTMLElement = (target: unknown): target is HTMLElement;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `target` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `target is HTMLElement` | `instanceof HTMLElement` 时为 `true` |
+
+### isInputElement
+
+断言目标值是否为 `HTMLInputElement` 实例。
+
+```ts
+const isInputElement = (target: unknown): target is HTMLInputElement;
+```
+
+### isTextAreaElement
+
+断言目标值是否为 `HTMLTextAreaElement` 实例。
+
+```ts
+const isTextAreaElement = (target: unknown): target is HTMLTextAreaElement;
+```
+
+### isCSSStyleRule
+
+断言目标值是否为浏览器 CSSOM 中的 `CSSStyleRule` 实例。SSR、Bun、Node 等没有 `CSSStyleRule` 全局对象的环境会返回 `false`，不会抛错。
+
+```ts
+const isCSSStyleRule = (data: unknown): data is CSSStyleRule;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is CSSStyleRule` | `CSSStyleRule` 全局存在且 `data instanceof CSSStyleRule` 时为 `true` |
+
+```ts
+import { isCSSStyleRule } from '@momots/host/guard/is-css-style-rule';
+
+const rule = document.styleSheets[0]?.cssRules.item(0);
+if (isCSSStyleRule(rule)) {
+  rule.style.setProperty('color', 'red');
+}
+```
+
+### isScrollable
+
+断言元素是否处于可滚动状态（`scrollHeight > clientHeight` 或 `scrollWidth > clientWidth`）。
+
+```ts
+function isScrollable(element: HTMLElement): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `element` | `HTMLElement` | 待检测的 DOM 元素 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | 内容超出可视区域、产生滚动时为 `true` |
+
+```ts
+import { isScrollable } from '@momots/host/guard/is-scrollable';
+
+isScrollable(div); // 是否产生滚动
+```
+
+### isOverflow
+
+断言元素内容是否溢出可视框（含容差，默认 2px）。
+
+```ts
+function isOverflow(element: HTMLElement, tolerance?: number): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `element` | `HTMLElement` | 待检测的 DOM 元素 |
+| `tolerance` | `number` | 容差像素，默认 `2` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | `offsetWidth + tolerance < scrollWidth` 或高度方向等价条件时为 `true` |
+
+```ts
+import { isOverflow } from '@momots/host/guard/is-overflow';
+
+isOverflow(div); // 内容是否溢出（默认容差 2px）
+```
+
+Body / 二进制类守卫均接受 `unknown` 输入，返回 TypeScript 类型谓词。
+
+### isArrayBuffer
+
+```ts
+function isArrayBuffer(data: unknown): data is ArrayBuffer;
+```
+
+### isUint8Array
+
+```ts
+function isUint8Array(data: unknown): data is Uint8Array;
+```
+
+### isArrayBufferView
+
+```ts
+function isArrayBufferView(data: unknown): data is ArrayBufferView;
+```
+
+### isArrayBufferLike
+
+```ts
+function isArrayBufferLike(data: unknown): data is ArrayBufferLike;
+```
+
+### isBufferSource
+
+```ts
+function isBufferSource(data: unknown): data is BufferSource;
+```
+
+### isBlob
+
+```ts
+function isBlob(data: unknown): data is Blob;
+```
+
+### isFormData
+
+```ts
+function isFormData(data: unknown): data is FormData;
+```
+
+### isReadableStream
+
+```ts
+function isReadableStream(data: unknown): data is ReadableStream;
+```
+
+### isURLSearchParams
+
+```ts
+function isURLSearchParams(data: unknown): data is URLSearchParams;
+```
+
+### isNonRawBodyInit
+
+判断 `BodyInit` 是否为「非纯文本」类型（排除 `string` 与 `URLSearchParams`）。等价于 `isBlob || isFormData || isBufferSource || isReadableStream`。
+
+```ts
+function isNonRawBodyInit(
+  data: unknown,
+): data is Exclude<BodyInit, string | URLSearchParams>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is Exclude<BodyInit, string \| URLSearchParams>` | 二进制或结构化 body 时为 `true` |
+
+```ts
+import { isNonRawBodyInit } from '@momots/host/guard/is-non-raw-body-init';
+
+isNonRawBodyInit(new Blob()); // => true
+isNonRawBodyInit('hello');    // => false
+```
+
+## 字符串守卫
+
+子路径：`guard/is-hex-string`
+
+### isHexString
+
+判断字符串是否为 CSS hex 颜色字面量（`#RGB` / `#RGBA` / `#RRGGBB` / `#RRGGBBAA`）。
+
+```ts
+function isHexString(val: string): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `val` | `string` | 待判断的颜色字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `boolean` | 符合 hex 颜色语法时为 `true` |
+
+```ts
+import { isHexString } from '@momots/host/guard/is-hex-string';
+
+isHexString('#0f08'); // => true
+isHexString('rgb(1, 2, 3)'); // => false
+```
+
+## 存储
+
+子路径：`storage`
+
+### memory
+
+基于 `@momots/core` 的 `singleton` 创建的全局 `MemoryStorage` 单例。`Storagefy` 在 `localStorage` 不可用时自动降级到此实例。
+
+### MemoryStorage
+
+实现了 `Storage` 接口的内存版（基于 `Map`），常用于测试或降级。
+
+```ts
+class MemoryStorage implements Storage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+  clear(): void;
+  key(index: number): string | null;
+  get length(): number;
+}
+```
+
+### Storagefy&lt;T&gt;
+
+类型化的同步存储单元。键存为 `Storagefy:<key>`，值包装为 `{ value, expired }` JSON。默认使用 `localStorage`，不可用时降级到 `memory`。过期时间单位为**秒**；变更时会派发 `StorageEvent`。
+
+```ts
+class Storagefy<T> {
+  constructor(key: string, storage?: Realizable<Storage>);
+
+  set(arg: T | ((old: T | null) => T), expires?: number): void;
+  get(): T | null;
+  remove(): void;
+
+  static readonly namespace: 'Storagefy';
+  static has(key: string, storage?: Storage): boolean;
+  static keys(storage?: Storage): string[];
+  static used(storage?: Storage): number;
+  static clear(storage?: Storage): void;
+  static isNativeStorage: (storage: Storage) => boolean;
+  static dispatch: (...args) => void;
+}
+```
+
+| 实例方法 | 说明 |
+| --- | --- |
+| `set(arg, expires?)` | 写入值或函数式更新；`expires` 为过期秒数 |
+| `get()` | 读取值；过期或解析失败时自动删除并返回 `null` |
+| `remove()` | 删除键并派发 `StorageEvent` |
+
+| 静态方法 | 说明 |
+| --- | --- |
+| `has(key)` | 键是否存在 |
+| `keys()` | 列出命名空间下所有键 |
+| `used()` | 命名空间已用空间（KB） |
+| `clear()` | 清除命名空间下所有数据 |
+
+读到过期项、JSON 解析失败时会自动删除并返回 `null`；`set` 超配额会抛错。
+
+```ts
+import { Storagefy } from '@momots/host/storage';
+
+const cache = new Storagefy<{ name: string }>('profile');
+cache.set({ name: 'Momo' }, 300); // 5 分钟后过期
+cache.get(); // => { name: 'Momo' } | null
+```
+
+### StoragefyAsync&lt;T&gt;
+
+与 `Storagefy` 语义一致，但支持可插拔的**异步** encode/decode。默认用 `JSON.parse` / `JSON.stringify`；提供 `static createAES<T>(hexKey)` 构造 AES-GCM 编解码器。`hexKey` 必须是 AES 支持的 16、24 或 32 字节 key 的十六进制字符串（分别对应 32、48 或 64 个 hex 字符）。
+
+```ts
+class StoragefyAsync<T> {
+  constructor(
+    key: string,
+    params?: {
+      store?: Realizable<Storage>;
+      encode?: (value: StoragefyValue<T>) => Promise<string> | string;
+      decode?: (value: string) => Promise<StoragefyValue<T>> | StoragefyValue<T>;
+    },
+  );
+
+  set(arg: T | ((old: T | null) => T), expires?: number): Promise<void>;
+  get(): Promise<T | null>;
+  remove(): void;
+
+  static createAES<T>(hexKey: string | (() => Promise<string>)): Promise<Codec<T>>;
+  // 静态方法同 Storagefy（namespace 为 StoragefyAsync）
+}
+```
+
+```ts
+import { StoragefyAsync } from '@momots/host/storage';
+
+const codec = await StoragefyAsync.createAES<Data>(
+  '00112233445566778899aabbccddeeff',
+);
+const cell = new StoragefyAsync<Data>('k', {
+  encode: codec.encode,
+  decode: codec.decode,
+});
+await cell.set(data);
+await cell.get();
+```
+
+## 持久缓冲
+
+子路径：`persistent`
+
+### PersistentBuffer&lt;T&gt;
+
+轻量的持久化 FIFO 缓冲。构造时从 storage 恢复，每次变更后同步写入。默认 storage 为 `memory` 单例；实际键名为 `${namespace}:${key}`，默认 namespace 为 `PersistentBuffer`。
+
+```ts
+interface PersistentBufferOptions {
+  key: string;
+  namespace?: string;
+  storage?: Realizable<Storage>;
+}
+
+class PersistentBuffer<T> {
+  constructor(options: PersistentBufferOptions);
+
+  readonly key: string;
+  get size(): number;
+
+  push(...args: T[]): void;
+  peekAll(): T[];
+  drain(count: number): void;
+  clear(): void;
+}
+```
+
+| 方法 | 说明 |
+| --- | --- |
+| `push(...args)` | 追加元素到末尾 |
+| `peekAll()` | 返回所有元素的副本 |
+| `drain(count)` | 从头部移除 `count` 个已消费元素；超出大小时等效 `clear()` |
+| `clear()` | 清空缓冲区 |
+
+storage 损坏或写入失败时静默降级，不影响内存中的核心操作。
+
+```ts
+import { PersistentBuffer } from '@momots/host/persistent';
+import { MemoryStorage } from '@momots/host/storage';
+
+const buf = new PersistentBuffer<number>({ key: 'events', storage: new MemoryStorage() });
+buf.push(1, 2, 3);
+buf.peekAll(); // => [1, 2, 3]
+buf.drain(2);  // 丢弃最早的 2 个，剩 [3]
+```
+
+## URL
+
+子路径：`url`
+
+### toSearchParams
+
+将多种输入归一化为 `URLSearchParams`。在缺少 `URLSearchParams` 的宿主环境中，需要调用方自行提供 polyfill。
+
+```ts
+function toSearchParams(init: unknown): URLSearchParams | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `init` | `unknown` | 查询参数初始化值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `URLSearchParams \| undefined` | 可构造时返回实例，否则 `undefined` |
+
+| 输入类型 | 行为 |
+| --- | --- |
+| `URLSearchParams` | 原样返回 |
+| `string` | `new URLSearchParams(string)` |
+| `string[]` | 过滤含 `=` 的项、去空格后拼接解析 |
+| 普通对象 | 值 `toString()`，丢弃 nullish 键 |
+| 其他 | `undefined` |
+
+```ts
+import { toSearchParams } from '@momots/host/url';
+
+toSearchParams('a=1&b=2')?.get('a');                          // => '1'
+toSearchParams({ a: 1, b: undefined, c: false })?.toString(); // => 'a=1&c=false'
+```
+
+## 二进制编解码
+
+子路径：`buffer`
+
+### blobToBytes
+
+将 `Blob` 读取为字节数组。
+
+```ts
+function blobToBytes(blob: Blob): Promise<Uint8Array<ArrayBuffer>>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `blob` | `Blob` | 待读取的二进制对象 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `Promise<Uint8Array>` | Blob 内容的字节视图 |
+
+### bytesToHex
+
+将字节数组编码为小写十六进制字符串。
+
+```ts
+function bytesToHex(buffer: Uint8Array): string;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `buffer` | `Uint8Array` | 待编码的字节数组 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `string` | 小写 hex 字符串，每字节两位 |
+
+### hexToBytes
+
+将十六进制字符串解码为字节数组。
+
+```ts
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `hex` | `string` | 偶数长度的 hex 字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `Uint8Array` | 解码后的字节数组 |
+
+长度不是偶数或含非十六进制字符时**抛出错误**。
+
+```ts
+import { bytesToHex, hexToBytes } from '@momots/host/buffer';
+
+bytesToHex(new Uint8Array([0, 15, 255])); // => '000fff'
+Array.from(hexToBytes('010203'));         // => [1, 2, 3]
+```
+
+## CSS 颜色
+
+子路径：`css/*`
+
+### RGBColor
+
+解析结果对象，含 `red`、`green`、`blue`、`alpha` 通道及 `toHex()`、`toString()` 方法。`toString` 可传入 `{ alpha }` 覆盖透明度。
+
+```ts
+interface RGBColor {
+  red: number;
+  green: number;
+  blue: number;
+  alpha: number;
+  toHex(params?: Partial<RGBColor>): string;
+  toString(params?: Partial<RGBColor>): string;
+}
+```
+
+### toRGB
+
+解析 CSS 颜色字符串为 `RGBColor`。支持 hex（含 alpha）、`rgb()/rgba()`（含百分比与 `/` alpha）、relative RGB、`color-mix(in srgb, ...)`、`transparent`。无法解析返回 `null`。
+
+```ts
+function toRGB(val?: string): RGBColor | null;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `val` | `string` | CSS 颜色字符串（可选） |
+
+| 返回 | 说明 |
+| --- | --- |
+| `RGBColor \| null` | 解析成功返回颜色对象，否则 `null` |
+
+```ts
+import { toRGB } from '@momots/host/css/to-rgb';
+
+toRGB('#0f08')?.toHex();                                // => '#00ff00'
+toRGB('rgb(1 2 3 / 50%)')?.toString();                  // => 'rgba(1, 2, 3, 0.5)'
+toRGB('color-mix(in srgb, #000000, #ffffff)')?.toHex(); // => '#808080'
+```
+
+### toCSSVariable
+
+从计算样式读取 CSS 自定义属性值。
+
+```ts
+function toCSSVariable<T extends string>(
+  name?: T,
+  params?: { initial?: string; element?: HTMLElement },
+): string | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `name` | `string` | CSS 变量名（如 `--brand`） |
+| `params.initial` | `string` | 变量不存在或无值时的回退值 |
+| `params.element` | `HTMLElement` | 计算样式的元素，默认 `document.body` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `string \| undefined` | 变量值或 `initial` |
+
+```ts
+import { toCSSVariable } from '@momots/host/css/to-css-variable';
+
+toCSSVariable('--brand', { initial: '#000' });
+```
+
+### toCSSRGBVariable
+
+读取 CSS 变量并用 `toRGB` 解析为 `RGBColor`。变量值不可解析或为 `transparent` 时返回 `undefined`。
+
+```ts
+function toCSSRGBVariable(name: string): RGBColor | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `name` | `string` | CSS 变量名 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `RGBColor \| undefined` | 解析后的颜色对象 |
+
+```ts
+import { toCSSRGBVariable } from '@momots/host/css/to-css-rgb-variable';
+
+toCSSRGBVariable('--brand')?.toString({ alpha: 0.5 });
+```
+
+## Canvas
+
+子路径：`canvas`
+
+### measureText
+
+使用浏览器 `CanvasRenderingContext2D.measureText` 测量文本宽度，并额外加上 `x` 字宽四分之一作为经验补偿。该函数需要可用的 `document` 和 2D canvas context；SSR、Bun、Node 或禁用 Canvas 的环境会返回 `undefined`。
+
+```ts
+function measureText(
+  text?: string,
+  font?: Partial<Pick<CSSStyleDeclaration, 'fontStyle' | 'fontWeight' | 'fontSize' | 'fontFamily'>>,
+): number | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `text` | `string` | 待测量文本；不是字符串时返回 `undefined` |
+| `font.fontStyle` | `CSSStyleDeclaration['fontStyle']` | 可选字体样式，如 `italic` |
+| `font.fontWeight` | `CSSStyleDeclaration['fontWeight']` | 可选字重，如 `600` |
+| `font.fontSize` | `CSSStyleDeclaration['fontSize']` | 字号，默认 `10px` |
+| `font.fontFamily` | `CSSStyleDeclaration['fontFamily']` | 字体族，默认 `sans-serif` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `number \| undefined` | 文本宽度像素值；无 Canvas 或文本无效时为 `undefined` |
+
+```ts
+import { measureText } from '@momots/host/canvas';
+
+const width = measureText('Momo', {
+  fontWeight: '600',
+  fontSize: '16px',
+  fontFamily: 'Inter, sans-serif',
+});
+```
+
+## 请求转 cURL
+
+子路径：`fetch`
+
+### generate
+
+cURL 命令各片段生成器，行为对齐 Chrome DevTools 的「Copy as cURL」。
+
+```ts
+const generate = {
+  method(init?: RequestInit): string;
+  header(init?: RequestInit): string | void;
+  body(init?: RequestInit): Promise<string | void>;
+  compress(init?: RequestInit): string;
+};
+```
+
+| 方法 | 说明 |
+| --- | --- |
+| `method` | 生成 `-X` 参数；GET 不输出 |
+| `header` | 生成 `-H` 参数；忽略 `content-length` |
+| `body` | 生成 `--data-raw` / `--data-binary` / `-F`；FormData 中 Blob 以 `@filename` 占位 |
+| `compress` | 存在 `accept-encoding` 时输出 `--compressed` |
+
+### toCurl
+
+把 `fetch` 请求参数转成多行 cURL 命令（行尾 `\` 续行 + 两空格缩进）。
+
+```ts
+function toCurl(uri: string | URL, init?: RequestInit): Promise<string>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `uri` | `string \| URL` | 请求 URL |
+| `init` | `RequestInit` | 可选 fetch 初始化参数 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `Promise<string>` | 完整 cURL 命令字符串 |
+
+```ts
+import { toCurl } from '@momots/host/fetch';
+
+await toCurl('https://api.example.com/users', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: '{"name":"Momo"}',
+});
+// curl 'https://api.example.com/users' \
+//   -X 'POST' \
+//   -H 'content-type: application/json' \
+//   --data-raw '{"name":"Momo"}'
+```
+
+## 滚动定位
+
+子路径：`nearest`
+
+### nearestScrollable
+
+从某元素向上递归查找最近的可滚动祖先。
+
+```ts
+function nearestScrollable(element: unknown): HTMLElement | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `element` | `unknown` | 起始 DOM 元素 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `HTMLElement \| undefined` | 最近可滚动祖先；找不到时 `undefined` |
+
+```ts
+import { nearestScrollable } from '@momots/host/nearest';
+
+nearestScrollable(el)?.scrollTo({ top: 0 });
+```
+
+## 浏览器指纹
+
+根入口：`@momots/host`
+
+子路径：`fingerprint`
+
+### projection
+
+综合 UA、语言、canvas/WebGL/audio、屏幕、字体、时区、导航计时等信息生成 SHA-1 指纹（小写 hex，40 位）。
+
+```ts
+function projection(): Promise<string>;
+```
+
+| 返回 | 说明 |
+| --- | --- |
+| `Promise<string>` | 40 位小写 hex 指纹字符串 |
+
+部分浏览器禁用 Canvas 或限制 AudioContext 时会回退为 `no_canvas` / `no_audio` 等占位值，仍参与哈希。
+
+```ts
+import { projection } from '@momots/host';
+
+const fp = await projection(); // => 40 位 hex
+```

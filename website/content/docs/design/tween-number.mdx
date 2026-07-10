@@ -1,0 +1,35 @@
+---
+title: TweenNumber
+description: 带 tween 过渡的数字展示组件。
+icon: Hash
+---
+
+`TweenNumber` 使用 motion 的 `animate` 与 `useMotionValue` 在数值变化时平滑过渡，并通过 `Intl.NumberFormat` 格式化输出，适合仪表盘、计数器与金额展示。
+
+<TweenNumberPlayground />
+
+## 使用
+
+```tsx
+import { TweenNumber } from "@momots/design/components/tween-number";
+
+<TweenNumber
+  value={1280}
+  prefix="¥"
+  format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `number \| string` | 目标数值 |
+| `duration` | `number` | 过渡时长（秒），默认 `0.6` |
+| `format` | `Intl.NumberFormatOptions` | 数字格式化选项 |
+| `locales` | `Intl.LocalesArgument` | 区域设置，默认 `zh-CN` |
+| `prefix` | `ReactNode` | 数字前缀 |
+| `suffix` | `ReactNode` | 数字后缀 |
+| `transition` | `Transition` | 覆盖 motion 过渡配置 |
+| `className` | `string` | 容器追加 Tailwind class |
+| `...props` | `ComponentProps<"div">` | 其余容器 div 属性 |

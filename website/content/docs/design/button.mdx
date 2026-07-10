@@ -1,0 +1,29 @@
+---
+title: Button
+description: 带 motion 点击反馈的基础按钮。
+icon: MousePointer2
+---
+
+`Button` 基于 `motion.button` 构建，提供 variant 与 size 变体，点击时有轻微缩放反馈，样式使用 Tailwind 默认主题 token。
+
+<ButtonPlayground />
+
+## 使用
+
+```tsx
+import { Button } from "@momots/design/components/button";
+
+<Button variant="default" size="default" onClick={() => console.log("clicked")}>
+  Continue
+</Button>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `variant` | `"default" \| "accent" \| "destructive" \| "outline" \| "secondary" \| "ghost" \| "link"` | 视觉变体 |
+| `size` | `"default" \| "sm" \| "lg" \| "icon" \| "icon-sm" \| "icon-lg"` | 尺寸 |
+| `className` | `string` | 追加 Tailwind class |
+| `disabled` | `boolean` | 禁用按钮 |
+| `...props` | `HTMLMotionProps<"button">` | 其余原生 button / motion 属性 |

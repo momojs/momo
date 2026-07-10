@@ -1,0 +1,12 @@
+[install]
+linker = "isolated"
+registry = "https://registry.npmjs.org"
+
+[test]
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = [
+  "packages/core/dist/**",
+  "packages/host/dist/**",
+  "packages/drive/dist/**",
+  "packages/design/dist/**",
+]
