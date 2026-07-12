@@ -29,8 +29,8 @@ function Indicator({ isChecked, keepMounted, ...props }: RadioIndicatorProps) {
           keepMounted={keepMounted}
           render={
             <motion.div
-              key='radio-group-indicator-circle'
-              data-slot='radio-group-indicator-circle'
+              key='radio-group-indicator'
+              data-slot='radio-group-indicator'
               className='relative flex items-center justify-center'
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -51,7 +51,7 @@ function Indicator({ isChecked, keepMounted, ...props }: RadioIndicatorProps) {
   );
 }
 
-interface RadioProps
+export interface RadioProps
   extends OmitOf<HTMLMotionProps<'button'>, 'className' | 'value'>,
     Pick<
       React.ComponentProps<typeof BaseRadio.Root>,
@@ -119,7 +119,7 @@ export function RadioGroup<T extends ControlValue>({
         {...props}
       >
         {options?.map(({ value }) => (
-          <Radio value={value}>
+          <Radio value={value} key={value}>
             <Indicator isChecked={current === value} />
           </Radio>
         ))}

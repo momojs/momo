@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef } from 'react';
 
 import { Toggle as BaseToggle } from '@base-ui/react/toggle';
 import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group';
@@ -9,7 +9,11 @@ import type { VariantProps } from 'cva';
 import { motion } from 'motion/react';
 import { isString } from 'remeda';
 
-import { Highlight, useHighlighter } from '../effects/highlight';
+import {
+  Highlight,
+  useHighlighter,
+  useHighlighters,
+} from '../effects/highlight';
 import type { RippleRef } from '../effects/ripples';
 import { Ripples } from '../effects/ripples';
 import { useControllableValue } from '../hooks/use-controllable-value';
@@ -30,24 +34,39 @@ const variants = {
         button: 'w-full px-2',
         segmented:
           'w-auto px-2.5 font-medium data-[pressed]:text-momo-fg-default',
-        tabbar: 'w-full flex-col px-2.5',
+        tabbar: 'w-full flex-col p-2.5',
       },
     },
     compoundVariants: [
       {
-        variant: 'segmented',
         size: 'sm',
+        variant: 'segmented',
         className: 'px-2.5',
       },
       {
-        variant: 'segmented',
         size: 'md',
+        variant: 'segmented',
         className: 'px-3',
       },
       {
-        variant: 'segmented',
         size: 'lg',
+        variant: 'segmented',
         className: 'px-4',
+      },
+      {
+        size: 'sm',
+        variant: 'tabbar',
+        className: 'h-13',
+      },
+      {
+        size: 'md',
+        variant: 'tabbar',
+        className: 'h-14',
+      },
+      {
+        size: 'lg',
+        variant: 'tabbar',
+        className: 'h-15',
       },
     ],
     defaultVariants: {
@@ -165,16 +184,11 @@ export function ToggleGroup<T extends string>({
   variant = 'button',
   onChange,
 }: ToggleGroupProps<T>) {
-  const hoverHighlighter = useHighlighter();
+  const hasHoverHighlight = variant === 'button' || variant === 'segmented';
+  const hoverHighlighter = useHighlighter({ enabled: hasHoverHighlight });
   const activeHighlighter = useHighlighter({ trigger: 'manual' });
 
-  const container = useCallback(
-    (instance: HTMLElement | null) => {
-      hoverHighlighter.container(instance);
-      activeHighlighter.container(instance);
-    },
-    [activeHighlighter.container, hoverHighlighter.container],
-  );
+  const { container } = useHighlighters(hoverHighlighter, activeHighlighter);
 
   const [
     current,
@@ -184,6 +198,12 @@ export function ToggleGroup<T extends string>({
     defaultValue,
     onChange,
   });
+
+  useEffect(() => {
+    if (!hasHoverHighlight) {
+      hoverHighlighter.exit();
+    }
+  }, [hasHoverHighlight, hoverHighlighter.exit]);
 
   useEffect(() => {
     if (current == null) {
@@ -217,10 +237,16 @@ export function ToggleGroup<T extends string>({
         setCurrent(value[0] as T);
       }}
     >
-      <Highlight
-        className='bg-momo-bg-surface'
-        highlightStyle={hoverHighlighter.style}
-      />
+      {hasHoverHighlight && (
+        <Highlight
+          className={
+            variant === 'segmented'
+              ? 'bg-momo-bg-surface-raised'
+              : 'bg-momo-bg-surface'
+          }
+          highlightStyle={hoverHighlighter.style}
+        />
+      )}
       <Highlight
         className={
           variant === 'segmented'
@@ -244,7 +270,7 @@ export function ToggleGroup<T extends string>({
             activeRef={
               current === value ? activeHighlighter.reference : undefined
             }
-            ref={hoverHighlighter.reference}
+            ref={hasHoverHighlight ? hoverHighlighter.reference : undefined}
             aria-label={textValue ?? (isString(label) ? label : value)}
           >
             {label ?? value}

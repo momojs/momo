@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks';
 import { swap } from '../shared/motion';
-import { cva } from '../tailwind';
+import { cva, toPixel } from '../tailwind';
 
 const variants = {
   root: cva({
@@ -39,7 +39,7 @@ const variants = {
       size: 'md',
     },
   }),
-  thumbContent: cva({
+  icon: cva({
     base: 'absolute inset-0 grid place-items-center',
     variants: {
       size: {
@@ -58,10 +58,19 @@ const variants = {
   }),
 };
 
-const pressedThumbWidth = {
-  sm: 20,
-  md: 24,
-  lg: 28,
+const animate = {
+  thumb: ({
+    size = 'md',
+    isPressed,
+  }: {
+    isPressed: boolean;
+  } & Pick<VariantProps<typeof variants.root>, 'size'>) => ({
+    width: {
+      sm: toPixel(isPressed ? 5 : 4),
+      md: toPixel(isPressed ? 6 : 5),
+      lg: toPixel(isPressed ? 7 : 6),
+    }[size],
+  }),
 } as const;
 
 interface SwitchProps
@@ -92,34 +101,33 @@ interface SwitchProps
       | 'checked'
       | 'onCheckedChange'
       | 'defaultChecked'
+      | 'className'
     > {
-  className?: string;
-  thumbUnchecked?: React.ReactNode;
-  thumbChecked?: React.ReactNode;
+  checkedIcon?: React.ReactNode;
+  uncheckedIcon?: React.ReactNode;
 }
 
 export function Switch({
-  size = 'md',
-  className,
-  thumbChecked,
-  thumbUnchecked,
-  disabled,
-  nativeButton,
+  id,
   name,
   form,
   value,
-  uncheckedValue,
+  checked,
   readOnly,
   required,
   inputRef,
-  id,
-  checked,
+  disabled,
+  className,
+  nativeButton,
+  checkedIcon,
+  uncheckedIcon,
+  uncheckedValue,
   defaultChecked,
+  size = 'md',
   onCheckedChange,
-
-  onTap,
-  onTapStart,
   onTapCancel,
+  onTapStart,
+  onTap,
   ...thumbProps
 }: SwitchProps) {
   const [isPressed, setIsPressed] = useState(false);
@@ -138,37 +146,41 @@ export function Switch({
 
   return (
     <BaseSwitch.Root
-      disabled={disabled}
-      checked={isChecked}
-      onCheckedChange={setIsChecked}
+      id={id}
       name={name}
       form={form}
       value={value}
-      uncheckedValue={uncheckedValue}
-      nativeButton={nativeButton}
+      disabled={disabled}
+      checked={isChecked}
       readOnly={readOnly}
       required={required}
       inputRef={inputRef}
-      id={id}
+      nativeButton={nativeButton}
+      uncheckedValue={uncheckedValue}
       className={variants.root({ size, className })}
+      onCheckedChange={setIsChecked}
     >
       <BaseSwitch.Thumb
         className={variants.thumb({ size })}
         render={
           <motion.span
+            layout='position'
             data-slot='switch-thumb'
-            layout
             whileTap={{ scale: 0.96 }}
+            animate={animate.thumb({ size, isPressed })}
             onTapStart={(event, info) => {
               onTapStart?.(event, info);
               setIsPressed(true);
             }}
             initial
-            onTapCancel={() => setIsPressed(false)}
-            onTap={() => setIsPressed(false)}
-            animate={
-              isPressed ? { width: pressedThumbWidth[size ?? 'md'] } : undefined
-            }
+            onTapCancel={(event, info) => {
+              onTapCancel?.(event, info);
+              setIsPressed(false);
+            }}
+            onTap={(event, info) => {
+              onTapCancel?.(event, info);
+              setIsPressed(false);
+            }}
             {...thumbProps}
           />
         }
@@ -176,23 +188,23 @@ export function Switch({
         <AnimatePresence mode='popLayout' initial={false}>
           {isChecked ? (
             <motion.div
-              className={variants.thumbContent({
+              className={variants.icon({
                 size,
                 state: 'checked',
               })}
               {...swap}
             >
-              {thumbChecked}
+              {checkedIcon}
             </motion.div>
           ) : (
             <motion.div
-              className={variants.thumbContent({
+              className={variants.icon({
                 size,
                 state: 'unchecked',
               })}
               {...swap}
             >
-              {thumbUnchecked}
+              {uncheckedIcon}
             </motion.div>
           )}
         </AnimatePresence>

@@ -2,18 +2,56 @@
 
 import type { CheckboxRootProps as BaseCheckboxRootProps } from '@base-ui/react/checkbox';
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';
+import type { VariantProps } from 'cva';
 import type { HTMLMotionProps, SVGMotionProps } from 'motion/react';
 import { motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks';
-import { cx } from '../shared';
+import { cva } from '../tailwind';
 
-interface IndicatorProps extends SVGMotionProps<SVGSVGElement> {
+const variants = {
+  root: cva({
+    base: 'peer grid shrink-0 place-items-center rounded-momo-sm border border-momo-border-input bg-momo-bg-canvas text-momo-fg-on-brand shadow-xs outline-none transition-[background-color,border-color,box-shadow,color,opacity,transform] focus-visible:border-momo-ring-focus focus-visible:ring-[3px] focus-visible:ring-momo-ring-focus/50 data-[checked]:border-momo-bg-brand data-[checked]:bg-momo-bg-brand data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[indeterminate]:border-momo-bg-brand data-[indeterminate]:bg-momo-bg-brand data-[invalid]:border-momo-border-danger data-[invalid]:ring-momo-fg-danger/20 data-[readonly]:cursor-default',
+    variants: {
+      size: {
+        sm: 'size-4',
+        md: 'size-5',
+        lg: 'size-6',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }),
+  indicator: cva({
+    base: 'shrink-0',
+    variants: {
+      size: {
+        sm: 'size-3',
+        md: 'size-3.5',
+        lg: 'size-4',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }),
+};
+
+interface IndicatorProps
+  extends SVGMotionProps<SVGSVGElement>,
+    VariantProps<typeof variants.indicator> {
   isChecked?: boolean;
   isIndeterminate?: boolean;
 }
 
-function Indicator({ isChecked, isIndeterminate, ...props }: IndicatorProps) {
+function Indicator({
+  isChecked,
+  isIndeterminate,
+  className,
+  size,
+  ...props
+}: IndicatorProps) {
   return (
     <BaseCheckbox.Indicator
       keepMounted
@@ -25,6 +63,7 @@ function Indicator({ isChecked, isIndeterminate, ...props }: IndicatorProps) {
           viewBox='0 0 24 24'
           strokeWidth='3.5'
           stroke='currentColor'
+          className={variants.indicator({ size, className })}
           initial='unchecked'
           animate={isChecked ? 'checked' : 'unchecked'}
           {...props}
@@ -74,7 +113,8 @@ function Indicator({ isChecked, isIndeterminate, ...props }: IndicatorProps) {
 }
 
 export interface CheckboxProps
-  extends Omit<
+  extends VariantProps<typeof variants.root>,
+    Omit<
       HTMLMotionProps<'button'>,
       | 'children'
       | 'className'
@@ -126,6 +166,7 @@ export function Checkbox({
   inputRef,
   id,
   className,
+  size = 'md',
   ...props
 }: CheckboxProps) {
   const [isChecked = false, setIsChecked] = useControllableValue(
@@ -162,15 +203,16 @@ export function Checkbox({
           data-slot='checkbox'
           whileTap={{ scale: 0.95 }}
           whileHover={{ scale: 1.05 }}
-          className={cx(
-            'peer grid size-4 shrink-0 place-items-center rounded-momo-sm border border-momo-border-input bg-momo-bg-canvas text-momo-fg-on-brand shadow-xs outline-none transition-[background-color,border-color,box-shadow,color,transform] focus-visible:border-momo-ring-focus focus-visible:ring-[3px] focus-visible:ring-momo-ring-focus/50 data-[checked]:border-momo-bg-brand data-[checked]:bg-momo-bg-brand data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[indeterminate]:border-momo-bg-brand data-[indeterminate]:bg-momo-bg-brand data-[invalid]:border-momo-border-danger data-[invalid]:ring-momo-fg-danger/20 data-[readonly]:cursor-default',
-            className,
-          )}
+          className={variants.root({ size, className })}
           {...props}
         />
       }
     >
-      <Indicator isChecked={isChecked} isIndeterminate={indeterminate} />
+      <Indicator
+        size={size}
+        isChecked={isChecked}
+        isIndeterminate={indeterminate}
+      />
     </BaseCheckbox.Root>
   );
 }

@@ -14,6 +14,7 @@ icon: SquareCheck
 import { Checkbox } from "@momots/design/components/checkbox";
 
 <Checkbox
+  size="md"
   checked={accepted}
   aria-label="Accept terms"
   onCheckedChange={setAccepted}
@@ -26,6 +27,7 @@ import { Checkbox } from "@momots/design/components/checkbox";
 | --- | --- | --- |
 | `checked` | `boolean` | 受控勾选状态 |
 | `defaultChecked` | `boolean` | 非受控默认状态 |
+| `size` | `"sm" \| "md" \| "lg"` | 控件尺寸，默认 `"md"` |
 | `indeterminate` | `boolean` | 是否显示 mixed 状态 |
 | `disabled` | `boolean` | 是否禁用 |
 | `readOnly` | `boolean` | 是否只读 |

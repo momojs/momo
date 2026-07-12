@@ -7,6 +7,7 @@ import type { AccordionRootProps } from '@base-ui/react/accordion';
 import { Accordion as BaseAccordion } from '@base-ui/react/accordion';
 import { ChevronDownIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
+import { asArray } from '@momots/core';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue, usePresenceGate } from '../hooks';
@@ -139,38 +140,41 @@ export function Accordion<T extends ControlValue>({
   value,
   options = [],
   className,
+  defaultValue,
   multiple = false,
   onValueChange,
   ...props
 }: AccordionProps<T>) {
   const [currents, setCurrents] = useControllableValue({
     value,
+    defaultValue,
     onChange: onValueChange,
   });
-  const currentValues = Array.isArray(currents)
-    ? currents
-    : currents == null
-      ? []
-      : [currents];
+
+  const values = asArray(currents);
 
   return (
     <MotionConfig
-      transition={{ type: 'spring', bounce: 0.2, visualDuration: 0.4 }}
+      transition={{
+        type: 'spring',
+        bounce: 0.2,
+        visualDuration: 0.4,
+      }}
     >
       <BaseAccordion.Root
         value={currents}
+        multiple={multiple}
         onValueChange={setCurrents}
         className={cx(
           'w-full min-w-72 max-w-lg overflow-hidden rounded-momo-lg border border-momo-border-default bg-momo-bg-surface-raised text-momo-fg-default shadow-momo-sm',
           className,
         )}
-        multiple={multiple}
         {...props}
       >
         {options.map(({ value, label, content }) => (
           <Item
             key={value}
-            open={currentValues.includes(value)}
+            open={values.includes(value)}
             value={value}
             title={label}
             content={content ?? label}

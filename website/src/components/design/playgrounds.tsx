@@ -100,6 +100,7 @@ function CheckboxControl({
   return (
     <label className='inline-flex h-8 items-center gap-2 text-xs font-medium text-fd-muted-foreground'>
       <Checkbox
+        size='sm'
         checked={checked}
         aria-label={label}
         onCheckedChange={onChange}
@@ -319,11 +320,18 @@ export function CheckboxPlayground() {
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [indeterminate, setIndeterminate] = useState(false);
+  const [size, setSize] = useState<ControlSizeValue>('md');
 
   return (
     <PlaygroundFrame
       controls={
         <>
+          <SelectControl
+            label='Size'
+            value={size}
+            options={controlSizeOptions}
+            onChange={setSize}
+          />
           <CheckboxControl
             label='Disabled'
             checked={disabled}
@@ -344,12 +352,14 @@ export function CheckboxPlayground() {
       state={
         <code>
           checked: {String(checked)}; indeterminate: {String(indeterminate)};
-          disabled: {String(disabled)}; readOnly: {String(readOnly)}
+          disabled: {String(disabled)}; readOnly: {String(readOnly)}; size:{' '}
+          {size}
         </code>
       }
     >
       <label className='inline-flex max-w-sm items-start gap-3 text-left'>
         <Checkbox
+          size={size}
           checked={checked}
           disabled={disabled}
           readOnly={readOnly}

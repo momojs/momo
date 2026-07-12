@@ -2,10 +2,10 @@
 
 import {
   createContext,
-  Fragment,
+  useCallback,
   useContext,
   useEffect,
-  useId,
+  useMemo,
   useRef,
 } from 'react';
 
@@ -16,6 +16,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { OmitOf } from '@momots/core';
+import { eliminate } from '@momots/core';
 import type { VariantProps } from 'cva';
 import { isAfter } from 'date-fns';
 import {
@@ -26,6 +27,7 @@ import {
 } from 'motion/react';
 import type {
   CalendarMonth,
+  CalendarWeek,
   DayButton,
   DayPickerProps,
   Locale,
@@ -33,8 +35,13 @@ import type {
   PropsSingle,
 } from 'react-day-picker';
 import { DayPicker, getDefaultClassNames } from 'react-day-picker';
-import { clone, entries } from 'remeda';
+import { clone, entries, omit } from 'remeda';
 
+import {
+  Highlight,
+  useHighlighter,
+  useHighlighters,
+} from '../effects/highlight';
 import { usePrevious } from '../hooks';
 import { cx } from '../shared';
 import { cva } from '../tailwind';
@@ -53,8 +60,7 @@ const variants = {
     base: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-momo-ring-focus disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 size-(--cell-size) p-0 select-none aria-disabled:opacity-50',
     variants: {
       variant: {
-        default:
-          'bg-momo-bg-brand text-momo-fg-on-brand shadow hover:bg-momo-bg-brand-hover',
+        default: 'bg-momo-bg-brand text-momo-fg-on-brand shadow ',
         destructive:
           'bg-momo-bg-danger text-momo-fg-on-danger shadow-sm hover:opacity-90',
         outline:
@@ -96,7 +102,16 @@ const variants = {
     },
   }),
   button: cva({
-    base: 'relative isolate z-10 inline-flex aspect-square size-auto w-full min-w-(--cell-size) flex-col items-center justify-center gap-1 rounded-md border-0 bg-transparent p-0 text-sm font-medium leading-none text-momo-fg-default transition-colors disabled:pointer-events-none disabled:opacity-50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-momo-bg-brand data-[range-end=true]:text-momo-fg-on-brand data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-momo-bg-surface-muted data-[range-middle=true]:text-momo-fg-default data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-momo-bg-brand data-[range-start=true]:text-momo-fg-on-brand data-[selected-single=true]:bg-momo-bg-brand data-[selected-single=true]:text-momo-fg-on-brand [&>span]:text-xs [&>span]:opacity-70',
+    base: 'relative isolate z-10 inline-flex aspect-square size-auto w-full min-w-(--cell-size) flex-col items-center justify-center gap-1 rounded-md border-0 bg-transparent p-0 text-sm font-medium leading-none text-momo-fg-default transition-colors disabled:pointer-events-none disabled:opacity-50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-momo-bg-brand data-[range-end=true]:text-momo-fg-on-brand data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-momo-bg-brand data-[range-start=true]:text-momo-fg-on-brand data-[selected-single=true]:bg-momo-bg-brand data-[selected-single=true]:text-momo-fg-on-brand [&>span]:text-xs [&>span]:opacity-70 hover:text-momo-fg-on-brand',
+    variants: {
+      selected: {
+        true: 'text-momo-fg-on-brand',
+        false: 'text-momo-fg-default',
+      },
+    },
+    defaultVariants: {
+      selected: false,
+    },
   }),
 };
 
@@ -138,7 +153,7 @@ const toClsx = ({ caption, cell, pager }: Variants): typeof names => {
     caption_label: variants.caption({
       layout: caption?.layout === 'label' ? 'label' : 'dropdown',
     }),
-    month_grid: cx('w-full border-collapse'),
+    month_grid: cx('w-full border-collapse relative'),
     weekdays: cx('flex'),
     weekday: cx(
       'flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-momo-fg-muted select-none',
@@ -146,25 +161,37 @@ const toClsx = ({ caption, cell, pager }: Variants): typeof names => {
     week: cx('mt-2 flex w-full'),
     week_number_header: cx('w-(--cell-size) select-none'),
     week_number: cx('text-[0.8rem] text-momo-fg-muted select-none'),
-    day: variants.cell({ showWeekNumber: Boolean(cell?.showWeekNumber) }),
+    day_button: variants.cell({
+      showWeekNumber: Boolean(cell?.showWeekNumber),
+    }),
     range_start: cx(
       'relative isolate z-0 rounded-l-(--cell-radius) bg-momo-bg-surface-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-momo-bg-surface-muted',
     ),
-    range_middle: cx('rounded-none'),
+    range_middle: cx('bg-momo-bg-surface-muted'),
     range_end: cx(
       'relative isolate z-0 rounded-r-(--cell-radius) bg-momo-bg-surface-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-momo-bg-surface-muted',
     ),
     today: cx(
-      'rounded-(--cell-radius) bg-momo-bg-surface-muted text-momo-fg-default data-[selected=true]:rounded-none',
+      'rounded-(--cell-radius) bg-momo-bg-surface-muted text-momo-fg-default',
     ),
     outside: cx('text-momo-fg-muted aria-selected:text-momo-fg-muted'),
     disabled: cx('text-momo-fg-muted opacity-50'),
     hidden: cx('invisible'),
-  }).forEach(([key, value]) => {
+  } satisfies Partial<typeof names>).forEach(([key, value]) => {
     res[key] = cx(res[key], value);
   });
   return res;
 };
+
+const TableContext = createContext<{
+  setHoverCellRef: (cell: HTMLButtonElement | null) => void;
+  setSelectedCellRef: (cell: HTMLButtonElement | null) => void;
+}>(null!);
+
+const MonthContext = createContext<{
+  calendarMonth: CalendarMonth;
+  displayIndex: number;
+}>(null!);
 
 const today = new Date();
 
@@ -172,9 +199,14 @@ interface CellProps extends React.ComponentProps<typeof DayButton> {
   locale?: Partial<Locale>;
 }
 
-function Cell({ id, day, locale, modifiers, className, ...props }: CellProps) {
-  const ele = useRef<HTMLButtonElement>(null);
-
+function CellButton({
+  id,
+  day,
+  locale,
+  modifiers,
+  className,
+  ...props
+}: CellProps) {
   const {
     focused,
     selected,
@@ -183,88 +215,234 @@ function Cell({ id, day, locale, modifiers, className, ...props }: CellProps) {
     range_middle, //
   } = modifiers;
 
+  const ele = useRef<HTMLButtonElement>(null!);
+
+  const { setHoverCellRef, setSelectedCellRef } = useContext(TableContext);
+
   useEffect(() => {
-    const { current } = ele;
-    if (focused) current?.focus();
-  }, [focused]);
+    return setHoverCellRef(ele.current);
+  }, []);
+
+  useEffect(() => {
+    if (selected) {
+      return setSelectedCellRef(ele.current);
+    }
+  }, [selected]);
 
   return (
-    <Fragment>
-      <button
-        ref={ele}
-        type='button'
-        data-slot='CalendarCell'
-        data-day={day.date.toLocaleDateString(locale?.code)}
-        data-selected-single={
-          selected && !range_end && !range_start && !range_middle
-        }
-        data-range-end={range_end}
-        data-range-start={range_start}
-        data-range-middle={range_middle}
-        className={variants.button({ className: cx(names.day, className) })}
-        {...props}
-      />
-      <AnimatePresence initial={false}>
-        {selected && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className='absolute inset-0 rounded-md bg-momo-bg-brand'
-            layoutId={`${id}-selected-cell`}
-          />
-        )}
-      </AnimatePresence>
-    </Fragment>
+    <button
+      ref={ele}
+      type='button'
+      data-slot='CalendarCell'
+      data-focused={focused}
+      data-range-end={range_end}
+      data-range-start={range_start}
+      data-range-middle={range_middle}
+      className={variants.button({ className, selected })}
+      {...props}
+    />
   );
 }
 
-const CalendarContext = createContext<{
-  calendarMonth: CalendarMonth;
-  displayIndex: number;
-}>(null!);
+interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {}
 
-function MonthGrid({
-  onDrag,
-  onDragEnd,
-  onDragStart,
+function Table({
+  children,
   onAnimationStart,
+  onDragStart,
+  onDragEnd,
+  onDrag,
   ...props
-}: React.TableHTMLAttributes<HTMLTableElement>) {
+}: TableProps) {
   const {
-    date: curr, //
-  } = useContext(CalendarContext).calendarMonth;
+    calendarMonth, //
+  } = useContext(MonthContext);
 
-  const prev = usePrevious(curr);
+  const { date: current } = calendarMonth;
 
-  const direction = prev ? (isAfter(curr, prev) ? 1 : -1) : 0;
+  const previous = usePrevious(current);
+
+  const direction = previous ? (isAfter(current, previous) ? 1 : -1) : 0;
+
+  const highlighter = {
+    hover: useHighlighter({ trigger: 'hover' }),
+    select: useHighlighter({ trigger: 'manual' }),
+  };
+
+  const highlighters = useHighlighters(
+    highlighter.hover, //
+    highlighter.select,
+  );
+
+  const setHoverCellRef = useCallback(
+    (cell: HTMLButtonElement | null) => {
+      highlighter.hover.reference(cell);
+    },
+    [highlighter.hover.reference],
+  );
+
+  const setSelectedCellRef = useCallback(
+    (cell: HTMLButtonElement | null) => {
+      highlighter.select.reference(cell);
+    },
+    [highlighter.select.reference],
+  );
 
   return (
-    <AnimatePresence initial={false} mode='popLayout' custom={direction}>
-      <motion.table
-        data-slot='CalendarMonthGrid'
-        key={props['aria-label']}
-        initial={{
-          opacity: 1,
-          x: direction * 200 + '%',
-        }}
-        animate={{
-          x: 0,
-          opacity: 1,
-        }}
-        exit={{
-          opacity: 1,
-          x: direction * -200 + '%',
-        }}
+    <TableContext.Provider
+      value={useMemo(
+        () => ({
+          setHoverCellRef,
+          setSelectedCellRef,
+        }),
+        [setHoverCellRef, setSelectedCellRef],
+      )}
+    >
+      <AnimatePresence initial={false} custom={direction} mode='popLayout'>
+        <motion.table
+          ref={highlighters.container}
+          key={props['aria-label']}
+          custom={direction}
+          data-slot='CalendarMonthGrid'
+          variants={{
+            enter: (direction: number) => ({
+              opacity: 1,
+              x: `${direction * 200}%`,
+            }),
+            center: {
+              x: 0,
+              opacity: 1,
+            },
+            exit: (direction: number) => ({
+              opacity: 1,
+              x: `${direction * -200}%`,
+            }),
+          }}
+          initial='enter'
+          animate='center'
+          exit='exit'
+          {...props}
+        >
+          <Highlight
+            className='bg-momo-bg-brand-hover'
+            highlightStyle={highlighter.hover.style}
+          />
+          <Highlight
+            className='bg-momo-bg-brand-active'
+            highlightStyle={highlighter.select.style}
+          />
+          {children}
+        </motion.table>
+      </AnimatePresence>
+    </TableContext.Provider>
+  );
+}
+
+function Month({
+  displayIndex,
+  calendarMonth,
+  ...props
+}: {
+  calendarMonth: CalendarMonth;
+  displayIndex: number;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <MonthContext.Provider value={{ displayIndex, calendarMonth }}>
+      <div data-slot='CalendarMonth' {...props} />
+    </MonthContext.Provider>
+  );
+}
+
+function Chevron({
+  className,
+  orientation,
+  ...props
+}: {
+  size?: number;
+  disabled?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+  orientation?: 'up' | 'down' | 'left' | 'right';
+}) {
+  if (orientation === 'left') {
+    return (
+      <HugeiconsIcon
+        icon={ChevronLeftIcon}
+        className={cx('cn-rtl-flip size-4', className)}
+        strokeWidth={1.8}
         {...props}
       />
-    </AnimatePresence>
+    );
+  }
+
+  if (orientation === 'right') {
+    return (
+      <HugeiconsIcon
+        icon={ChevronRightIcon}
+        className={cx('cn-rtl-flip size-4', className)}
+        strokeWidth={1.8}
+        {...props}
+      />
+    );
+  }
+
+  return (
+    <HugeiconsIcon
+      icon={ChevronDownIcon}
+      className={cx('size-4', className)}
+      size={16}
+      strokeWidth={1.8}
+      {...props}
+    />
+  );
+}
+
+function WeekNumber({
+  week,
+  children,
+  ...props
+}: {
+  week: CalendarWeek;
+} & React.ThHTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <td data-slot='CalendarWeekNumber' data-week={week.weekNumber} {...props}>
+      <div className='flex size-(--cell-size) items-center justify-center text-center'>
+        {children}
+      </div>
+    </td>
+  );
+}
+
+function MonthButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.button
+      whileTap={eliminate(!reduced && { scale: 0.92 })}
+      {...omit(props, MOTION_ATTRS)}
+    />
   );
 }
 
 export interface CalendarProps
   extends Variants,
     OmitOf<PropsBase & PropsSingle, 'captionLayout' | 'components' | 'mode'> {}
+
+const MOTION_ATTRS = [
+  'onDrag',
+  'onDragEnd',
+  'onDragStart',
+  'onAnimationStart',
+] as const;
+
+const components: NonNullable<DayPickerProps['components']> = {
+  Month,
+  Chevron,
+  WeekNumber,
+  MonthGrid: Table,
+  DayButton: CellButton,
+  NextMonthButton: MonthButton,
+  PreviousMonthButton: MonthButton,
+};
 
 export function Calendar({
   cell,
@@ -279,10 +457,6 @@ export function Calendar({
   onMonthChange,
   ...props
 }: CalendarProps) {
-  const id = useId();
-
-  const reduced = useReducedMotion();
-
   return (
     <MotionConfig
       transition={{
@@ -293,111 +467,18 @@ export function Calendar({
     >
       <DayPicker
         mode='single'
-        selected={today}
-        showOutsideDays={showOutsideDays}
-        showWeekNumber={showWeekNumber}
-        className={cx(variants.calendar(), className)}
-        captionLayout={caption?.layout}
         locale={locale}
+        selected={today}
+        captionLayout={caption?.layout}
+        showWeekNumber={showWeekNumber}
+        showOutsideDays={showOutsideDays}
+        className={variants.calendar({ className })}
+        classNames={toClsx({ caption, cell, pager })}
+        components={components}
         formatters={{
           formatMonthDropdown: (date) =>
             date.toLocaleString(locale?.code, { month: 'short' }),
           ...formatters,
-        }}
-        classNames={toClsx({ caption, cell, pager })}
-        components={{
-          MonthGrid,
-          Month: ({
-            displayIndex,
-            calendarMonth, //
-            ...props
-          }) => (
-            <CalendarContext.Provider
-              value={{
-                displayIndex,
-                calendarMonth, //
-              }}
-            >
-              <div data-slot='CalendarMonth' {...props} />
-            </CalendarContext.Provider>
-          ),
-          PreviousMonthButton: ({
-            className,
-            onAnimationStart: _onAnimationStart,
-            onDrag: _onDrag,
-            onDragEnd: _onDragEnd,
-            onDragStart: _onDragStart,
-            ...props
-          }) => {
-            return (
-              <motion.button
-                whileTap={reduced ? undefined : { scale: 0.92 }}
-                className={cx(className)}
-                {...props}
-              />
-            );
-          },
-          NextMonthButton: ({
-            className,
-            onAnimationStart: _onAnimationStart,
-            onDrag: _onDrag,
-            onDragEnd: _onDragEnd,
-            onDragStart: _onDragStart,
-            ...props
-          }) => {
-            return (
-              <motion.button
-                whileTap={reduced ? undefined : { scale: 0.92 }}
-                className={cx(className)}
-                {...props}
-              />
-            );
-          },
-          Chevron: ({ className, orientation, ...props }) => {
-            if (orientation === 'left') {
-              return (
-                <HugeiconsIcon
-                  icon={ChevronLeftIcon}
-                  className={cx('cn-rtl-flip size-4', className)}
-                  size={16}
-                  strokeWidth={1.8}
-                  {...props}
-                />
-              );
-            }
-
-            if (orientation === 'right') {
-              return (
-                <HugeiconsIcon
-                  icon={ChevronRightIcon}
-                  className={cx('cn-rtl-flip size-4', className)}
-                  size={16}
-                  strokeWidth={1.8}
-                  {...props}
-                />
-              );
-            }
-
-            return (
-              <HugeiconsIcon
-                icon={ChevronDownIcon}
-                className={cx('size-4', className)}
-                size={16}
-                strokeWidth={1.8}
-                {...props}
-              />
-            );
-          },
-          DayButton: (props) => <Cell id={id} locale={locale} {...props} />,
-          WeekNumber: ({ children, ...props }) => {
-            return (
-              <td {...props}>
-                <div className='flex size-(--cell-size) items-center justify-center text-center'>
-                  {children}
-                </div>
-              </td>
-            );
-          },
         }}
         {...props}
       />

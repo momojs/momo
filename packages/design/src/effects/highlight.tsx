@@ -115,25 +115,25 @@ export function useHighlighter<
 
         return () => {
           instance.removeEventListener('click', click);
-          if (referenceRef.current === instance) exit();
         };
       }
 
-      const focus = () => {
-        setReference(instance);
-      };
-      const blur = () => {
-        if (referenceRef.current === instance) exit();
-      };
+      if (trigger === 'focus') {
+        const focus = () => {
+          setReference(instance);
+        };
+        const blur = () => {
+          if (referenceRef.current === instance) exit();
+        };
 
-      instance.addEventListener('focus', focus);
-      instance.addEventListener('blur', blur);
+        instance.addEventListener('blur', blur);
+        instance.addEventListener('focus', focus);
 
-      return () => {
-        instance.removeEventListener('focus', focus);
-        instance.removeEventListener('blur', blur);
-        if (referenceRef.current === instance) exit();
-      };
+        return () => {
+          instance.removeEventListener('blur', blur);
+          instance.removeEventListener('focus', focus);
+        };
+      }
     },
     [exit, setReference, trigger],
   );
@@ -142,8 +142,11 @@ export function useHighlighter<
     (instance) => {
       containerRef.current = instance;
       flush();
+      return () => {
+        exit();
+      };
     },
-    [flush],
+    [exit, flush],
   );
 
   return {
@@ -152,6 +155,54 @@ export function useHighlighter<
     flush,
     reference,
     container,
+  };
+}
+
+export function useHighlighters(...args: Highlighter<Element, Element>[]) {
+  const highlightersRef = useRef(args);
+  highlightersRef.current = args;
+
+  const exit = useCallback(() => {
+    highlightersRef.current.forEach((highlighter) => {
+      highlighter.exit();
+    });
+  }, []);
+
+  const flush = useCallback(() => {
+    highlightersRef.current.forEach((highlighter) => {
+      highlighter.flush();
+    });
+  }, []);
+
+  const reference = useCallback<RefCallback<Element>>((instance) => {
+    const cleanups: Array<() => void> = [];
+
+    highlightersRef.current.forEach((highlighter) => {
+      const cleanup = highlighter.reference(instance);
+
+      if (typeof cleanup === 'function') {
+        cleanups.push(cleanup);
+      }
+    });
+
+    if (cleanups.length > 0) {
+      return () => {
+        cleanups.forEach((cleanup) => cleanup());
+      };
+    }
+  }, []);
+
+  const container = useCallback<RefCallback<Element>>((instance) => {
+    highlightersRef.current.forEach((highlighter) => {
+      highlighter.container(instance);
+    });
+  }, []);
+
+  return {
+    exit,
+    flush,
+    container,
+    reference,
   };
 }
 
