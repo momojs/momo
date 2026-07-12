@@ -16,11 +16,6 @@
       "bun": "./src/build.ts",
       "import": "./dist/build.js"
     },
-    "./test": {
-      "types": "./src/test.ts",
-      "bun": "./src/test.ts",
-      "import": "./dist/test.js"
-    },
     "./config": {
       "types": "./src/config.ts",
       "bun": "./src/config.ts",
@@ -34,16 +29,8 @@
   "scripts": {
     "build": "bun run ./src/bin.ts build",
     "momo": "bun run ./src/bin.ts",
-    "test": "bun test src",
-    "test:webview": "momo test",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "types": "tsc --project tsconfig.build.json"
-  },
-  "dependencies": {
-    "istanbul-lib-coverage": "^3.2.2",
-    "istanbul-lib-instrument": "^6.0.3",
-    "istanbul-lib-report": "^3.0.1",
-    "istanbul-reports": "^3.2.0"
   }
 }

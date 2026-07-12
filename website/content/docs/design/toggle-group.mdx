@@ -4,7 +4,7 @@ description: 图标工具组，适合单选工具栏和编辑器控制。
 icon: MousePointerClick
 ---
 
-`ToggleGroup` 使用 Base UI ToggleGroup 提供键盘和选择语义，用 motion 绘制选中态指示器，支持 `button`、`segmented` 与 `tabbar` 视觉变体。
+`ToggleGroup` 使用 Base UI ToggleGroup 提供键盘和选择语义，用 motion 绘制选中态指示器，支持 `button`、`segmented` 与 `tabbar` 视觉变体。按钮、指示器、边框与 focus ring 都消费 momo semantic token。
 
 <ToggleGroupPlayground />
 
@@ -17,9 +17,9 @@ import { ToggleGroup } from "@momots/design/components/toggle-group";
   value={align}
   onChange={setAlign}
   options={[
-    { value: "left", title: "Left", icon: <LeftIcon /> },
-    { value: "center", title: "Center", icon: <CenterIcon /> },
-    { value: "right", title: "Right", icon: <RightIcon /> },
+    { value: "left", label: "Left", icon: <LeftIcon /> },
+    { value: "center", label: "Center", icon: <CenterIcon /> },
+    { value: "right", label: "Right", icon: <RightIcon /> },
   ]}
 />
 ```

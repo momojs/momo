@@ -157,7 +157,7 @@ const OSS_ITEMS: OssItem[] = [
   { name: '@momots/core', meta: 'pure fns', base: 2.4, icon: Boxes },
   { name: '@momots/host', meta: 'runtime', base: 1.8, icon: Blocks },
   { name: '@momots/drive', meta: 'fetch', base: 3.1, icon: Zap },
-  { name: '@momots/cli', meta: 'bun webview', base: 0.9, icon: Terminal },
+  { name: '@momots/cli', meta: 'bun build', base: 0.9, icon: Terminal },
   { name: 'remeda', meta: 'peer', base: -0.6, icon: Package },
   { name: 'type-fest', meta: 'types', base: 1.2, icon: Package },
 ];

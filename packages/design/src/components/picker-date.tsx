@@ -132,12 +132,16 @@ export function PickerDate({
   defaultDate = today,
   onChange,
 }: PickerDateProps) {
-  const [date = today, onDateChange] = useControllableValue({
-    value,
-    onChange,
-    defaultDate,
-    defaultValuePropName: 'defaultDate',
-  });
+  const [date = today, onDateChange] = useControllableValue(
+    {
+      value,
+      onChange,
+      defaultDate,
+    },
+    {
+      defaultValuePropName: 'defaultDate',
+    },
+  );
 
   return (
     <PickerCore<number>

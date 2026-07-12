@@ -1,340 +1,181 @@
-/* Anthropic 主题，基于 packages/design/DESIGN.md 的 Claude.com 视觉规范。
+@import "./semantic.css";
 
-   采用 shadcn 风格的 token 体系，并按 momo 前缀分层：
-
-   1. --momo-palette-*  主题内部 reference 色阶，不建议组件直接消费。
-   2. --momo-color-*    语义层，文本、背景、边框、填充、反馈状态。
-   3. --momo-font-* / --momo-radius-* / --momo-space-* / --momo-shadow-*
-      基础层，字体族、圆角、间距、阴影，可通过 Tailwind v4 任意值语法
-      消费，例如 p-(--momo-space-lg)。
-   4. --momo-background / --momo-primary / --momo-border / --momo-ring 等
-      短语义 alias，组件源码（button、calendar、switch）直接引用，也是
-      切换主题时唯一需要覆盖的一层。
-   5. --color-momo-* / --radius-momo-* / --font-momo-* / --text-momo-*
-      Tailwind v4 theme inline 注册的 token，对应 bg-momo-primary、
-      rounded-momo-md、font-momo-display、text-momo-body-md 等 utility。
-      这一层只需注册一次，新增主题只需提供第 1-4 层的值。
-
-   应用侧引入方式：
-
-     import "tailwindcss";
-     import "@momots/design/themes/anthropic.css";
-
-     <div className="theme-anthropic">...</div>
-     <div className="theme-anthropic dark">...</div>
-*/
+@theme {
+  --color-anthropic-coral-500: #cc785c;
+  --color-anthropic-coral-600: #b96549;
+  --color-anthropic-coral-700: #a9583e;
+  --color-anthropic-coral-100: #e6dfd8;
+  --color-anthropic-cream-50: #faf9f5;
+  --color-anthropic-cream-100: #f5f0e8;
+  --color-anthropic-cream-200: #efe9de;
+  --color-anthropic-cream-300: #ebe6df;
+  --color-anthropic-cream-400: #e8e0d2;
+  --color-anthropic-ink-950: #141413;
+  --color-anthropic-ink-900: #181715;
+  --color-anthropic-ink-850: #1f1e1b;
+  --color-anthropic-ink-800: #252320;
+  --color-anthropic-ink-700: #3d3d3a;
+  --color-anthropic-ink-500: #6c6a64;
+  --color-anthropic-ink-400: #8e8b82;
+  --color-anthropic-ink-350: #a09d96;
+  --color-anthropic-teal-500: #5db8a6;
+  --color-anthropic-green-500: #5db872;
+  --color-anthropic-amber-500: #e8a55a;
+  --color-anthropic-yellow-600: #d4a017;
+  --color-anthropic-red-600: #c64545;
+}
 
 .theme-anthropic {
   color-scheme: light;
+  background: var(--momo-bg-canvas);
+  color: var(--momo-fg-default);
+  font-family: var(--momo-font-body);
 
-  /* ---------------------------------------------------------------- */
-  /* 1. Palette —— reference 色阶                                      */
-  /* ---------------------------------------------------------------- */
-  --momo-palette-coral: #cc785c;
-  --momo-palette-coral-active: #a9583e;
-  --momo-palette-coral-disabled: #e6dfd8;
+  --momo-bg-canvas: var(--color-anthropic-cream-50);
+  --momo-bg-surface: var(--color-anthropic-cream-100);
+  --momo-bg-surface-muted: var(--color-anthropic-cream-200);
+  --momo-bg-surface-raised: var(--color-anthropic-cream-50);
+  --momo-bg-overlay: var(--color-anthropic-cream-50);
+  --momo-bg-brand: var(--color-anthropic-coral-500);
+  --momo-bg-brand-hover: var(--color-anthropic-coral-600);
+  --momo-bg-brand-active: var(--color-anthropic-coral-700);
+  --momo-bg-danger: var(--color-anthropic-red-600);
+  --momo-bg-success: var(--color-anthropic-green-500);
+  --momo-bg-warning: var(--color-anthropic-amber-500);
 
-  --momo-palette-ink: #141413;
-  --momo-palette-body: #3d3d3a;
-  --momo-palette-body-strong: #252523;
-  --momo-palette-muted: #6c6a64;
-  --momo-palette-muted-soft: #8e8b82;
+  --momo-fg-default: var(--color-anthropic-ink-950);
+  --momo-fg-muted: var(--color-anthropic-ink-500);
+  --momo-fg-subtle: var(--color-anthropic-ink-400);
+  --momo-fg-inverse: var(--color-anthropic-cream-50);
+  --momo-fg-brand: var(--color-anthropic-coral-500);
+  --momo-fg-on-brand: var(--color-white);
+  --momo-fg-danger: var(--color-anthropic-red-600);
+  --momo-fg-on-danger: var(--color-white);
+  --momo-fg-success: var(--color-anthropic-green-500);
+  --momo-fg-warning: var(--color-anthropic-yellow-600);
 
-  --momo-palette-white: #ffffff;
-  --momo-palette-canvas: #faf9f5;
-  --momo-palette-surface-soft: #f5f0e8;
-  --momo-palette-surface-card: #efe9de;
-  --momo-palette-surface-strong: #e8e0d2;
+  --momo-border-default: var(--color-anthropic-cream-300);
+  --momo-border-muted: var(--color-anthropic-cream-100);
+  --momo-border-strong: var(--color-anthropic-cream-400);
+  --momo-border-input: var(--color-anthropic-cream-400);
+  --momo-border-danger: var(--color-anthropic-red-600);
 
-  --momo-palette-hairline: #e6dfd8;
-  --momo-palette-hairline-soft: #ebe6df;
+  --momo-ring-focus: var(--color-anthropic-coral-500);
 
-  --momo-palette-surface-dark: #181715;
-  --momo-palette-surface-dark-elevated: #252320;
-  --momo-palette-surface-dark-soft: #1f1e1b;
-  --momo-palette-on-dark: #faf9f5;
-  --momo-palette-on-dark-soft: #a09d96;
+  --momo-font-display:
+    Copernicus, "Tiempos Headline", "EB Garamond", Georgia, serif;
+  --momo-font-body:
+    StyreneB, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --momo-font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 
-  --momo-palette-teal: #5db8a6;
-  --momo-palette-amber: #e8a55a;
-  --momo-palette-green: #5db872;
-  --momo-palette-yellow: #d4a017;
-  --momo-palette-red: #c64545;
-
-  /* ---------------------------------------------------------------- */
-  /* 2. 语义色 —— 文本 / 背景 / 边框 / 填充 / 反馈                       */
-  /* ---------------------------------------------------------------- */
-  --momo-color-text-primary: var(--momo-palette-ink);
-  --momo-color-text-secondary: var(--momo-palette-body);
-  --momo-color-text-strong: var(--momo-palette-body-strong);
-  --momo-color-text-muted: var(--momo-palette-muted);
-  --momo-color-text-muted-soft: var(--momo-palette-muted-soft);
-  --momo-color-text-on-primary: var(--momo-palette-white);
-  --momo-color-text-on-dark: var(--momo-palette-on-dark);
-  --momo-color-text-on-dark-soft: var(--momo-palette-on-dark-soft);
-
-  --momo-color-bg-canvas: var(--momo-palette-canvas);
-  --momo-color-bg-surface: var(--momo-palette-surface-soft);
-  --momo-color-bg-surface-card: var(--momo-palette-surface-card);
-  --momo-color-bg-surface-strong: var(--momo-palette-surface-strong);
-  --momo-color-bg-dark: var(--momo-palette-surface-dark);
-  --momo-color-bg-dark-elevated: var(--momo-palette-surface-dark-elevated);
-  --momo-color-bg-dark-soft: var(--momo-palette-surface-dark-soft);
-
-  --momo-color-border: var(--momo-palette-hairline);
-  --momo-color-border-soft: var(--momo-palette-hairline-soft);
-
-  --momo-color-fill-primary: var(--momo-palette-coral);
-  --momo-color-fill-primary-hover: var(--momo-palette-coral-active);
-  --momo-color-fill-primary-active: var(--momo-palette-coral-active);
-  --momo-color-fill-primary-disabled: var(--momo-palette-coral-disabled);
-
-  --momo-color-accent-teal: var(--momo-palette-teal);
-  --momo-color-accent-amber: var(--momo-palette-amber);
-  --momo-color-feedback-success: var(--momo-palette-green);
-  --momo-color-feedback-warning: var(--momo-palette-yellow);
-  --momo-color-feedback-error: var(--momo-palette-red);
-
-  /* ---------------------------------------------------------------- */
-  /* 3. 基础 token —— 字体 / 圆角 / 间距 / 阴影                          */
-  /* ---------------------------------------------------------------- */
-  --momo-font-display: Copernicus, "Tiempos Headline", "Cormorant Garamond",
-    "EB Garamond", Georgia, serif;
-  --momo-font-body: StyreneB, Inter, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
-  --momo-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-
-  --momo-radius-xs: 4px;
-  --momo-radius-sm: 6px;
-  --momo-radius-md: 8px;
-  --momo-radius-lg: 12px;
-  --momo-radius-xl: 16px;
+  --momo-radius-xs: 0.25rem;
+  --momo-radius-sm: 0.375rem;
+  --momo-radius-md: 0.5rem;
+  --momo-radius-lg: 0.75rem;
+  --momo-radius-xl: 1rem;
   --momo-radius-pill: 9999px;
   --momo-radius-full: 9999px;
 
-  --momo-space-xxs: 4px;
-  --momo-space-xs: 8px;
-  --momo-space-sm: 12px;
-  --momo-space-md: 16px;
-  --momo-space-lg: 24px;
-  --momo-space-xl: 32px;
-  --momo-space-xxl: 48px;
-  --momo-space-section: 96px;
+  --momo-space-xxs: 0.25rem;
+  --momo-space-xs: 0.5rem;
+  --momo-space-sm: 0.75rem;
+  --momo-space-md: 1rem;
+  --momo-space-lg: 1.5rem;
+  --momo-space-xl: 2rem;
+  --momo-space-xxl: 3rem;
+  --momo-space-section: 6rem;
 
-  --momo-shadow-sm: 0 1px 3px rgba(20, 20, 19, 0.08);
+  --momo-shadow-sm: none;
 
-  /* 字号阶梯：size / leading（行高比）/ tracking（字距）/ weight。 */
-  --momo-text-display-xl: 64px;
+  --momo-text-display-xl: 4rem;
   --momo-text-display-xl-leading: 1.05;
-  --momo-text-display-xl-tracking: -1.5px;
+  --momo-text-display-xl-tracking: 0;
   --momo-text-display-xl-weight: 400;
-
-  --momo-text-display-lg: 48px;
+  --momo-text-display-lg: 3rem;
   --momo-text-display-lg-leading: 1.1;
-  --momo-text-display-lg-tracking: -1px;
+  --momo-text-display-lg-tracking: 0;
   --momo-text-display-lg-weight: 400;
-
-  --momo-text-display-md: 36px;
+  --momo-text-display-md: 2.25rem;
   --momo-text-display-md-leading: 1.15;
-  --momo-text-display-md-tracking: -0.5px;
+  --momo-text-display-md-tracking: 0;
   --momo-text-display-md-weight: 400;
-
-  --momo-text-display-sm: 28px;
+  --momo-text-display-sm: 1.75rem;
   --momo-text-display-sm-leading: 1.2;
-  --momo-text-display-sm-tracking: -0.3px;
+  --momo-text-display-sm-tracking: 0;
   --momo-text-display-sm-weight: 400;
-
-  --momo-text-title-lg: 22px;
+  --momo-text-title-lg: 1.375rem;
   --momo-text-title-lg-leading: 1.3;
-  --momo-text-title-lg-tracking: 0px;
+  --momo-text-title-lg-tracking: 0;
   --momo-text-title-lg-weight: 500;
-
-  --momo-text-title-md: 18px;
+  --momo-text-title-md: 1.125rem;
   --momo-text-title-md-leading: 1.4;
-  --momo-text-title-md-tracking: 0px;
+  --momo-text-title-md-tracking: 0;
   --momo-text-title-md-weight: 500;
-
-  --momo-text-title-sm: 16px;
+  --momo-text-title-sm: 1rem;
   --momo-text-title-sm-leading: 1.4;
-  --momo-text-title-sm-tracking: 0px;
+  --momo-text-title-sm-tracking: 0;
   --momo-text-title-sm-weight: 500;
-
-  --momo-text-body-md: 16px;
+  --momo-text-body-md: 1rem;
   --momo-text-body-md-leading: 1.55;
-  --momo-text-body-md-tracking: 0px;
+  --momo-text-body-md-tracking: 0;
   --momo-text-body-md-weight: 400;
-
-  --momo-text-body-sm: 14px;
+  --momo-text-body-sm: 0.875rem;
   --momo-text-body-sm-leading: 1.55;
-  --momo-text-body-sm-tracking: 0px;
+  --momo-text-body-sm-tracking: 0;
   --momo-text-body-sm-weight: 400;
-
-  --momo-text-caption: 13px;
+  --momo-text-caption: 0.8125rem;
   --momo-text-caption-leading: 1.4;
-  --momo-text-caption-tracking: 0px;
+  --momo-text-caption-tracking: 0;
   --momo-text-caption-weight: 500;
-
-  --momo-text-caption-uppercase: 12px;
+  --momo-text-caption-uppercase: 0.75rem;
   --momo-text-caption-uppercase-leading: 1.4;
-  --momo-text-caption-uppercase-tracking: 1.5px;
+  --momo-text-caption-uppercase-tracking: 0.09375rem;
   --momo-text-caption-uppercase-weight: 500;
-
-  --momo-text-code: 14px;
+  --momo-text-code: 0.875rem;
   --momo-text-code-leading: 1.6;
-  --momo-text-code-tracking: 0px;
+  --momo-text-code-tracking: 0;
   --momo-text-code-weight: 400;
-
-  --momo-text-button: 14px;
+  --momo-text-button: 0.875rem;
   --momo-text-button-leading: 1;
-  --momo-text-button-tracking: 0px;
+  --momo-text-button-tracking: 0;
   --momo-text-button-weight: 500;
-
-  --momo-text-nav-link: 14px;
+  --momo-text-nav-link: 0.875rem;
   --momo-text-nav-link-leading: 1.4;
-  --momo-text-nav-link-tracking: 0px;
+  --momo-text-nav-link-tracking: 0;
   --momo-text-nav-link-weight: 500;
-
-  /* ---------------------------------------------------------------- */
-  /* 4. 短语义 alias —— 组件直接消费                                    */
-  /* ---------------------------------------------------------------- */
-  --momo-background: var(--momo-color-bg-canvas);
-  --momo-foreground: var(--momo-color-text-primary);
-
-  --momo-card: var(--momo-color-bg-surface-card);
-  --momo-card-foreground: var(--momo-color-text-primary);
-
-  --momo-popover: var(--momo-color-bg-canvas);
-  --momo-popover-foreground: var(--momo-color-text-primary);
-
-  --momo-primary: var(--momo-color-fill-primary);
-  --momo-primary-foreground: var(--momo-color-text-on-primary);
-
-  --momo-secondary: var(--momo-color-bg-surface-card);
-  --momo-secondary-foreground: var(--momo-color-text-primary);
-
-  --momo-muted: var(--momo-color-bg-surface);
-  --momo-muted-foreground: var(--momo-color-text-muted);
-
-  --momo-accent: var(--momo-color-bg-surface-card);
-  --momo-accent-foreground: var(--momo-color-text-primary);
-
-  --momo-danger: var(--momo-color-feedback-error);
-  --momo-danger-foreground: var(--momo-color-text-on-primary);
-
-  --momo-success: var(--momo-color-feedback-success);
-  --momo-warning: var(--momo-color-feedback-warning);
-
-  --momo-border: var(--momo-color-border);
-  --momo-input: var(--momo-color-border);
-  --momo-ring: var(--momo-color-fill-primary);
 }
 
-/* -------------------------------------------------------------------- */
-/* Anthropic Dark —— 复用同一套 palette，切到 surface-dark 系列             */
-/* -------------------------------------------------------------------- */
-.theme-anthropic.dark {
+:where(.theme-anthropic.dark, .dark .theme-anthropic) {
   color-scheme: dark;
 
-  --momo-background: var(--momo-color-bg-dark);
-  --momo-foreground: var(--momo-color-text-on-dark);
+  --momo-bg-canvas: var(--color-anthropic-ink-900);
+  --momo-bg-surface: var(--color-anthropic-ink-850);
+  --momo-bg-surface-muted: var(--color-anthropic-ink-800);
+  --momo-bg-surface-raised: var(--color-anthropic-ink-800);
+  --momo-bg-overlay: var(--color-anthropic-ink-800);
+  --momo-bg-brand: var(--color-anthropic-coral-500);
+  --momo-bg-brand-hover: var(--color-anthropic-coral-600);
+  --momo-bg-brand-active: var(--color-anthropic-coral-700);
+  --momo-bg-danger: var(--color-anthropic-red-600);
+  --momo-bg-success: var(--color-anthropic-green-500);
+  --momo-bg-warning: var(--color-anthropic-amber-500);
 
-  --momo-card: var(--momo-color-bg-dark-elevated);
-  --momo-card-foreground: var(--momo-color-text-on-dark);
+  --momo-fg-default: var(--color-anthropic-cream-50);
+  --momo-fg-muted: var(--color-anthropic-ink-350);
+  --momo-fg-subtle: var(--color-anthropic-ink-400);
+  --momo-fg-inverse: var(--color-anthropic-ink-950);
+  --momo-fg-brand: var(--color-anthropic-coral-500);
+  --momo-fg-on-brand: var(--color-white);
+  --momo-fg-danger: var(--color-anthropic-red-600);
+  --momo-fg-on-danger: var(--color-white);
+  --momo-fg-success: var(--color-anthropic-green-500);
+  --momo-fg-warning: var(--color-anthropic-amber-500);
 
-  --momo-popover: var(--momo-color-bg-dark-elevated);
-  --momo-popover-foreground: var(--momo-color-text-on-dark);
-
-  --momo-primary: var(--momo-color-fill-primary);
-  --momo-primary-foreground: var(--momo-color-text-on-primary);
-
-  --momo-secondary: var(--momo-color-bg-dark-elevated);
-  --momo-secondary-foreground: var(--momo-color-text-on-dark);
-
-  --momo-muted: var(--momo-color-bg-dark-soft);
-  --momo-muted-foreground: var(--momo-color-text-on-dark-soft);
-
-  --momo-accent: var(--momo-color-bg-dark-elevated);
-  --momo-accent-foreground: var(--momo-color-text-on-dark);
-
-  --momo-danger: var(--momo-color-feedback-error);
-  --momo-danger-foreground: var(--momo-color-text-on-primary);
-
-  --momo-border: color-mix(in srgb, var(--momo-color-text-on-dark) 12%, transparent);
-  --momo-input: color-mix(in srgb, var(--momo-color-text-on-dark) 16%, transparent);
-  --momo-ring: var(--momo-color-fill-primary);
-}
-
-/* -------------------------------------------------------------------- */
-/* 5. Tailwind v4 theme 注册 —— 只需一份，供所有 `.theme-*` 复用           */
-/* -------------------------------------------------------------------- */
-@theme inline {
-  --color-momo-background: var(--momo-background);
-  --color-momo-foreground: var(--momo-foreground);
-  --color-momo-card: var(--momo-card);
-  --color-momo-card-foreground: var(--momo-card-foreground);
-  --color-momo-popover: var(--momo-popover);
-  --color-momo-popover-foreground: var(--momo-popover-foreground);
-  --color-momo-primary: var(--momo-primary);
-  --color-momo-primary-foreground: var(--momo-primary-foreground);
-  --color-momo-secondary: var(--momo-secondary);
-  --color-momo-secondary-foreground: var(--momo-secondary-foreground);
-  --color-momo-muted: var(--momo-muted);
-  --color-momo-muted-foreground: var(--momo-muted-foreground);
-  --color-momo-accent: var(--momo-accent);
-  --color-momo-accent-foreground: var(--momo-accent-foreground);
-  --color-momo-danger: var(--momo-danger);
-  --color-momo-danger-foreground: var(--momo-danger-foreground);
-  --color-momo-success: var(--momo-success);
-  --color-momo-warning: var(--momo-warning);
-  --color-momo-border: var(--momo-border);
-  --color-momo-input: var(--momo-input);
-  --color-momo-ring: var(--momo-ring);
-
-  --radius-momo-xs: var(--momo-radius-xs);
-  --radius-momo-sm: var(--momo-radius-sm);
-  --radius-momo-md: var(--momo-radius-md);
-  --radius-momo-lg: var(--momo-radius-lg);
-  --radius-momo-xl: var(--momo-radius-xl);
-  --radius-momo-pill: var(--momo-radius-pill);
-  --radius-momo-full: var(--momo-radius-full);
-
-  --font-momo-display: var(--momo-font-display);
-  --font-momo-body: var(--momo-font-body);
-  --font-momo-mono: var(--momo-font-mono);
-
-  --text-momo-display-xl: var(--momo-text-display-xl);
-  --text-momo-display-xl--line-height: var(--momo-text-display-xl-leading);
-  --text-momo-display-lg: var(--momo-text-display-lg);
-  --text-momo-display-lg--line-height: var(--momo-text-display-lg-leading);
-  --text-momo-display-md: var(--momo-text-display-md);
-  --text-momo-display-md--line-height: var(--momo-text-display-md-leading);
-  --text-momo-display-sm: var(--momo-text-display-sm);
-  --text-momo-display-sm--line-height: var(--momo-text-display-sm-leading);
-
-  --text-momo-title-lg: var(--momo-text-title-lg);
-  --text-momo-title-lg--line-height: var(--momo-text-title-lg-leading);
-  --text-momo-title-md: var(--momo-text-title-md);
-  --text-momo-title-md--line-height: var(--momo-text-title-md-leading);
-  --text-momo-title-sm: var(--momo-text-title-sm);
-  --text-momo-title-sm--line-height: var(--momo-text-title-sm-leading);
-
-  --text-momo-body-md: var(--momo-text-body-md);
-  --text-momo-body-md--line-height: var(--momo-text-body-md-leading);
-  --text-momo-body-sm: var(--momo-text-body-sm);
-  --text-momo-body-sm--line-height: var(--momo-text-body-sm-leading);
-
-  --text-momo-caption: var(--momo-text-caption);
-  --text-momo-caption--line-height: var(--momo-text-caption-leading);
-  --text-momo-caption-uppercase: var(--momo-text-caption-uppercase);
-  --text-momo-caption-uppercase--line-height: var(
-    --momo-text-caption-uppercase-leading
-  );
-
-  --text-momo-code: var(--momo-text-code);
-  --text-momo-code--line-height: var(--momo-text-code-leading);
-  --text-momo-button: var(--momo-text-button);
-  --text-momo-button--line-height: var(--momo-text-button-leading);
-  --text-momo-nav-link: var(--momo-text-nav-link);
-  --text-momo-nav-link--line-height: var(--momo-text-nav-link-leading);
+  --momo-border-default: var(--color-anthropic-ink-800);
+  --momo-border-muted: var(--color-anthropic-ink-850);
+  --momo-border-strong: var(--color-anthropic-ink-500);
+  --momo-border-input: var(--color-anthropic-ink-800);
+  --momo-border-danger: var(--color-anthropic-red-600);
 }

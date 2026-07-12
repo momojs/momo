@@ -28,17 +28,20 @@ bun add @ncdai/wheel-picker
 当前网站的 design 文档会直接加载 `packages/design/src` 中的源码组件。这样在开发组件时，改动源码即可通过 Vite 热更新反映到文档页面。
 
 <Cards>
+  <Card title="Accordion" href="/docs/design/accordion">
+    带 motion 展开动画的折叠面板。
+  </Card>
   <Card title="Button" href="/docs/design/button">
     带 motion 点击反馈的基础按钮，支持多种 variant 与 size。
+  </Card>
+  <Card title="Checkbox" href="/docs/design/checkbox">
+    表单友好的复选框，支持 indeterminate 状态。
   </Card>
   <Card title="TweenNumber" href="/docs/design/tween-number">
     数值变化时带 tween 过渡的数字展示，支持 Intl 格式化。
   </Card>
   <Card title="ToggleGroup" href="/docs/design/toggle-group">
     图标工具组，适合单选的编辑器按钮或视图切换。
-  </Card>
-  <Card title="Segmented" href="/docs/design/segmented">
-    文本与图标混合的分段控制器。
   </Card>
   <Card title="Switch" href="/docs/design/switch">
     表单友好的开关控件。
@@ -86,6 +89,8 @@ await Bun.build({
       "types": "./dist/components/toggle-group.d.ts",
       "import": "./dist/components/toggle-group.js"
     },
+    "./themes/semantic.css": "./src/themes/semantic.css",
+    "./themes/neutral.css": "./src/themes/neutral.css",
     "./themes/anthropic.css": "./src/themes/anthropic.css"
   },
   "files": ["dist", "src/themes"]
@@ -104,6 +109,7 @@ await Bun.build({
 
 ```css
 @import "tailwindcss";
+@import "@momots/design/themes/neutral.css";
 @import "@momots/design/themes/anthropic.css";
 ```
 
@@ -119,4 +125,4 @@ await Bun.build({
 </div>
 ```
 
-组件只消费带 `momo` 前缀的语义 token 和短语义 alias，新增主题只需复用同一套命名即可通过替换根元素 class 完成切换。token 的分层结构与每个 token 的具体语义见 [主题与 Token](/docs/design/theme)。
+组件只消费带 `momo` 前缀的 semantic token，例如 `bg-momo-bg-canvas`、`text-momo-fg-default`、`border-momo-border-default` 与 `ring-momo-ring-focus`。新增主题只需复用同一套命名即可通过替换根元素 class 完成切换。token 的分层结构与每个 token 的具体语义见 [主题与 Token](/docs/design/theme)。

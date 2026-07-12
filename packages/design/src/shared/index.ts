@@ -1,14 +1,14 @@
-export type ControlValue = PropertyKey | null;
+export type ControlValue = string | number | null;
 
 export type ControlSize = 'sm' | 'md' | 'lg';
 
 export type ControlOption<T extends ControlValue> = {
   value: T;
   textValue?: string;
-  label: React.ReactNode;
-  icon?: React.ReactNode;
   disabled?: boolean;
   className?: string;
+  label: React.ReactNode;
+  icon?: React.ReactNode;
   style?: React.CSSProperties;
 };
 

@@ -13,20 +13,36 @@ type Updater<ValueType> = (
 type PropName = 'valuePropName' | 'triggerPropName' | 'defaultValuePropName';
 
 type NameOf<
-  Props,
+  Options,
   Name extends PropName,
   Fallback extends string,
-> = Name extends keyof Props
-  ? Props[Name] extends string
-    ? Props[Name]
+> = Options extends { readonly [Key in Name]?: infer Value }
+  ? NonNullable<Value> extends string
+    ? NonNullable<Value>
     : Fallback
   : Fallback;
 
-type ResolveNames<Props> = {
-  readonly valuePropName: NameOf<Props, 'valuePropName', 'value'>;
-  readonly triggerPropName: NameOf<Props, 'triggerPropName', 'onChange'>;
+type ResolvedNames = {
+  readonly valuePropName: string;
+  readonly triggerPropName: string;
+  readonly defaultValuePropName: string;
+};
+
+export type UseControllableValueOptions<
+  ValuePropName extends string = string,
+  TriggerPropName extends string = string,
+  DefaultValuePropName extends string = string,
+> = {
+  readonly valuePropName?: ValuePropName;
+  readonly triggerPropName?: TriggerPropName;
+  readonly defaultValuePropName?: DefaultValuePropName;
+};
+
+type ResolveNames<Options> = {
+  readonly valuePropName: NameOf<Options, 'valuePropName', 'value'>;
+  readonly triggerPropName: NameOf<Options, 'triggerPropName', 'onChange'>;
   readonly defaultValuePropName: NameOf<
-    Props,
+    Options,
     'defaultValuePropName',
     'defaultValue'
   >;
@@ -34,7 +50,7 @@ type ResolveNames<Props> = {
 
 type InferValueType<
   Props,
-  Names extends ResolveNames<Props> = ResolveNames<Props>,
+  Names extends ResolvedNames,
 > = Names['valuePropName'] extends keyof Props
   ? Props[Names['valuePropName']]
   : Names['defaultValuePropName'] extends keyof Props
@@ -43,13 +59,10 @@ type InferValueType<
 
 export type UseControllableProps<
   Props extends Record<string, unknown> = Record<string, never>,
-  Names extends ResolveNames<Props> = ResolveNames<Props>,
-  ValueType = InferValueType<Props>,
-> = {
-  valuePropName?: Names['valuePropName'];
-  triggerPropName?: Names['triggerPropName'];
-  defaultValuePropName?: Names['defaultValuePropName'];
-} & PartialRecord<Names['valuePropName'], ValueType> &
+  Options extends UseControllableValueOptions | undefined = undefined,
+  Names extends ResolvedNames = ResolveNames<Options>,
+  ValueType = InferValueType<Props, Names>,
+> = PartialRecord<Names['valuePropName'], ValueType> &
   PartialRecord<Names['defaultValuePropName'], ValueType> &
   PartialRecord<Names['triggerPropName'], Trigger<ValueType>>;
 
@@ -85,18 +98,18 @@ function useCommittedUncontrolledValue<ValueType>({
 
 export function useControllableValue<
   const Props extends Record<string, unknown>,
-  ValueType = NoInfer<InferValueType<Props>>,
->(props?: Props): [ValueType | undefined, Updater<ValueType>] {
-  const config = (props ?? {}) as Props & {
-    valuePropName?: string;
-    triggerPropName?: string;
-    defaultValuePropName?: string;
-  };
+  const Options extends UseControllableValueOptions | undefined = undefined,
+  Names extends ResolvedNames = ResolveNames<Options>,
+  ValueType = NoInfer<InferValueType<Props, Names>>,
+>(
+  props?: Props,
+  options?: Options,
+): [ValueType | undefined, Updater<ValueType>] {
   const {
     valuePropName = 'value',
     triggerPropName = 'onChange',
     defaultValuePropName = 'defaultValue',
-  } = config;
+  } = options ?? {};
 
   const value = props?.[valuePropName] as ValueType | undefined;
   const trigger = props?.[triggerPropName] as Trigger<ValueType> | undefined;

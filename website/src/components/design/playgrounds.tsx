@@ -13,19 +13,18 @@ import {
   CherryIcon,
   Clock01Icon,
   GrapeIcon,
-  GridViewIcon,
   Layout03Icon,
-  ListViewIcon,
   Moon02Icon,
   Notification01Icon,
   Settings02Icon,
   Sun03Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useTheme } from 'fumadocs-ui/provider/base';
 
+import { Accordion } from '../../../../packages/design/src/components/accordion';
 import { Button } from '../../../../packages/design/src/components/button';
 import { Calendar } from '../../../../packages/design/src/components/calendar';
+import { Checkbox } from '../../../../packages/design/src/components/checkbox';
 import { PickerDate } from '../../../../packages/design/src/components/picker-date';
 import { PickerTime } from '../../../../packages/design/src/components/picker-time';
 import { Select } from '../../../../packages/design/src/components/select';
@@ -34,11 +33,8 @@ import { Switch } from '../../../../packages/design/src/components/switch';
 import { Tabs } from '../../../../packages/design/src/components/tabs';
 import { ToggleGroup } from '../../../../packages/design/src/components/toggle-group';
 import { TweenNumber } from '../../../../packages/design/src/components/tween-number';
-import {
-  PLAYGROUND_THEMES,
-  usePlaygroundTheme,
-} from './playground-theme';
 import type { PlaygroundThemeName } from './playground-theme';
+import { PLAYGROUND_THEMES, usePlaygroundTheme } from './playground-theme';
 
 function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ');
@@ -53,6 +49,13 @@ type SelectOption<T extends string> = {
   label: string;
 };
 
+const playgroundThemeOptions = (
+  Object.keys(PLAYGROUND_THEMES) as PlaygroundThemeName[]
+).map((value) => ({
+  value,
+  label: PLAYGROUND_THEMES[value].label,
+}));
+
 function SelectControl<T extends string>({
   label,
   value,
@@ -65,22 +68,23 @@ function SelectControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <label className='inline-flex items-center gap-2 text-xs font-medium text-fd-muted-foreground'>
-      {label}
-      <select
+    <div className='inline-flex items-center gap-2 text-xs font-medium text-fd-muted-foreground'>
+      <span>{label}</span>
+      <Select<T>
+        size='sm'
         value={value}
-        className='h-8 rounded-md border border-fd-border bg-fd-background px-2 text-xs text-fd-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-fd-ring'
-        onChange={(event) => {
-          onChange(event.target.value as T);
-        }}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+        options={options.map((option) => ({
+          value: option.value,
+          label: option.label,
+        }))}
+        placeholder={label}
+        triggerClassName='min-w-28 text-xs'
+        popupClassName='text-xs'
+        itemClassName='text-xs'
+        triggerProps={{ 'aria-label': label }}
+        onChange={onChange}
+      />
+    </div>
   );
 }
 
@@ -95,13 +99,10 @@ function CheckboxControl({
 }) {
   return (
     <label className='inline-flex h-8 items-center gap-2 text-xs font-medium text-fd-muted-foreground'>
-      <input
-        type='checkbox'
+      <Checkbox
         checked={checked}
-        className='size-3.5 rounded border-fd-border accent-fd-primary'
-        onChange={(event) => {
-          onChange(event.target.checked);
-        }}
+        aria-label={label}
+        onCheckedChange={onChange}
       />
       {label}
     </label>
@@ -118,9 +119,6 @@ function PlaygroundFrame({
   state?: React.ReactNode;
 }) {
   const [theme, setTheme] = usePlaygroundTheme();
-  const { resolvedTheme } = useTheme();
-  const selected = PLAYGROUND_THEMES[theme];
-  const isDark = resolvedTheme === 'dark';
 
   return (
     <div className='not-prose grid gap-4 rounded-lg border bg-fd-card p-4'>
@@ -133,29 +131,19 @@ function PlaygroundFrame({
         {controls && (
           <div className='flex flex-wrap items-center gap-3'>{controls}</div>
         )}
-        <label className='inline-flex items-center gap-2 text-xs font-medium text-fd-muted-foreground'>
-          Theme
-          <select
-            value={theme}
-            className='h-8 rounded-md border border-fd-border bg-fd-background px-2 text-xs text-fd-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-fd-ring'
-            onChange={(event) => {
-              setTheme(event.target.value as PlaygroundThemeName);
-            }}
-          >
-            {Object.entries(PLAYGROUND_THEMES).map(([value, option]) => (
-              <option key={value} value={value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectControl
+          label='Theme'
+          value={theme}
+          options={playgroundThemeOptions}
+          onChange={setTheme}
+        />
       </div>
-      <div className={cn('grid gap-4 rounded-md', selected.className, isDark && 'dark')}>
-        <div className='grid min-h-56 place-items-center rounded-md border border-momo-border bg-momo-background p-6 text-momo-foreground'>
+      <div className='grid gap-4 rounded-md'>
+        <div className='grid min-h-56 place-items-center rounded-md border border-momo-border-default bg-momo-bg-canvas p-6 text-momo-fg-default'>
           {children}
         </div>
         {state && (
-          <div className='rounded-md border border-momo-border bg-momo-muted p-3 text-xs text-momo-muted-foreground'>
+          <div className='rounded-md border border-momo-border-default bg-momo-bg-surface-muted p-3 text-xs text-momo-fg-muted'>
             {state}
           </div>
         )}
@@ -326,6 +314,99 @@ export function TweenNumberPlayground() {
   );
 }
 
+export function CheckboxPlayground() {
+  const [checked, setChecked] = useState(true);
+  const [disabled, setDisabled] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+  const [indeterminate, setIndeterminate] = useState(false);
+
+  return (
+    <PlaygroundFrame
+      controls={
+        <>
+          <CheckboxControl
+            label='Disabled'
+            checked={disabled}
+            onChange={setDisabled}
+          />
+          <CheckboxControl
+            label='Read only'
+            checked={readOnly}
+            onChange={setReadOnly}
+          />
+          <CheckboxControl
+            label='Mixed'
+            checked={indeterminate}
+            onChange={setIndeterminate}
+          />
+        </>
+      }
+      state={
+        <code>
+          checked: {String(checked)}; indeterminate: {String(indeterminate)};
+          disabled: {String(disabled)}; readOnly: {String(readOnly)}
+        </code>
+      }
+    >
+      <label className='inline-flex max-w-sm items-start gap-3 text-left'>
+        <Checkbox
+          checked={checked}
+          disabled={disabled}
+          readOnly={readOnly}
+          indeterminate={indeterminate}
+          aria-label='Accept terms'
+          onCheckedChange={(nextChecked) => {
+            setChecked(nextChecked);
+            setIndeterminate(false);
+          }}
+        />
+        <span className='grid gap-1'>
+          <span className='text-sm font-medium text-momo-fg-default'>
+            Accept terms
+          </span>
+          <span className='text-xs text-momo-fg-muted'>
+            Checkbox keeps Base UI form semantics and animates the indicator
+            with motion.
+          </span>
+        </span>
+      </label>
+    </PlaygroundFrame>
+  );
+}
+
+export function AccordionPlayground() {
+  const [value, setValue] = useState<string[]>(['tokens']);
+
+  return (
+    <PlaygroundFrame state={<code>open: {value.join(', ') || 'none'}</code>}>
+      <Accordion
+        value={value}
+        onValueChange={setValue}
+        options={[
+          {
+            value: 'tokens',
+            label: 'Semantic tokens',
+            content:
+              'Background, foreground, border, and ring colors resolve through the active momo theme.',
+          },
+          {
+            value: 'motion',
+            label: 'Motion first',
+            content:
+              'Disclosure height and focus feedback are animated with motion, while CSS stays focused on layout and tokens.',
+          },
+          {
+            value: 'composition',
+            label: 'Composable content',
+            content:
+              'Use Accordion for compact settings, grouped help, and details that should stay close to the control surface.',
+          },
+        ]}
+      />
+    </PlaygroundFrame>
+  );
+}
+
 export function ToggleGroupPlayground() {
   const [value, setValue] = useState<'left' | 'center' | 'right' | 'justify'>(
     'center',
@@ -378,45 +459,6 @@ export function ToggleGroupPlayground() {
             value: 'justify',
             label: 'Justify',
             icon: <Icon icon={AlignHorizontalJustifyCenterIcon} />,
-          },
-        ]}
-      />
-    </PlaygroundFrame>
-  );
-}
-
-export function SegmentedPlayground() {
-  const [value, setValue] = useState<'list' | 'grid' | 'settings'>('grid');
-  const [size, setSize] = useState<ControlSizeValue>('md');
-
-  return (
-    <PlaygroundFrame
-      controls={
-        <SelectControl
-          label='Size'
-          value={size}
-          options={controlSizeOptions}
-          onChange={setSize}
-        />
-      }
-      state={
-        <code>
-          value: {value}; size: {size}
-        </code>
-      }
-    >
-      <ToggleGroup
-        size={size}
-        value={value}
-        variant='segmented'
-        onChange={setValue}
-        options={[
-          { value: 'list', label: 'List', icon: <Icon icon={ListViewIcon} /> },
-          { value: 'grid', label: 'Grid', icon: <Icon icon={GridViewIcon} /> },
-          {
-            value: 'settings',
-            label: 'Settings',
-            icon: <Icon icon={Settings02Icon} />,
           },
         ]}
       />
@@ -514,6 +556,7 @@ export function SelectPlayground() {
   >('apple');
   const [size, setSize] = useState<ControlSizeValue>('md');
   const [disabled, setDisabled] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
 
   return (
     <PlaygroundFrame
@@ -530,11 +573,17 @@ export function SelectPlayground() {
             checked={disabled}
             onChange={setDisabled}
           />
+          <CheckboxControl
+            label='Read only'
+            checked={readOnly}
+            onChange={setReadOnly}
+          />
         </>
       }
       state={
         <code>
-          value: {value}; size: {size}; disabled: {String(disabled)}
+          value: {value}; size: {size}; disabled: {String(disabled)}; readOnly:{' '}
+          {String(readOnly)}
         </code>
       }
     >
@@ -543,6 +592,7 @@ export function SelectPlayground() {
           size={size}
           value={value}
           disabled={disabled}
+          readOnly={readOnly}
           placeholder='Select a fruit...'
           onChange={setValue}
           options={[
@@ -606,14 +656,23 @@ export function SwitchPlayground() {
         </code>
       }
     >
-      <Switch
-        size={size}
-        checked={enabled}
-        disabled={disabled}
-        onChange={setEnabled}
-        label='Notifications'
-        description='Use the switch in controlled or uncontrolled forms.'
-      />
+      <div className='inline-flex items-start gap-3'>
+        <Switch
+          checked={enabled}
+          disabled={disabled}
+          size={size}
+          aria-label='Notifications'
+          onCheckedChange={setEnabled}
+        />
+        <div className='grid gap-1 text-left'>
+          <span className='text-sm font-medium text-momo-fg-default'>
+            Notifications
+          </span>
+          <span className='text-xs text-momo-fg-muted'>
+            Use the switch in controlled or uncontrolled forms.
+          </span>
+        </div>
+      </div>
     </PlaygroundFrame>
   );
 }
@@ -758,7 +817,7 @@ export function PickerDatePlayground() {
       }
     >
       <div className='grid gap-4 text-center'>
-        <div className='inline-flex items-center justify-center gap-2 text-sm font-medium text-momo-foreground'>
+        <div className='inline-flex items-center justify-center gap-2 text-sm font-medium text-momo-fg-default'>
           <Icon icon={Calendar03Icon} />
           Date picker
         </div>
@@ -794,7 +853,7 @@ export function PickerTimePlayground() {
       }
     >
       <div className='grid gap-4 text-center'>
-        <div className='inline-flex items-center justify-center gap-2 text-sm font-medium text-momo-foreground'>
+        <div className='inline-flex items-center justify-center gap-2 text-sm font-medium text-momo-fg-default'>
           <Icon icon={Clock01Icon} />
           Time picker
         </div>
@@ -807,7 +866,7 @@ export function PickerTimePlayground() {
 export function IconPlayground() {
   return (
     <PlaygroundFrame>
-      <div className='flex items-center gap-3 text-momo-foreground'>
+      <div className='flex items-center gap-3 text-momo-fg-default'>
         <Icon icon={Sun03Icon} />
         <Icon icon={Moon02Icon} />
         <span className='text-sm'>

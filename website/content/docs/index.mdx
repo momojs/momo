@@ -4,7 +4,7 @@ description: Bun 优先的函数式 React 工具链，用于构建可组合的�
 icon: Rocket
 ---
 
-momo 是一套 **Bun 优先**、面向函数式的、类型安全的、可组合的 React 工具链。它由多个独立、可按需引入、支持 tree-shaking 的工具库组成，覆盖从纯数据处理、浏览器运行时能力、HTTP 请求驱动到测试 CLI 的完整链路。
+momo 是一套 **Bun 优先**、面向函数式的、类型安全的、可组合的 React 工具链。它由多个独立、可按需引入、支持 tree-shaking 的工具库组成，覆盖从纯数据处理、浏览器运行时能力、HTTP 请求驱动到包构建的完整链路。
 
 ## 名字与读音
 
@@ -14,7 +14,7 @@ momo 是一套 **Bun 优先**、面向函数式的、类型安全的、可组合
 
 ## 初衷
 
-React 项目里有很多代码并不属于组件本身：类型守卫、数据归一、URL 与 Storage、DOM / CSS / Blob、请求中间件、测试与脚手架。这些能力常常散落在业务目录里，久了以后会变成难以复用、难以 tree-shaking、也难以迁移的“项目私货”。
+React 项目里有很多代码并不属于组件本身：类型守卫、数据归一、URL 与 Storage、DOM / CSS / Blob、请求中间件、构建与脚手架。这些能力常常散落在业务目录里，久了以后会变成难以复用、难以 tree-shaking、也难以迁移的“项目私货”。
 
 momo 的初衷是把这些能力从业务代码中提炼出来，按语义边界拆成稳定的小包：
 
@@ -22,7 +22,7 @@ momo 的初衷是把这些能力从业务代码中提炼出来，按语义边界
 - `@momots/host`：浏览器、Web Platform 与运行时相关的工具。
 - `@momots/drive`：围绕 Fetch 的 HTTP 客户端、中间件编排与响应解析。
 - `@momots/design`：基于 motion、Base UI 与 Tailwind CSS 的 React 组件库。
-- `@momots/cli`：面向 Bun 与真实运行环境的命令行能力。
+- `@momots/cli`：面向 Bun 的包构建命令与配置。
 
 ## 目的与愿景
 
@@ -41,7 +41,7 @@ momo 的设计偏向函数式，但不追求概念炫技。它更关心 API 是�
 - **小函数优先**：一个函数只表达一个清楚的变换、守卫或投影。
 - **子路径优先**：鼓励从 `@momots/core/eliminate`、`@momots/host/fetch` 这类入口导入。
 - **组合而非接管**：提供编排模型，但不强迫你放弃原框架或其他三方插件。
-- **Bun 优先**：测试、构建、WebView 相关能力优先围绕 Bun 的现代运行时体验设计。
+- **Bun 优先**：构建与仓库开发流程优先围绕 Bun 的现代运行时体验设计。
 
 ## 工具库一览
 
@@ -60,7 +60,7 @@ momo 的设计偏向函数式，但不追求概念炫技。它更关心 API 是�
     React 组件库：Base UI 交互原语、motion 动效与 Tailwind CSS 样式组合。
   </Card>
   <Card title="@momots/cli" href="/docs/cli">
-    momo 命令行工具：在真实的 Bun.WebView 浏览器环境中运行测试。
+    momo 命令行工具：统一类型生成与 Bun.build 包构建流程。
   </Card>
 </Cards>
 

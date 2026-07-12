@@ -4,7 +4,7 @@ description: 年、月、日三列日期选择器。
 icon: CalendarDays
 ---
 
-`PickerDate` 基于 `PickerCore` 生成 year/month/day 三列。默认 fallback 使用 Tailwind 实现；需要接入 `@ncdai/wheel-picker` 时，把适配组件传给 `adapter`。
+`PickerDate` 基于 `PickerCore` 生成 year/month/day 三列，面板、选中行、文本与 focus ring 使用 momo semantic token。
 
 <PickerDatePlayground />
 
@@ -16,23 +16,14 @@ import { PickerDate } from "@momots/design/components/picker-date";
 <PickerDate value={date} onChange={setDate} />
 ```
 
-## 接入 @ncdai/wheel-picker
-
-```tsx
-import { WheelPicker } from "@ncdai/wheel-picker";
-import { PickerDate } from "@momots/design/components/picker-date";
-
-<PickerDate value={date} onChange={setDate} adapter={WheelPicker} />
-```
-
-如果内部包的 props 与 `PickerCore` 的 `WheelPickerAdapterProps` 不一致，可以在应用侧写一层 adapter。
-
 ## Props
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
-| `value` | `string` | `YYYY-MM-DD` |
-| `startYear` | `number` | 起始年份 |
-| `endYear` | `number` | 结束年份 |
-| `adapter` | `WheelPickerAdapter` | 手动接入的 wheel picker |
-| `onChange` | `(value: string) => void` | 日期变化回调 |
+| `value` | `Date` | 受控日期 |
+| `defaultDate` | `Date` | 非受控默认日期 |
+| `min` | `Date` | 可选最小日期 |
+| `max` | `Date` | 可选最大日期 |
+| `disabled` | `boolean` | 是否禁用 |
+| `className` | `string` | 根节点追加 Tailwind class |
+| `onChange` | `(value: Date) => void` | 日期变化回调 |

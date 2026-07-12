@@ -1,0 +1,131 @@
+@theme inline {
+  --color-momo-bg-canvas: var(--momo-bg-canvas);
+  --color-momo-bg-surface: var(--momo-bg-surface);
+  --color-momo-bg-surface-muted: var(--momo-bg-surface-muted);
+  --color-momo-bg-surface-raised: var(--momo-bg-surface-raised);
+  --color-momo-bg-overlay: var(--momo-bg-overlay);
+  --color-momo-bg-brand: var(--momo-bg-brand);
+  --color-momo-bg-brand-hover: var(--momo-bg-brand-hover);
+  --color-momo-bg-brand-active: var(--momo-bg-brand-active);
+  --color-momo-bg-danger: var(--momo-bg-danger);
+  --color-momo-bg-success: var(--momo-bg-success);
+  --color-momo-bg-warning: var(--momo-bg-warning);
+
+  --color-momo-fg-default: var(--momo-fg-default);
+  --color-momo-fg-muted: var(--momo-fg-muted);
+  --color-momo-fg-subtle: var(--momo-fg-subtle);
+  --color-momo-fg-inverse: var(--momo-fg-inverse);
+  --color-momo-fg-brand: var(--momo-fg-brand);
+  --color-momo-fg-on-brand: var(--momo-fg-on-brand);
+  --color-momo-fg-danger: var(--momo-fg-danger);
+  --color-momo-fg-on-danger: var(--momo-fg-on-danger);
+  --color-momo-fg-success: var(--momo-fg-success);
+  --color-momo-fg-warning: var(--momo-fg-warning);
+
+  --color-momo-border-default: var(--momo-border-default);
+  --color-momo-border-muted: var(--momo-border-muted);
+  --color-momo-border-strong: var(--momo-border-strong);
+  --color-momo-border-input: var(--momo-border-input);
+  --color-momo-border-danger: var(--momo-border-danger);
+
+  --color-momo-ring-focus: var(--momo-ring-focus);
+
+  --font-momo-display: var(--momo-font-display);
+  --font-momo-body: var(--momo-font-body);
+  --font-momo-mono: var(--momo-font-mono);
+
+  --radius-momo-xs: var(--momo-radius-xs);
+  --radius-momo-sm: var(--momo-radius-sm);
+  --radius-momo-md: var(--momo-radius-md);
+  --radius-momo-lg: var(--momo-radius-lg);
+  --radius-momo-xl: var(--momo-radius-xl);
+  --radius-momo-pill: var(--momo-radius-pill);
+  --radius-momo-full: var(--momo-radius-full);
+
+  --spacing-momo-xxs: var(--momo-space-xxs);
+  --spacing-momo-xs: var(--momo-space-xs);
+  --spacing-momo-sm: var(--momo-space-sm);
+  --spacing-momo-md: var(--momo-space-md);
+  --spacing-momo-lg: var(--momo-space-lg);
+  --spacing-momo-xl: var(--momo-space-xl);
+  --spacing-momo-xxl: var(--momo-space-xxl);
+  --spacing-momo-section: var(--momo-space-section);
+
+  --shadow-momo-sm: var(--momo-shadow-sm);
+
+  --text-momo-display-xl: var(--momo-text-display-xl);
+  --text-momo-display-xl--line-height: var(--momo-text-display-xl-leading);
+  --text-momo-display-xl--letter-spacing: var(--momo-text-display-xl-tracking);
+  --text-momo-display-xl--font-weight: var(--momo-text-display-xl-weight);
+
+  --text-momo-display-lg: var(--momo-text-display-lg);
+  --text-momo-display-lg--line-height: var(--momo-text-display-lg-leading);
+  --text-momo-display-lg--letter-spacing: var(--momo-text-display-lg-tracking);
+  --text-momo-display-lg--font-weight: var(--momo-text-display-lg-weight);
+
+  --text-momo-display-md: var(--momo-text-display-md);
+  --text-momo-display-md--line-height: var(--momo-text-display-md-leading);
+  --text-momo-display-md--letter-spacing: var(--momo-text-display-md-tracking);
+  --text-momo-display-md--font-weight: var(--momo-text-display-md-weight);
+
+  --text-momo-display-sm: var(--momo-text-display-sm);
+  --text-momo-display-sm--line-height: var(--momo-text-display-sm-leading);
+  --text-momo-display-sm--letter-spacing: var(--momo-text-display-sm-tracking);
+  --text-momo-display-sm--font-weight: var(--momo-text-display-sm-weight);
+
+  --text-momo-title-lg: var(--momo-text-title-lg);
+  --text-momo-title-lg--line-height: var(--momo-text-title-lg-leading);
+  --text-momo-title-lg--letter-spacing: var(--momo-text-title-lg-tracking);
+  --text-momo-title-lg--font-weight: var(--momo-text-title-lg-weight);
+
+  --text-momo-title-md: var(--momo-text-title-md);
+  --text-momo-title-md--line-height: var(--momo-text-title-md-leading);
+  --text-momo-title-md--letter-spacing: var(--momo-text-title-md-tracking);
+  --text-momo-title-md--font-weight: var(--momo-text-title-md-weight);
+
+  --text-momo-title-sm: var(--momo-text-title-sm);
+  --text-momo-title-sm--line-height: var(--momo-text-title-sm-leading);
+  --text-momo-title-sm--letter-spacing: var(--momo-text-title-sm-tracking);
+  --text-momo-title-sm--font-weight: var(--momo-text-title-sm-weight);
+
+  --text-momo-body-md: var(--momo-text-body-md);
+  --text-momo-body-md--line-height: var(--momo-text-body-md-leading);
+  --text-momo-body-md--letter-spacing: var(--momo-text-body-md-tracking);
+  --text-momo-body-md--font-weight: var(--momo-text-body-md-weight);
+
+  --text-momo-body-sm: var(--momo-text-body-sm);
+  --text-momo-body-sm--line-height: var(--momo-text-body-sm-leading);
+  --text-momo-body-sm--letter-spacing: var(--momo-text-body-sm-tracking);
+  --text-momo-body-sm--font-weight: var(--momo-text-body-sm-weight);
+
+  --text-momo-caption: var(--momo-text-caption);
+  --text-momo-caption--line-height: var(--momo-text-caption-leading);
+  --text-momo-caption--letter-spacing: var(--momo-text-caption-tracking);
+  --text-momo-caption--font-weight: var(--momo-text-caption-weight);
+
+  --text-momo-caption-uppercase: var(--momo-text-caption-uppercase);
+  --text-momo-caption-uppercase--line-height: var(
+    --momo-text-caption-uppercase-leading
+  );
+  --text-momo-caption-uppercase--letter-spacing: var(
+    --momo-text-caption-uppercase-tracking
+  );
+  --text-momo-caption-uppercase--font-weight: var(
+    --momo-text-caption-uppercase-weight
+  );
+
+  --text-momo-code: var(--momo-text-code);
+  --text-momo-code--line-height: var(--momo-text-code-leading);
+  --text-momo-code--letter-spacing: var(--momo-text-code-tracking);
+  --text-momo-code--font-weight: var(--momo-text-code-weight);
+
+  --text-momo-button: var(--momo-text-button);
+  --text-momo-button--line-height: var(--momo-text-button-leading);
+  --text-momo-button--letter-spacing: var(--momo-text-button-tracking);
+  --text-momo-button--font-weight: var(--momo-text-button-weight);
+
+  --text-momo-nav-link: var(--momo-text-nav-link);
+  --text-momo-nav-link--line-height: var(--momo-text-nav-link-leading);
+  --text-momo-nav-link--letter-spacing: var(--momo-text-nav-link-tracking);
+  --text-momo-nav-link--font-weight: var(--momo-text-nav-link-weight);
+}

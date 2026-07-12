@@ -26,6 +26,8 @@
       "types": "./dist/shared/index.d.ts",
       "import": "./dist/shared/index.js"
     },
+    "./themes/semantic.css": "./src/themes/semantic.css",
+    "./themes/neutral.css": "./src/themes/neutral.css",
     "./themes/anthropic.css": "./src/themes/anthropic.css"
   },
   "files": [

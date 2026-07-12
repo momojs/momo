@@ -4,10 +4,11 @@
   "pages": [
     "index",
     "theme",
+    "accordion",
     "button",
+    "checkbox",
     "tween-number",
     "toggle-group",
-    "segmented",
     "switch",
     "select",
     "slider",

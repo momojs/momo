@@ -1,124 +1,95 @@
 ---
-title: 教程
-description: 用 momo test 在真实浏览器里测试一个 DOM 组件。
+title: 浏览器测试
+description: 用 bun:test 与 bunwright 测试依赖真实浏览器的内容。
 icon: GraduationCap
 ---
 
-本教程端到端地完成一次浏览器测试：编写配置、实现一个渲染函数、为它写真实 DOM 测试，并用 `momo test` 运行。
+普通逻辑测试继续使用 `bun:test`。只有依赖 DOM、布局、Canvas 或浏览器全局对象的内容才需要 bunwright。
 
-## 第 1 步：编写 momo.config.ts
+## 第 1 步：安装
 
-在包根目录创建配置。`test.include` 是**必填**项，相对于配置文件所在目录解析。`html` 会注入到测试页面的 `<body>`：
-
-```ts
-import { defineConfig } from '@momots/cli';
-
-export default defineConfig({
-  test: {
-    include: ['src/**/*.webview.spec.ts'],
-    html: '<main id="app"></main>',
-    width: 1280,   // 视口宽，默认 1280
-    height: 720,   // 视口高，默认 720
-    backend: 'webkit', // 'webkit'（默认）| 'chrome'
-  },
-});
+```bash
+bun add -d bunwright
 ```
 
-## 第 2 步：实现待测代码
+bunwright 需要 Bun 1.3.12 或更高版本，以及本机已有的 Chrome 或 WebKit。
 
-`src/widget.ts`：
+## 第 2 步：准备浏览器入口
+
+浏览器不能直接导入本地 TypeScript 源码，因此先用 `Bun.build` 将待测模块打包。入口把浏览器内的操作暴露为可序列化的结果：
 
 ```ts
-export function renderButton(root: HTMLElement, label: string) {
-  const btn = document.createElement('button');
-  btn.textContent = label;
-  root.appendChild(btn);
-  return btn;
-}
+// browser-tests/fixture.ts
+import { isScrollable } from '../src/is-scrollable';
+
+globalThis.runBrowserCheck = () => {
+  const box = document.createElement('div');
+  box.style.cssText = 'height:100px;overflow:auto';
+  box.innerHTML = '<div style="height:1000px"></div>';
+  document.body.append(box);
+  return isScrollable(box);
+};
 ```
 
-## 第 3 步：写浏览器测试
-
-`src/widget.webview.spec.ts`：
+## 第 3 步：编写测试
 
 ```ts
-import { afterEach, describe, expect, test } from '@momots/cli/test';
+// browser-tests/layout.test.ts
+import { afterAll, beforeAll, expect, test } from 'bun:test';
+import { browser } from 'bunwright';
 
-import { renderButton } from './widget';
+let server: ReturnType<typeof Bun.serve>;
+let page: Awaited<ReturnType<typeof browser.newPage>>;
 
-afterEach(() => {
-  document.querySelector('#app')!.innerHTML = '';
+beforeAll(async () => {
+  const build = await Bun.build({
+    entrypoints: [new URL('./fixture.ts', import.meta.url).pathname],
+    target: 'browser',
+  });
+  if (!build.success) throw new Error('fixture build failed');
+
+  server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      if (new URL(request.url).pathname === '/fixture.js') {
+        return new Response(build.outputs[0]);
+      }
+      return new Response(
+        '<script type="module" src="/fixture.js"></script>',
+        { headers: { 'Content-Type': 'text/html' } },
+      );
+    },
+  });
+
+  page = await browser.newPage();
+  await page.navigate(`http://${server.hostname}:${server.port}`);
 });
 
-describe('widget 在真实浏览器中', () => {
-  test('渲染带文案的按钮', () => {
-    renderButton(document.querySelector('#app')!, '点我');
+afterAll(async () => {
+  await browser.close();
+  server.stop(true);
+});
 
-    const btn = document.querySelector('button');
-    expect(btn).toBeDefined();
-    expect(btn!.textContent).toBe('点我');
-    expect(document.querySelectorAll('button')).toHaveLength(1);
-  });
-
-  test('存在浏览器全局对象', () => {
-    expect(typeof window).toBe('object');
-  });
-
-  test('支持异步断言', async () => {
-    const n = await Promise.resolve(42);
-    expect(n).toBe(42);
-    expect(n).not.toBe(43);
-  });
+test('内容超高的容器是可滚动的', async () => {
+  const result = await page.evaluate(() => globalThis.runBrowserCheck());
+  expect(result).toBe(true);
 });
 ```
 
 ## 第 4 步：运行
 
-```bash
-# 在含 momo.config.ts 的目录执行（会向上查找）
-momo test
-
-# 或显式指定配置
-momo test --config packages/my-pkg/momo.config.ts
-momo test -c ./momo.config.ts
-```
-
-输出大致如下：
-
-```text
-在 Bun.WebView 中运行 1 个 spec 文件…
-
-✓ widget 在真实浏览器中 > 渲染带文案的按钮 (2.1ms)
-✓ widget 在真实浏览器中 > 存在浏览器全局对象 (0.5ms)
-✓ widget 在真实浏览器中 > 支持异步断言 (0.3ms)
-
-WebView 3 passed (3 total)
-```
-
-成功退出码 `0`；任一失败或配置缺失/非法时退出码 `1`。
-
-## 第 5 步：双轨测试（推荐）
-
-把测试分成两类，各取所长：
-
-```mermaid
-flowchart TD
-  A["*.spec.ts"] --> B{"需要真实浏览器?"}
-  B -->|是，如 *.webview.spec.ts| C["momo test<br/>Bun.WebView"]
-  B -->|否，纯逻辑| D["bun test<br/>Node/Bun 运行时"]
-```
-
-`package.json`：
-
 ```json
 {
   "scripts": {
     "test": "bun test src",
-    "test:webview": "momo test"
+    "test:browser": "bun test browser-tests"
   }
 }
 ```
 
-> 这正是 `@momots/host` 的做法：`momo.config.ts` 只 `include: ['src/**/webview.spec.ts']`，其余守卫的纯逻辑测试走 `bun test`。
+```bash
+bun run test
+bun run test:browser
+```
 
-完整 API 见 [向导](/docs/cli/guide)。
+仓库里的 `@momots/host` 使用同样的结构：`bun:test` 负责测试报告和断言，bunwright 只负责真实浏览器页面。

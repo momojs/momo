@@ -1,218 +1,155 @@
 ---
 title: 主题与 Token
-description: momo/design 的 shadcn 风格 token 体系，以及每一层 token 的语义与用法。
+description: momo/design 的 semantic design token 体系，以及每一层 token 的语义与用法。
 icon: Palette
 ---
 
-`@momots/design` 的主题采用类似 Semi Design 的**分层 token 体系**，并统一带 `momo` 前缀，避免与宿主项目或其他框架的全局 token 冲突。当前内置两套主题：
+`@momots/design` 使用三层 token：
 
-- `anthropic`：基于 [`packages/design/DESIGN.md`](https://github.com) 还原的 Claude.com 视觉规范（暖调米色画布 + 珊瑚色主色）。
-- `neutral`：shadcn 风格的默认中性配色（zinc 灰阶 + Inter 无衬线字体）。
+| 层级 | 前缀 | 说明 |
+| --- | --- | --- |
+| Primitive | 无 `momo` 前缀 | 默认使用 Tailwind 色盘；主题独有色值用类 Tailwind 命名写在主题 CSS 的 `@theme` 中 |
+| Semantic | `--momo-bg-*`、`--momo-fg-*`、`--momo-border-*`、`--momo-ring-*` | 组件直接消费的语义层，跨主题命名一致 |
+| Base | `--momo-font-*`、`--momo-radius-*`、`--momo-space-*`、`--momo-shadow-*`、`--momo-text-*` | 字体、圆角、间距、阴影、字号阶梯 |
 
-两套主题的 token **结构完全一致**，只有第 1-3 层的具体取值不同；组件源码只消费第 4 层的短语义 alias，因此新增主题只需按同一套命名补齐取值，不需要改动任何组件。
+当前内置两套主题：
+
+- `neutral`：shadcn `neutral` 主题，取值来自 `shadcn@4.13.0` 的官方 registry。
+- `anthropic`：基于 `packages/design/DESIGN.md` 的 Claude / Anthropic 暖调主题。
+
+组件不再消费 `--momo-primary`、`--momo-background` 这类旧 alias；颜色统一用 `bg-*` 和 `fg-*` 区分背景与文本。
 
 ## 引入方式
 
 ```css
 @import "tailwindcss";
-@import "@momots/design/themes/anthropic.css";
-/* 或者 */
 @import "@momots/design/themes/neutral.css";
+@import "@momots/design/themes/anthropic.css";
 ```
 
-在根元素或局部容器上切换主题 class：
+推荐把 momo theme class 挂在应用根节点，也就是 `html` / `:root`。这样默认 portal 到 `body` 的浮层组件（例如 Select、Popover、Menu）也能继承同一份 `--momo-*` token：
 
 ```tsx
-<div className="theme-anthropic">
-  <Calendar />
-</div>
+<html className="theme-neutral">
+  <body>
+    <App />
+  </body>
+</html>
 
-<div className="theme-anthropic dark">
-  <Calendar />
-</div>
-
-<div className="theme-neutral">
-  <Calendar />
-</div>
+<html className="theme-neutral dark">
+  <body>
+    <App />
+  </body>
+</html>
 ```
+
+如果应用支持主题切换，只需要替换 `html` 上的主题 class：
 
 | Class | 说明 |
 | --- | --- |
-| `theme-anthropic` | Anthropic 亮色 |
-| `theme-anthropic dark` | Anthropic 暗色，与亮色共用同一套 palette，只切换到 `surface-dark` 系列 |
-| `theme-neutral` | Neutral 亮色（默认） |
+| `theme-neutral` | Neutral 亮色 |
 | `theme-neutral dark` | Neutral 暗色 |
+| `theme-anthropic` | Anthropic 亮色 |
+| `theme-anthropic dark` | Anthropic 暗色 |
 
-组件不会自动引入主题文件（`sideEffects` 只标记了 CSS，JS 入口不 import 主题），应用侧必须显式引入需要的主题。
+也可以把 `dark` 放在祖先节点上：`.dark .theme-neutral` 和 `.dark .theme-anthropic` 都会生效。
 
-## 分层概览
+局部容器也可以挂载主题 class，但它只适合无 portal 的隔离预览或嵌入场景。对于默认挂载到 `body` 的浮层，局部容器内的 token 不会自动传递到 portal；此时应优先把主题挂到 `html`，或者由应用显式传入组件的 portal container。
 
-| 层级 | 前缀 | 命名是否跨主题统一 | 说明 |
-| --- | --- | --- | --- |
-| 1. Palette | `--momo-palette-*` | 否，主题私有 | 主题内部 reference 色阶，不建议组件直接消费 |
-| 2. 语义色 | `--momo-color-*` | 是 | 文本、背景、边框、填充、反馈状态等语义 token |
-| 3. 基础 token | `--momo-font-*`、`--momo-radius-*`、`--momo-space-*`、`--momo-shadow-*`、`--momo-text-*` | 是 | 字体、圆角、间距、阴影、字号阶梯 |
-| 4. 短语义 alias | `--momo-background`、`--momo-primary`、`--momo-border`、`--momo-ring` 等 | 是 | 组件源码直接引用的层，也是切换主题时唯一需要覆盖的一层 |
-| 5. Tailwind 注册 | `--color-momo-*`、`--radius-momo-*`、`--font-momo-*`、`--text-momo-*` | 是 | `@theme inline` 注册给 Tailwind v4 的 token，对应 utility class |
+组件不会自动引入主题文件；应用侧必须显式引入需要的主题 CSS。
 
-第 1 层是每个主题的私有实现细节，例如 `anthropic` 用 `--momo-palette-coral`，`neutral` 用 `--momo-palette-primary`，命名可以不同；从第 2 层开始，所有主题必须使用完全相同的 token 名称，只替换取值。
+## Semantic Color Tokens
 
-组件只消费第 4 层的 alias（例如 `bg-momo-background`、`border-momo-border`），因此永远不会直接绑定某一套具体配色。
+### Background
 
-## 语义色（第 2 层）
-
-`--momo-color-*` 描述颜色的**用途**而非具体色值，是 palette 到组件之间的中间层。
-
-### 文本
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-color-text-primary` | 主要文本颜色，标题与正文默认色 |
-| `--momo-color-text-secondary` | 次级正文颜色，弱于 primary |
-| `--momo-color-text-strong` | 强调段落、导语文本 |
-| `--momo-color-text-muted` | 次级说明文字，如小标题、面包屑 |
-| `--momo-color-text-muted-soft` | 更弱的说明文字，如版权信息、细则 |
-| `--momo-color-text-on-primary` | 叠加在主色填充（按钮等）上的文本颜色 |
-| `--momo-color-text-on-dark` | 叠加在深色表面上的文本颜色 |
-| `--momo-color-text-on-dark-soft` | 深色表面上的次级文本 |
-
-### 背景
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-color-bg-canvas` | 页面默认背景（画布） |
-| `--momo-color-bg-surface` | 次级背景，用于分区、极浅色块 |
-| `--momo-color-bg-surface-card` | 卡片、弹层默认背景 |
-| `--momo-color-bg-surface-strong` | 强调背景块，如选中态 tab、强调分区 |
-| `--momo-color-bg-dark` | 深色主表面，如深色卡片、footer |
-| `--momo-color-bg-dark-elevated` | 深色表面上的提升层，如弹层、设置面板 |
-| `--momo-color-bg-dark-soft` | 深色表面上更柔和的层，如代码块背景 |
-
-### 边框
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-color-border` | 默认描边色 |
-| `--momo-color-border-soft` | 更弱的描边 / 分隔线，几乎不可见 |
-
-### 填充
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-color-fill-primary` | 主色填充（品牌色），用于主按钮、强调 CTA |
-| `--momo-color-fill-primary-hover` | 主色 hover 态 |
-| `--momo-color-fill-primary-active` | 主色按下 / 激活态 |
-| `--momo-color-fill-primary-disabled` | 主色禁用态 |
-
-### 强调色 & 反馈状态
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-color-accent-teal` | 次要点缀色（青色），用于状态指示灯等场景 |
-| `--momo-color-accent-amber` | 次要点缀色（琥珀色），用于分类徽章、高亮 |
-| `--momo-color-feedback-success` | 成功反馈色 |
-| `--momo-color-feedback-warning` | 警告反馈色 |
-| `--momo-color-feedback-error` | 错误 / 危险反馈色 |
-
-## 基础 token（第 3 层）
-
-### 字体族
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-font-display` | 展示型大标题字体，用于 hero、section 标题 |
-| `--momo-font-body` | 正文、UI 标签、按钮文字字体 |
-| `--momo-font-mono` | 代码 / 等宽字体 |
-
-### 圆角
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-radius-xs` | 徽章角标、极小控件 |
-| `--momo-radius-sm` | 小型内联按钮、下拉菜单项 |
-| `--momo-radius-md` | 标准按钮、输入框、tab |
-| `--momo-radius-lg` | 内容卡片（feature card、pricing card 等） |
-| `--momo-radius-xl` | Hero 插画容器、大型 marquee 组件 |
-| `--momo-radius-pill` | 徽章 pill、标签 |
-| `--momo-radius-full` | 头像、圆形图标按钮 |
-
-### 间距
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-space-xxs` ~ `--momo-space-xxl` | 4 / 8 / 12 / 16 / 24 / 32 / 48px 的间距刻度，对应组件内边距、元素间距 |
-| `--momo-space-section` | 96px，用于页面 section 之间的大间距 |
-
-### 阴影
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-shadow-sm` | 低强度投影，用于 hover 提升态等轻量层级差异 |
-
-### 字号阶梯
-
-每一档字号都配套 `-leading`（行高比）、`-tracking`（字距）、`-weight`（字重）三个伴生变量，例如 `--momo-text-body-md`、`--momo-text-body-md-leading`、`--momo-text-body-md-tracking`、`--momo-text-body-md-weight`。
-
-| Token 前缀 | 语义 |
-| --- | --- |
-| `--momo-text-display-xl` / `-lg` / `-md` / `-sm` | 展示型标题，如 hero 大标题、section 标题、pricing 标题 |
-| `--momo-text-title-lg` / `-md` / `-sm` | 卡片标题、列表标签 |
-| `--momo-text-body-md` / `-sm` | 正文、辅助说明文字 |
-| `--momo-text-caption` | 徽章文案、小字注释 |
-| `--momo-text-caption-uppercase` | 全大写分类标签，如 "NEW" |
-| `--momo-text-code` | 代码块文字 |
-| `--momo-text-button` | 按钮文案 |
-| `--momo-text-nav-link` | 导航链接文案 |
-
-## 短语义 alias（第 4 层）
-
-这一层是组件源码直接消费的 token，命名沿用 shadcn 惯例（`background` / `foreground` / `card` / `popover` / `primary` / `secondary` / `muted` / `accent` / `border` / `input` / `ring`）。新增主题时，只要这一层的值配置正确，组件无需任何改动即可换肤。
-
-| Token | 语义 |
-| --- | --- |
-| `--momo-background` / `--momo-foreground` | 页面 / 容器默认背景与文本色 |
-| `--momo-card` / `--momo-card-foreground` | 卡片背景与文本色 |
-| `--momo-popover` / `--momo-popover-foreground` | 弹层（下拉、Popover）背景与文本色 |
-| `--momo-primary` / `--momo-primary-foreground` | 主色按钮背景与文本色 |
-| `--momo-secondary` / `--momo-secondary-foreground` | 次要按钮 / 次要背景块与文本色 |
-| `--momo-muted` / `--momo-muted-foreground` | 弱化背景（如输入框轨道）与弱化文本 |
-| `--momo-accent` / `--momo-accent-foreground` | hover / 高亮态背景与文本色 |
-| `--momo-danger` / `--momo-danger-foreground` | 危险操作（删除按钮等）背景与文本色 |
-| `--momo-success` | 成功状态色 |
-| `--momo-warning` | 警告状态色 |
-| `--momo-border` | 组件默认描边色 |
-| `--momo-input` | 输入类组件（switch 轨道、input 边框）描边色 |
-| `--momo-ring` | 聚焦态 focus ring 颜色 |
-
-## Tailwind v4 注册（第 5 层）
-
-`@theme inline` 只需要在每个主题文件里声明一次，把第 4 层 alias 转发成 Tailwind 能识别的 token，从而生成对应的 utility class。
-
-| Tailwind token | 对应 utility | 来源 |
+| Token | Utility | 语义 |
 | --- | --- | --- |
-| `--color-momo-*` | `bg-momo-*`、`text-momo-*`、`border-momo-*` 等 | 转发自第 4 层 `--momo-background`、`--momo-primary` 等 |
-| `--radius-momo-*` | `rounded-momo-xs` ~ `rounded-momo-full` | 转发自第 3 层 `--momo-radius-*` |
-| `--font-momo-*` | `font-momo-display`、`font-momo-body`、`font-momo-mono` | 转发自第 3 层 `--momo-font-*` |
-| `--text-momo-*` | `text-momo-display-xl`、`text-momo-body-md` 等（自带配套 `line-height`） | 转发自第 3 层 `--momo-text-*` |
+| `--momo-bg-canvas` | `bg-momo-bg-canvas` | 默认画布背景 |
+| `--momo-bg-surface` | `bg-momo-bg-surface` | hover、高亮、轻量分区背景 |
+| `--momo-bg-surface-muted` | `bg-momo-bg-surface-muted` | 弱背景、轨道、选区中段 |
+| `--momo-bg-surface-raised` | `bg-momo-bg-surface-raised` | 提升层、卡片式表面 |
+| `--momo-bg-overlay` | `bg-momo-bg-overlay` | Popover、Select 下拉等浮层背景 |
+| `--momo-bg-brand` | `bg-momo-bg-brand` | 主操作、选中态、品牌填充 |
+| `--momo-bg-brand-hover` | `bg-momo-bg-brand-hover` | 主操作 hover |
+| `--momo-bg-brand-active` | `bg-momo-bg-brand-active` | 主操作 active / pressed |
+| `--momo-bg-danger` | `bg-momo-bg-danger` | 危险操作填充 |
+| `--momo-bg-success` / `--momo-bg-warning` | `bg-momo-bg-success` / `bg-momo-bg-warning` | 成功 / 警告状态填充 |
+
+### Foreground
+
+| Token | Utility | 语义 |
+| --- | --- | --- |
+| `--momo-fg-default` | `text-momo-fg-default` | 默认文本、图标、正文 |
+| `--momo-fg-muted` | `text-momo-fg-muted` | 次级文本 |
+| `--momo-fg-subtle` | `text-momo-fg-subtle` | 更弱的辅助文本或装饰图标 |
+| `--momo-fg-inverse` | `text-momo-fg-inverse` | 反相文本 |
+| `--momo-fg-brand` | `text-momo-fg-brand` | 链接、品牌文本、选中图标 |
+| `--momo-fg-on-brand` | `text-momo-fg-on-brand` | 主色背景上的文本 |
+| `--momo-fg-danger` | `text-momo-fg-danger` | 危险文本 / ring 颜色 |
+| `--momo-fg-on-danger` | `text-momo-fg-on-danger` | 危险背景上的文本 |
+| `--momo-fg-success` / `--momo-fg-warning` | `text-momo-fg-success` / `text-momo-fg-warning` | 成功 / 警告状态文本 |
+
+`--color-momo-fg-*` 同时注册为 Tailwind color token，因此也可以用于 `fill-momo-fg-brand`、`ring-momo-fg-danger/20` 等颜色类。
+
+### Border And Ring
+
+| Token | Utility | 语义 |
+| --- | --- | --- |
+| `--momo-border-default` | `border-momo-border-default` | 默认描边 |
+| `--momo-border-muted` | `border-momo-border-muted` | 弱描边 / 分隔线 |
+| `--momo-border-strong` | `border-momo-border-strong` | 强描边 |
+| `--momo-border-input` | `border-momo-border-input` | 输入、表单、可交互边框 |
+| `--momo-border-danger` | `border-momo-border-danger` | 危险 / invalid 边框 |
+| `--momo-ring-focus` | `ring-momo-ring-focus` | focus ring |
+
+## Base Tokens
+
+### Typography
+
+| Token | Utility | 语义 |
+| --- | --- | --- |
+| `--momo-font-display` | `font-momo-display` | 展示型标题字体 |
+| `--momo-font-body` | `font-momo-body` | UI 与正文文字 |
+| `--momo-font-mono` | `font-momo-mono` | 代码 / 等宽字体 |
+
+每档字号都有 `-leading`、`-tracking`、`-weight` 伴生变量，并通过 `@theme inline` 注册为 Tailwind `text-momo-*` utility：
+
+| Utility | 语义 |
+| --- | --- |
+| `text-momo-display-xl` / `-lg` / `-md` / `-sm` | 展示型标题 |
+| `text-momo-title-lg` / `-md` / `-sm` | 卡片标题、列表标题 |
+| `text-momo-body-md` / `-sm` | 正文与辅助说明 |
+| `text-momo-caption` / `text-momo-caption-uppercase` | 徽章、小字注释、分类标签 |
+| `text-momo-code` | 代码文字 |
+| `text-momo-button` | 按钮文字 |
+| `text-momo-nav-link` | 导航链接 |
+
+### Shape, Spacing, Shadow
+
+| Token | Utility | 语义 |
+| --- | --- | --- |
+| `--momo-radius-xs` ~ `--momo-radius-full` | `rounded-momo-xs` ~ `rounded-momo-full` | 圆角阶梯 |
+| `--momo-space-xxs` ~ `--momo-space-section` | `p-momo-md`、`gap-momo-lg` 等 | 间距阶梯 |
+| `--momo-shadow-sm` | `shadow-momo-sm` | 低强度层级阴影 |
+
+## 示例
 
 ```tsx
-<button className="rounded-momo-md bg-momo-primary px-momo-md text-momo-button text-momo-primary-foreground">
+<button className="rounded-momo-md bg-momo-bg-brand px-momo-md text-momo-button text-momo-fg-on-brand hover:bg-momo-bg-brand-hover">
   Continue
 </button>
 ```
 
-`--momo-space-*`、`--momo-shadow-*` 以及每档字号的 `-tracking` / `-weight` 伴生变量目前未注册进 `@theme`，可以通过 Tailwind v4 的任意值语法直接消费：
-
 ```tsx
-<div className="p-(--momo-space-lg) shadow-(--momo-shadow-sm)" />
+<div className="rounded-momo-lg border border-momo-border-default bg-momo-bg-surface-raised p-momo-lg text-momo-fg-default">
+  <p className="text-momo-body-sm text-momo-fg-muted">Semantic tokens stay stable across themes.</p>
+</div>
 ```
 
 ## 新增主题
 
-1. 复制一份现有主题文件，重命名根 class（如 `.theme-coffee`）。
-2. 重新设计第 1 层 `--momo-palette-*`（命名可以自定义）。
-3. 按完全相同的 token 名称重写第 2、3 层的取值。
-4. 第 4 层 alias 引用第 2 层语义色即可，无需改动命名。
-5. 第 5 层 `@theme inline` 直接复制现有主题的内容（逐字相同）。
-
-组件只消费带 `momo` 前缀的第 4 层 alias，因此新主题接入后无需修改任何组件源码。
+1. 复制 `packages/design/src/themes/neutral.css` 或 `anthropic.css`。
+2. 主题私有 primitive 使用 Tailwind 原生命名或类 Tailwind 命名，不加 `--momo` 前缀。
+3. 补齐完全相同的 semantic / base token 名称。
+4. 引入 `./semantic.css`，让 `bg-momo-bg-*`、`text-momo-fg-*`、`border-momo-border-*` 等 utility 可用。
+5. 不添加 CSS animation token；组件动画默认交给 Motion。

@@ -1,0 +1,43 @@
+---
+title: Accordion
+description: 带 motion 展开动画的折叠面板。
+icon: ListCollapse
+---
+
+`Accordion` 使用 Base UI Accordion 提供 disclosure 语义，使用 motion 处理展开高度、焦点反馈与图标旋转。组件样式消费 `--momo-bg-*`、`--momo-fg-*`、`--momo-border-*` 和 `--momo-ring-*` 语义 token。
+
+<AccordionPlayground />
+
+## 使用
+
+```tsx
+import { Accordion } from "@momots/design/components/accordion";
+
+<Accordion
+  value={openItems}
+  onValueChange={setOpenItems}
+  options={[
+    {
+      value: "tokens",
+      label: "Semantic tokens",
+      content: "Accordion follows the active momo theme.",
+    },
+    {
+      value: "motion",
+      label: "Motion first",
+      content: "Height and focus feedback are animated with motion.",
+    },
+  ]}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `T[]` | 当前展开项 |
+| `defaultValue` | `T[]` | 非受控默认展开项 |
+| `options` | `AccordionOption<T>[]` | 面板列表，支持 `label`、`content`、`disabled`、`className`、`style` |
+| `multiple` | `boolean` | 是否允许同时展开多项 |
+| `className` | `string` | 根节点追加 Tailwind class |
+| `onValueChange` | `(value: T[]) => void` | 展开项变化回调 |

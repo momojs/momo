@@ -44,25 +44,25 @@ const names = getDefaultClassNames();
 const variants = {
   calendar: cva({
     base: [
-      'group/calendar bg-momo-background p-2 [--cell-radius:var(--momo-radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent',
+      'group/calendar bg-momo-bg-canvas p-2 [--cell-radius:var(--momo-radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent',
       String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
       String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
     ],
   }),
   pager: cva({
-    base: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-momo-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 size-(--cell-size) p-0 select-none aria-disabled:opacity-50',
+    base: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-momo-ring-focus disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 size-(--cell-size) p-0 select-none aria-disabled:opacity-50',
     variants: {
       variant: {
         default:
-          'bg-momo-primary text-momo-primary-foreground shadow hover:bg-momo-primary/90',
+          'bg-momo-bg-brand text-momo-fg-on-brand shadow hover:bg-momo-bg-brand-hover',
         destructive:
-          'bg-momo-danger text-momo-danger-foreground shadow-sm hover:bg-momo-danger/90',
+          'bg-momo-bg-danger text-momo-fg-on-danger shadow-sm hover:opacity-90',
         outline:
-          'border border-momo-input bg-momo-background shadow-sm hover:bg-momo-accent hover:text-momo-accent-foreground',
+          'border border-momo-border-input bg-momo-bg-canvas shadow-sm hover:bg-momo-bg-surface hover:text-momo-fg-default',
         secondary:
-          'bg-momo-secondary text-momo-secondary-foreground shadow-sm hover:bg-momo-secondary/80',
-        ghost: 'hover:bg-momo-accent hover:text-momo-accent-foreground',
-        link: 'text-momo-primary underline-offset-4 hover:underline',
+          'bg-momo-bg-surface-muted text-momo-fg-default shadow-sm hover:opacity-80',
+        ghost: 'hover:bg-momo-bg-surface hover:text-momo-fg-default',
+        link: 'text-momo-fg-brand underline-offset-4 hover:underline',
       },
     },
     defaultVariants: {
@@ -75,7 +75,7 @@ const variants = {
       layout: {
         label: 'cn-calendar-caption text-sm',
         dropdown:
-          'cn-calendar-caption-label flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-momo-muted-foreground',
+          'cn-calendar-caption-label flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-momo-fg-muted',
       },
     },
     defaultVariants: {
@@ -96,7 +96,7 @@ const variants = {
     },
   }),
   button: cva({
-    base: 'relative isolate z-10 inline-flex aspect-square size-auto w-full min-w-(--cell-size) flex-col items-center justify-center gap-1 rounded-md border-0 bg-transparent p-0 text-sm font-medium leading-none text-momo-foreground transition-colors disabled:pointer-events-none disabled:opacity-50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-momo-primary data-[range-end=true]:text-momo-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-momo-muted data-[range-middle=true]:text-momo-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-momo-primary data-[range-start=true]:text-momo-primary-foreground data-[selected-single=true]:bg-momo-primary data-[selected-single=true]:text-momo-primary-foreground [&>span]:text-xs [&>span]:opacity-70',
+    base: 'relative isolate z-10 inline-flex aspect-square size-auto w-full min-w-(--cell-size) flex-col items-center justify-center gap-1 rounded-md border-0 bg-transparent p-0 text-sm font-medium leading-none text-momo-fg-default transition-colors disabled:pointer-events-none disabled:opacity-50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-momo-bg-brand data-[range-end=true]:text-momo-fg-on-brand data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-momo-bg-surface-muted data-[range-middle=true]:text-momo-fg-default data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-momo-bg-brand data-[range-start=true]:text-momo-fg-on-brand data-[selected-single=true]:bg-momo-bg-brand data-[selected-single=true]:text-momo-fg-on-brand [&>span]:text-xs [&>span]:opacity-70',
   }),
 };
 
@@ -134,33 +134,31 @@ const toClsx = ({ caption, cell, pager }: Variants): typeof names => {
     dropdown_root: cx(
       'cn-calendar-dropdown-root relative rounded-(--cell-radius)',
     ),
-    dropdown: cx('absolute inset-0 bg-momo-popover opacity-0'),
+    dropdown: cx('absolute inset-0 bg-momo-bg-overlay opacity-0'),
     caption_label: variants.caption({
       layout: caption?.layout === 'label' ? 'label' : 'dropdown',
     }),
     month_grid: cx('w-full border-collapse'),
     weekdays: cx('flex'),
     weekday: cx(
-      'flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-momo-muted-foreground select-none',
+      'flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-momo-fg-muted select-none',
     ),
     week: cx('mt-2 flex w-full'),
     week_number_header: cx('w-(--cell-size) select-none'),
-    week_number: cx('text-[0.8rem] text-momo-muted-foreground select-none'),
+    week_number: cx('text-[0.8rem] text-momo-fg-muted select-none'),
     day: variants.cell({ showWeekNumber: Boolean(cell?.showWeekNumber) }),
     range_start: cx(
-      'relative isolate z-0 rounded-l-(--cell-radius) bg-momo-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-momo-muted',
+      'relative isolate z-0 rounded-l-(--cell-radius) bg-momo-bg-surface-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-momo-bg-surface-muted',
     ),
     range_middle: cx('rounded-none'),
     range_end: cx(
-      'relative isolate z-0 rounded-r-(--cell-radius) bg-momo-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-momo-muted',
+      'relative isolate z-0 rounded-r-(--cell-radius) bg-momo-bg-surface-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-momo-bg-surface-muted',
     ),
     today: cx(
-      'rounded-(--cell-radius) bg-momo-muted text-momo-foreground data-[selected=true]:rounded-none',
+      'rounded-(--cell-radius) bg-momo-bg-surface-muted text-momo-fg-default data-[selected=true]:rounded-none',
     ),
-    outside: cx(
-      'text-momo-muted-foreground aria-selected:text-momo-muted-foreground',
-    ),
-    disabled: cx('text-momo-muted-foreground opacity-50'),
+    outside: cx('text-momo-fg-muted aria-selected:text-momo-fg-muted'),
+    disabled: cx('text-momo-fg-muted opacity-50'),
     hidden: cx('invisible'),
   }).forEach(([key, value]) => {
     res[key] = cx(res[key], value);
@@ -212,7 +210,7 @@ function Cell({ id, day, locale, modifiers, className, ...props }: CellProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className='absolute inset-0 rounded-md bg-momo-primary'
+            className='absolute inset-0 rounded-md bg-momo-bg-brand'
             layoutId={`${id}-selected-cell`}
           />
         )}

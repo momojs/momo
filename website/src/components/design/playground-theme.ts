@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 /**
  * Playground 可选的配色主题（不含明暗，明暗跟随文档站全局设置）。
@@ -21,6 +21,9 @@ export type PlaygroundThemeName = keyof typeof PLAYGROUND_THEMES;
 
 const STORAGE_KEY = 'momo-playground-theme';
 const DEFAULT_THEME: PlaygroundThemeName = 'neutral';
+const THEME_CLASS_NAMES = Object.values(PLAYGROUND_THEMES).map(
+  (theme) => theme.className,
+);
 
 function isPlaygroundTheme(value: string | null): value is PlaygroundThemeName {
   return value != null && value in PLAYGROUND_THEMES;
@@ -30,6 +33,15 @@ function readStoredTheme(): PlaygroundThemeName {
   if (typeof window === 'undefined') return DEFAULT_THEME;
   const stored = window.localStorage.getItem(STORAGE_KEY);
   return isPlaygroundTheme(stored) ? stored : DEFAULT_THEME;
+}
+
+function applyRootTheme(theme: PlaygroundThemeName) {
+  if (typeof document === 'undefined') return;
+
+  const root = document.documentElement;
+  root.classList.remove(...THEME_CLASS_NAMES);
+  root.classList.add(PLAYGROUND_THEMES[theme].className);
+  root.dataset.momoTheme = theme;
 }
 
 /**
@@ -67,11 +79,16 @@ export function setPlaygroundTheme(theme: PlaygroundThemeName) {
   currentTheme = theme;
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, theme);
+    applyRootTheme(theme);
   }
   for (const listener of listeners) listener();
 }
 
 export function usePlaygroundTheme() {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  useEffect(() => {
+    applyRootTheme(theme);
+  }, [theme]);
+
   return [theme, setPlaygroundTheme] as const;
 }

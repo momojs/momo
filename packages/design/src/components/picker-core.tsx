@@ -40,7 +40,7 @@ export function PickerCore<T extends WheelPickerValue>({
   return (
     <WheelPickerWrapper
       className={cx(
-        'w-56 rounded-md border border-momo-border bg-momo-background',
+        'w-56 rounded-md border border-momo-border-default bg-momo-bg-canvas',
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
@@ -60,9 +60,9 @@ export function PickerCore<T extends WheelPickerValue>({
             });
           }}
           classNames={{
-            optionItem: 'text-momo-muted-foreground data-disabled:opacity-40',
+            optionItem: 'text-momo-fg-muted data-disabled:opacity-40',
             highlightWrapper:
-              'bg-momo-muted text-momo-foreground data-rwp-focused:ring-2 data-rwp-focused:ring-momo-ring data-rwp-focused:ring-inset',
+              'bg-momo-bg-surface-muted text-momo-fg-default data-rwp-focused:ring-2 data-rwp-focused:ring-momo-ring-focus data-rwp-focused:ring-inset',
             highlightItem: 'data-disabled:opacity-40',
           }}
         />

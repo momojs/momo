@@ -1,104 +1,202 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState } from 'react';
 
+import type { SwitchRootProps as BaseSwitchProps } from '@base-ui/react/switch';
 import { Switch as BaseSwitch } from '@base-ui/react/switch';
-import { Moon02Icon, Sun03Icon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
+import type { VariantProps } from 'cva';
+import type { HTMLMotionProps } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 
-import type { ControlSize } from '../shared';
-import { cx } from '../shared';
+import { useControllableValue } from '../hooks';
+import { swap } from '../shared/motion';
+import { cva } from '../tailwind';
 
-const rootSizeClasses: Record<ControlSize, string> = {
-  sm: 'h-6 w-11',
-  md: 'h-7 w-12',
-  lg: 'h-8 w-14',
+const variants = {
+  root: cva({
+    base: 'relative peer inline-flex shrink-0 items-center rounded-full border border-transparent bg-momo-bg-surface-muted p-px shadow-xs outline-none transition-[background-color,border-color,box-shadow,opacity] focus-visible:border-momo-ring-focus focus-visible:ring-[3px] focus-visible:ring-momo-ring-focus/50 data-[checked]:justify-end data-[checked]:bg-momo-bg-brand data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[invalid]:border-momo-border-danger data-[invalid]:ring-momo-fg-danger/20 data-[readonly]:cursor-default data-[unchecked]:justify-start data-[unchecked]:bg-momo-bg-surface-muted',
+    variants: {
+      size: {
+        sm: 'h-5 w-8',
+        md: 'h-6 w-10',
+        lg: 'h-7 w-12',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }),
+  thumb: cva({
+    base: 'relative grid shrink-0 place-items-center rounded-full bg-momo-bg-canvas text-momo-fg-muted shadow-sm ring-1 ring-momo-border-muted transition-[background-color,box-shadow,color]',
+    variants: {
+      size: {
+        sm: 'size-4',
+        md: 'size-5',
+        lg: 'size-6',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }),
+  thumbContent: cva({
+    base: 'absolute inset-0 grid place-items-center',
+    variants: {
+      size: {
+        sm: '[&_svg]:size-2.5',
+        md: '[&_svg]:size-3',
+        lg: '[&_svg]:size-3.5',
+      },
+      state: {
+        checked: 'text-momo-fg-brand',
+        unchecked: 'text-momo-fg-muted',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }),
 };
 
-const thumbSizeClasses: Record<ControlSize, string> = {
-  sm: 'size-5 data-[checked]:translate-x-5',
-  md: 'size-6 data-[checked]:translate-x-5',
-  lg: 'size-7 data-[checked]:translate-x-6',
-};
+const pressedThumbWidth = {
+  sm: 20,
+  md: 24,
+  lg: 28,
+} as const;
 
-export interface SwitchProps {
-  checked?: boolean;
-  defaultChecked?: boolean;
-  disabled?: boolean;
-  label?: ReactNode;
-  description?: ReactNode;
-  size?: ControlSize;
-  name?: string;
-  value?: string;
+interface SwitchProps
+  extends VariantProps<typeof variants.root>,
+    Omit<
+      HTMLMotionProps<'span'>,
+      | 'children'
+      | 'className'
+      | 'defaultChecked'
+      | 'disabled'
+      | 'form'
+      | 'id'
+      | 'onChange'
+      | 'value'
+    >,
+    Pick<
+      BaseSwitchProps,
+      | 'nativeButton'
+      | 'inputRef'
+      | 'required'
+      | 'readOnly'
+      | 'disabled'
+      | 'id'
+      | 'name'
+      | 'uncheckedValue'
+      | 'form'
+      | 'value'
+      | 'checked'
+      | 'onCheckedChange'
+      | 'defaultChecked'
+    > {
   className?: string;
-  onChange?: (checked: boolean) => void;
+  thumbUnchecked?: React.ReactNode;
+  thumbChecked?: React.ReactNode;
 }
 
 export function Switch({
+  size = 'md',
+  className,
+  thumbChecked,
+  thumbUnchecked,
+  disabled,
+  nativeButton,
+  name,
+  form,
+  value,
+  uncheckedValue,
+  readOnly,
+  required,
+  inputRef,
+  id,
   checked,
   defaultChecked,
-  disabled,
-  label,
-  description,
-  size = 'md',
-  name,
-  value,
-  className,
-  onChange,
+  onCheckedChange,
+
+  onTap,
+  onTapStart,
+  onTapCancel,
+  ...thumbProps
 }: SwitchProps) {
-  const control = (
-    <BaseSwitch.Root
-      checked={checked}
-      defaultChecked={defaultChecked}
-      disabled={disabled}
-      name={name}
-      value={value}
-      onCheckedChange={onChange}
-      className={cx(
-        'group inline-flex shrink-0 cursor-pointer items-center rounded-full border border-momo-input bg-momo-muted p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-momo-ring/45 data-[checked]:border-momo-primary data-[checked]:bg-momo-primary data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
-        rootSizeClasses[size],
-        className,
-      )}
-    >
-      <BaseSwitch.Thumb
-        className={cx(
-          'grid place-items-center rounded-full bg-momo-background text-momo-muted-foreground shadow-sm ring-1 ring-momo-border transition-transform data-[checked]:text-momo-primary',
-          thumbSizeClasses[size],
-        )}
-      >
-        <span className='grid place-items-center'>
-          <HugeiconsIcon
-            icon={Sun03Icon}
-            size={size === 'lg' ? 16 : 14}
-            strokeWidth={1.8}
-            className='col-start-1 row-start-1 opacity-100 transition-opacity group-data-[checked]:opacity-0'
-            aria-hidden
-          />
-          <HugeiconsIcon
-            icon={Moon02Icon}
-            size={size === 'lg' ? 16 : 14}
-            strokeWidth={1.8}
-            className='col-start-1 row-start-1 opacity-0 transition-opacity group-data-[checked]:opacity-100'
-            aria-hidden
-          />
-        </span>
-      </BaseSwitch.Thumb>
-    </BaseSwitch.Root>
+  const [isPressed, setIsPressed] = useState(false);
+  const [isChecked = false, setIsChecked] = useControllableValue(
+    {
+      checked,
+      defaultChecked,
+      onCheckedChange,
+    },
+    {
+      valuePropName: 'checked',
+      triggerPropName: 'onCheckedChange',
+      defaultValuePropName: 'defaultChecked',
+    },
   );
 
-  if (!label && !description) return control;
-
   return (
-    <label className='inline-flex items-center gap-3 text-sm text-momo-foreground'>
-      {control}
-      <span className='grid gap-0.5'>
-        {label && <span className='font-medium leading-none'>{label}</span>}
-        {description && (
-          <span className='text-xs leading-5 text-momo-muted-foreground'>
-            {description}
-          </span>
-        )}
-      </span>
-    </label>
+    <BaseSwitch.Root
+      disabled={disabled}
+      checked={isChecked}
+      onCheckedChange={setIsChecked}
+      name={name}
+      form={form}
+      value={value}
+      uncheckedValue={uncheckedValue}
+      nativeButton={nativeButton}
+      readOnly={readOnly}
+      required={required}
+      inputRef={inputRef}
+      id={id}
+      className={variants.root({ size, className })}
+    >
+      <BaseSwitch.Thumb
+        className={variants.thumb({ size })}
+        render={
+          <motion.span
+            data-slot='switch-thumb'
+            layout
+            whileTap={{ scale: 0.96 }}
+            onTapStart={(event, info) => {
+              onTapStart?.(event, info);
+              setIsPressed(true);
+            }}
+            initial
+            onTapCancel={() => setIsPressed(false)}
+            onTap={() => setIsPressed(false)}
+            animate={
+              isPressed ? { width: pressedThumbWidth[size ?? 'md'] } : undefined
+            }
+            {...thumbProps}
+          />
+        }
+      >
+        <AnimatePresence mode='popLayout' initial={false}>
+          {isChecked ? (
+            <motion.div
+              className={variants.thumbContent({
+                size,
+                state: 'checked',
+              })}
+              {...swap}
+            >
+              {thumbChecked}
+            </motion.div>
+          ) : (
+            <motion.div
+              className={variants.thumbContent({
+                size,
+                state: 'unchecked',
+              })}
+              {...swap}
+            >
+              {thumbUnchecked}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </BaseSwitch.Thumb>
+    </BaseSwitch.Root>
   );
 }

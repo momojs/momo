@@ -449,13 +449,13 @@ export function Slider({
       data-slot='slider'
       className={cx(
         '[--slider-height:--spacing(9)] [--slider-radius:var(--momo-radius-lg)]',
-        '[--slider-bg:var(--momo-muted)]',
-        '[--slider-fill:var(--momo-muted-foreground)]/10',
-        '[--slider-fill-active:var(--momo-muted-foreground)]/20',
-        '[--slider-hash:var(--momo-muted-foreground)]/30',
-        '[--slider-handle:var(--momo-foreground)]',
-        '[--slider-label:var(--momo-muted-foreground)]',
-        '[--slider-focus:var(--momo-foreground)]',
+        '[--slider-bg:var(--momo-bg-surface-muted)]',
+        '[--slider-fill:color-mix(in_srgb,var(--momo-fg-muted)_10%,transparent)]',
+        '[--slider-fill-active:color-mix(in_srgb,var(--momo-fg-muted)_20%,transparent)]',
+        '[--slider-hash:color-mix(in_srgb,var(--momo-fg-muted)_30%,transparent)]',
+        '[--slider-handle:var(--momo-fg-default)]',
+        '[--slider-label:var(--momo-fg-muted)]',
+        '[--slider-focus:var(--momo-fg-default)]',
         'relative h-(--slider-height)',
         className,
       )}
@@ -475,7 +475,7 @@ export function Slider({
         aria-valuetext={displayValue}
         className={cx(
           'group/slider absolute inset-0 cursor-pointer touch-none overflow-hidden rounded-(--slider-radius) bg-(--slider-bg) outline-none select-none',
-          'data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-momo-ring/50 data-[focus-visible=true]:ring-offset-1 data-[focus-visible=true]:ring-offset-momo-background',
+          'data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-momo-ring-focus/50 data-[focus-visible=true]:ring-offset-1 data-[focus-visible=true]:ring-offset-momo-bg-canvas',
         )}
         style={{ width: rubberWidth, x: rubberX }}
         onPointerDown={handlePointerDown}

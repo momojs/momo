@@ -10,17 +10,17 @@ const variants = cva({
   variants: {
     variant: {
       default:
-        'bg-momo-primary text-momo-primary-foreground shadow-xs hover:bg-momo-primary/90',
+        'bg-momo-bg-brand text-momo-fg-on-brand shadow-xs hover:bg-momo-bg-brand-hover',
       accent:
-        'bg-momo-accent text-momo-accent-foreground shadow-xs hover:bg-momo-accent/90',
+        'bg-momo-bg-surface text-momo-fg-default shadow-xs hover:bg-momo-bg-surface-muted',
       destructive:
-        'bg-momo-danger text-momo-danger-foreground shadow-xs hover:bg-momo-danger/90 focus-visible:ring-momo-danger/20',
+        'bg-momo-bg-danger text-momo-fg-on-danger shadow-xs hover:opacity-90 focus-visible:ring-momo-fg-danger/20',
       outline:
-        'border border-momo-input bg-momo-background shadow-xs hover:bg-momo-accent hover:text-momo-accent-foreground',
+        'border border-momo-border-input bg-momo-bg-canvas shadow-xs hover:bg-momo-bg-surface hover:text-momo-fg-default',
       secondary:
-        'bg-momo-secondary text-momo-secondary-foreground shadow-xs hover:bg-momo-secondary/80',
-      ghost: 'hover:bg-momo-accent hover:text-momo-accent-foreground',
-      link: 'text-momo-primary underline-offset-4 hover:underline',
+        'bg-momo-bg-surface-muted text-momo-fg-default shadow-xs hover:opacity-80',
+      ghost: 'hover:bg-momo-bg-surface hover:text-momo-fg-default',
+      link: 'text-momo-fg-brand underline-offset-4 hover:underline',
     },
     size: {
       default: 'h-9 px-4 py-2 has-[>svg]:px-3',
@@ -46,7 +46,7 @@ export function Button({ size, variant, className, ...props }: ButtonProps) {
     <motion.button
       whileTap={{ scale: 0.95 }}
       className={cx(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[box-shadow,_color,_background-color,_border-color,_outline-color,_text-decoration-color,_fill,_stroke] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-momo-ring focus-visible:ring-momo-ring/50 focus-visible:ring-[3px] aria-invalid:ring-momo-danger/20 aria-invalid:border-momo-danger",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[box-shadow,_color,_background-color,_border-color,_outline-color,_text-decoration-color,_fill,_stroke] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-momo-ring-focus focus-visible:ring-momo-ring-focus/50 focus-visible:ring-[3px] aria-invalid:ring-momo-fg-danger/20 aria-invalid:border-momo-border-danger",
         variants({ variant, size, className }),
       )}
       {...props}

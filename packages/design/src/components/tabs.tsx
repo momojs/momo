@@ -26,7 +26,7 @@ const variants = {
     },
   }),
   list: cva({
-    base: 'relative inline-flex rounded-lg border border-momo-border bg-momo-background p-1 shadow-sm',
+    base: 'relative inline-flex rounded-lg border border-momo-border-default bg-momo-bg-canvas p-1 shadow-sm',
     variants: {
       orientation: {
         horizontal: 'items-center overflow-x-auto',
@@ -38,7 +38,7 @@ const variants = {
     },
   }),
   tab: cva({
-    base: 'relative inline-flex h-9 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-momo-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-momo-ring/45 disabled:cursor-not-allowed disabled:opacity-45 data-[active]:text-momo-foreground [&_svg]:size-4',
+    base: 'relative inline-flex h-9 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-momo-fg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-momo-ring-focus/45 disabled:cursor-not-allowed disabled:opacity-45 data-[active]:text-momo-fg-default [&_svg]:size-4',
     variants: {
       orientation: {
         horizontal: '',
@@ -50,7 +50,7 @@ const variants = {
     },
   }),
   panel: cva({
-    base: 'rounded-lg border border-momo-border bg-momo-background p-4 text-sm leading-6 text-momo-foreground shadow-sm outline-none',
+    base: 'rounded-lg border border-momo-border-default bg-momo-bg-canvas p-4 text-sm leading-6 text-momo-fg-default shadow-sm outline-none',
   }),
 };
 
@@ -112,7 +112,7 @@ export function Tabs<T extends string>({
           >
             <Highlight
               active={current === value}
-              className='bg-momo-accent'
+              className='bg-momo-bg-surface'
               layoutId={`momo-tabs-indicator-${id}`}
             />
             {icon && (

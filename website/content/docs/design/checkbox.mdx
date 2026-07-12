@@ -1,0 +1,36 @@
+---
+title: Checkbox
+description: 表单友好的复选框控件。
+icon: SquareCheck
+---
+
+`Checkbox` 使用 Base UI Checkbox 提供隐藏 input、受控/非受控状态、indeterminate 状态与表单提交语义。勾选指示器使用 motion 绘制，边框、背景、文本与 focus ring 消费 momo semantic token。
+
+<CheckboxPlayground />
+
+## 使用
+
+```tsx
+import { Checkbox } from "@momots/design/components/checkbox";
+
+<Checkbox
+  checked={accepted}
+  aria-label="Accept terms"
+  onCheckedChange={setAccepted}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `checked` | `boolean` | 受控勾选状态 |
+| `defaultChecked` | `boolean` | 非受控默认状态 |
+| `indeterminate` | `boolean` | 是否显示 mixed 状态 |
+| `disabled` | `boolean` | 是否禁用 |
+| `readOnly` | `boolean` | 是否只读 |
+| `required` | `boolean` | 表单必填状态 |
+| `name` / `value` | `string` | 表单提交字段 |
+| `uncheckedValue` | `string` | 未选中时提交的值 |
+| `className` | `string` | 根节点追加 Tailwind class |
+| `onCheckedChange` | `(checked: boolean) => void` | 状态变化回调 |

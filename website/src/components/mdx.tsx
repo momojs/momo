@@ -2,12 +2,13 @@ import defaultMdxComponents from 'fumadocs-ui/mdx';
 import type { MDXComponents } from 'mdx/types';
 
 import {
+  AccordionPlayground,
   ButtonPlayground,
   CalendarPlayground,
+  CheckboxPlayground,
   IconPlayground,
   PickerDatePlayground,
   PickerTimePlayground,
-  SegmentedPlayground,
   SelectPlayground,
   SliderPlayground,
   SwitchPlayground,
@@ -20,13 +21,14 @@ import { Mermaid } from '@/components/mdx/mermaid';
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
+    AccordionPlayground,
     ButtonPlayground,
     CalendarPlayground,
+    CheckboxPlayground,
     IconPlayground,
     Mermaid,
     PickerDatePlayground,
     PickerTimePlayground,
-    SegmentedPlayground,
     SelectPlayground,
     SliderPlayground,
     SwitchPlayground,

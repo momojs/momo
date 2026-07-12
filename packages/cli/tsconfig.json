@@ -7,7 +7,6 @@
     "paths": {
       "@momots/cli": ["./src/index.ts"],
       "@momots/cli/build": ["./src/build.ts"],
-      "@momots/cli/test": ["./src/test.ts"],
       "@momots/cli/config": ["./src/config.ts"]
     }
   },

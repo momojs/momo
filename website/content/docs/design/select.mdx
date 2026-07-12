@@ -4,7 +4,7 @@ description: 带 motion 动画的下拉选择器。
 icon: ChevronsUpDown
 ---
 
-`Select` 使用 Base UI Select 提供键盘导航、表单提交与无障碍语义，下拉面板与触发器通过 motion 提供进出场与点击反馈。
+`Select` 使用 Base UI Select 提供键盘导航、表单提交与无障碍语义。组件默认渲染 Base UI 推荐的 `Trigger`、`Value`、`Icon`、`Portal`、`Positioner`、`Popup`、`List`、`ScrollArrow`、`Item`、`ItemIndicator` 与 `ItemText` 结构，并通过 momo semantic token 适配当前主题。
 
 <SelectPlayground />
 
@@ -25,20 +25,77 @@ import { Select } from "@momots/design/components/select";
 />;
 ```
 
+## 受控打开
+
+```tsx
+<Select
+  open={open}
+  onOpenChange={setOpen}
+  value={fruit}
+  onValueChange={(next) => {
+    if (next) setFruit(next);
+  }}
+  options={options}
+/>
+```
+
+`onChange` 是 momo 的简化回调，只在非空选项值变化时触发；需要完整 Base UI 事件信息或处理 `null` 值时，使用 `onValueChange`。
+`open` / `value` 都通过 momo 的 `useControllableValue` 处理，因此受控与非受控行为和其他表单组件保持一致。
+
+## 自定义弹层
+
+```tsx
+<Select
+  options={options}
+  positionerProps={{
+    alignItemWithTrigger: false,
+    sideOffset: 8,
+  }}
+  popupClassName="min-w-64"
+  listClassName="p-1"
+/>
+```
+
+更多 Base UI 行为通过 `Select` 的 root props 与 slot props 透传，不额外暴露底层 primitive。`Select` 不会自动改写 Portal 挂载点；应用应把 momo theme class 挂在 `html` / `:root` 上，让默认挂载到 `body` 的 popup 也能继承 `--momo-*` token。需要自定义挂载点时传入 `portalProps.container`。
+
+选项 hover 背景由 `useHighlighter` + `Highlight` 驱动，而不是 item 自身的 CSS hover 背景；`highlightItemOnHover` 默认关闭，避免 Base UI 的 pointer hover highlight 和 motion highlighter 重叠。
+
 ## Props
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
 | `value` | `T` | 当前选中值 |
 | `defaultValue` | `T` | 非受控默认值 |
-| `options` | `ControlOption<T>[]` | 选项列表，支持 `label`、`icon`、`disabled`、`className`、`style` |
+| `options` | `ControlOption<T>[]` | 简化选项列表，支持 `label`、`icon`、`disabled`、`className`、`style`、`textValue` |
+| `items` | Base UI Root `items` | 传给内部 Root 的 value-label 映射；默认使用 `options` |
+| `children` | `ReactNode` | 自定义 `List` 内部内容，适合分组或自定义 item |
 | `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
 | `placeholder` | `ReactNode` | 未选中时的占位文案 |
 | `disabled` | `boolean` | 是否禁用 |
+| `readOnly` | `boolean` | 是否只读 |
+| `multiple` | `boolean` | 是否允许多选 |
+| `highlightItemOnHover` | `boolean` | 是否启用 Base UI 的 pointer hover highlight，默认 `false`，momo hover 背景由 motion highlighter 处理 |
+| `open` / `defaultOpen` | `boolean` | 受控 / 非受控弹层打开状态 |
 | `name` | `string` | 表单字段名 |
+| `form` | `string` | 关联外部表单 |
+| `autoComplete` | `string` | 浏览器自动填充提示 |
 | `required` | `boolean` | 是否必填 |
+| `modal` | `boolean` | 打开时是否进入 modal 交互模式 |
+| `actionsRef` | Base UI actions ref | 传给内部 Root 的 imperative actions，例如动画结束后手动 `unmount` |
 | `className` | `string` | 触发器样式（`triggerClassName` 的别名） |
 | `triggerClassName` | `string` | 触发器样式 |
+| `valueClassName` / `iconClassName` | `string` | Value / Icon 样式 |
+| `positionerClassName` | `string` | Positioner 样式 |
 | `popupClassName` | `string` | 下拉面板样式 |
+| `listClassName` | `string` | List 样式 |
 | `itemClassName` | `string` | 选项样式 |
-| `onChange` | `(value: T) => void` | 选中项变化回调 |
+| `itemIndicatorClassName` / `itemTextClassName` | `string` | ItemIndicator / ItemText 样式 |
+| `scrollArrowClassName` | `string` | 上下滚动箭头样式 |
+| `triggerProps` / `valueProps` | Base UI props | 传给 `Select.Trigger` / `Select.Value` |
+| `portalProps` / `positionerProps` / `popupProps` / `listProps` | Base UI props | 传给对应 Base UI slot |
+| `itemProps` | Base UI props | 传给每个自动渲染的 `Select.Item` |
+| `scrollUpArrowProps` / `scrollDownArrowProps` | Base UI props | 传给上下滚动箭头 |
+| `indicator` | `ReactNode` | 自定义选中图标 |
+| `onChange` | `(value: T) => void` | 简化选中项变化回调，不包含 `null` |
+| `onValueChange` | Base UI callback | 完整值变化回调，包含 event details |
+| `onOpenChange` | Base UI callback | 弹层打开状态变化回调 |

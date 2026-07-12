@@ -72,13 +72,14 @@
   "scripts": {
     "build": "momo build",
     "test": "bun test src",
-    "test:webview": "bun ../cli/src/bin.ts test",
+    "test:browser": "bun test browser-tests",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "types": "tsc --project tsconfig.build.json"
   },
   "devDependencies": {
-    "@momots/cli": "workspace:*"
+    "@momots/cli": "workspace:*",
+    "bunwright": "^0.3.1"
   },
   "peerDependencies": {
     "@momots/core": ">=0.1.0-alpha.0 <0.2.0",

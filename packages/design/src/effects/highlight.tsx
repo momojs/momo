@@ -8,13 +8,17 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { cx } from '../shared';
 
-type HighlighterTrigger = 'hover' | 'click' | 'focus' | 'manual';
+export type HighlighterTrigger = 'hover' | 'click' | 'focus' | 'manual';
+
+type MeasuredHighlightStyle = StyleKeyframesDefinition &
+  Record<'height' | 'width' | 'x' | 'y' | 'zIndex', number>;
 
 type HighlighterOptions = {
-  trigger: HighlighterTrigger;
+  enabled?: boolean;
+  trigger?: HighlighterTrigger;
 };
 
-type Highlighter<
+export type Highlighter<
   TReference extends Element = HTMLElement,
   TContainer extends Element = HTMLElement,
 > = {
@@ -22,14 +26,17 @@ type Highlighter<
   flush: () => void;
   reference: RefCallback<TReference>;
   container: RefCallback<TContainer>;
-  style: StyleKeyframesDefinition | undefined;
+  style: StyleKeyframesDefinition | null;
 };
 
-function useHighlighter<
+export function useHighlighter<
   TReference extends Element = HTMLElement,
   TContainer extends Element = HTMLElement,
->({ trigger }: HighlighterOptions): Highlighter<TReference, TContainer> {
-  const [style, setStyle] = useState<StyleKeyframesDefinition>();
+>({
+  enabled = true,
+  trigger = 'hover',
+}: HighlighterOptions = {}): Highlighter<TReference, TContainer> {
+  const [style, setStyle] = useState<StyleKeyframesDefinition | null>(null);
 
   const containerRef = useRef<TContainer | null>(null);
   const referenceRef = useRef<TReference | null>(null);
@@ -37,27 +44,32 @@ function useHighlighter<
   const flush = useCallback(() => {
     const container = containerRef.current;
     const reference = referenceRef.current;
+    if (container && reference && enabled) {
+      const containerRect = container.getBoundingClientRect();
+      const referenceRect = reference.getBoundingClientRect();
+      const nextStyle: MeasuredHighlightStyle = {
+        zIndex: 0,
+        width: referenceRect.width,
+        height: referenceRect.height,
+        y: referenceRect.top - containerRect.top,
+        x: referenceRect.left - containerRect.left,
+      };
 
-    if (!container || !reference) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const referenceRect = reference.getBoundingClientRect();
-
-    setStyle({
-      top: referenceRect.top - containerRect.top,
-      left: referenceRect.left - containerRect.left,
-      width: referenceRect.width,
-      height: referenceRect.height,
-      opacity: 1,
-    });
-  }, []);
+      setStyle((current) => {
+        if (isSameMeasuredStyle(current, nextStyle)) return current;
+        return nextStyle;
+      });
+    } else {
+      setStyle(null);
+    }
+  }, [enabled]);
 
   const exit = useCallback(() => {
     referenceRef.current = null;
-    setStyle(undefined);
+    setStyle(null);
   }, []);
 
-  const setCurrentReference = useCallback(
+  const setReference = useCallback(
     (instance: TReference) => {
       referenceRef.current = instance;
       flush();
@@ -70,7 +82,7 @@ function useHighlighter<
       if (!instance) return;
 
       if (trigger === 'manual') {
-        setCurrentReference(instance);
+        setReference(instance);
 
         return () => {
           if (referenceRef.current === instance) exit();
@@ -78,7 +90,9 @@ function useHighlighter<
       }
 
       if (trigger === 'hover') {
-        const enter = () => setCurrentReference(instance);
+        const enter = () => {
+          setReference(instance);
+        };
         const leave = () => {
           if (referenceRef.current === instance) exit();
         };
@@ -89,12 +103,13 @@ function useHighlighter<
         return () => {
           instance.removeEventListener('pointerenter', enter);
           instance.removeEventListener('pointerleave', leave);
-          if (referenceRef.current === instance) exit();
         };
       }
 
       if (trigger === 'click') {
-        const click = () => setCurrentReference(instance);
+        const click = () => {
+          setReference(instance);
+        };
 
         instance.addEventListener('click', click);
 
@@ -104,7 +119,9 @@ function useHighlighter<
         };
       }
 
-      const focus = () => setCurrentReference(instance);
+      const focus = () => {
+        setReference(instance);
+      };
       const blur = () => {
         if (referenceRef.current === instance) exit();
       };
@@ -118,7 +135,7 @@ function useHighlighter<
         if (referenceRef.current === instance) exit();
       };
     },
-    [trigger, setCurrentReference, exit],
+    [exit, setReference, trigger],
   );
 
   const container = useCallback<RefCallback<TContainer>>(
@@ -138,39 +155,60 @@ function useHighlighter<
   };
 }
 
-type HighlightProps = ComponentProps<typeof motion.div> & {
+function isSameMeasuredStyle(
+  current: StyleKeyframesDefinition | null,
+  next: MeasuredHighlightStyle,
+) {
+  const measured = current as Partial<MeasuredHighlightStyle> | null;
+
+  return (
+    measured?.zIndex === next.zIndex &&
+    measured.width === next.width &&
+    measured.height === next.height &&
+    measured.x === next.x &&
+    measured.y === next.y
+  );
+}
+
+export type HighlightProps = ComponentProps<typeof motion.div> & {
   active?: boolean;
   exitDelay?: number;
-  highlightStyle?: StyleKeyframesDefinition;
+  highlightStyle?: StyleKeyframesDefinition | null;
 };
 
-function Highlight({
+export function Highlight({
   active,
-  layoutId,
   className,
   transition,
   highlightStyle,
   exitDelay = 0,
   ...props
 }: HighlightProps) {
+  const visible = active || !!highlightStyle;
+
   return (
     <AnimatePresence initial={false}>
-      {active && (
+      {visible && (
         <motion.div
           data-slot='highlight'
-          layoutId={layoutId}
-          transition={transition}
-          className={cx('absolute inset-0 rounded-md z-8', className)}
+          className={cx(
+            'absolute pointer-events-none inset-0 rounded-md z-8',
+            className,
+          )}
           initial={{
-            ...highlightStyle,
+            scale: 0,
             opacity: 0,
+            ...highlightStyle,
           }}
           animate={{
+            scale: 1,
             opacity: 1,
             ...highlightStyle,
           }}
           exit={{
+            scale: 0,
             opacity: 0,
+            ...highlightStyle,
             transition: {
               ...transition,
               delay: (transition?.delay ?? 0) + exitDelay / 1000,
@@ -182,12 +220,3 @@ function Highlight({
     </AnimatePresence>
   );
 }
-
-export {
-  Highlight,
-  type Highlighter,
-  type HighlighterOptions,
-  type HighlighterTrigger,
-  type HighlightProps,
-  useHighlighter,
-};
