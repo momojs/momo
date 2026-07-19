@@ -5,6 +5,7 @@ import {
   isEmptyish,
   isNot,
   isNullish,
+  isPlainObject,
   isString,
   pipe,
 } from 'remeda';
@@ -131,11 +132,11 @@ export class DriveContext<T = unknown> {
       api,
       url,
       path,
-      res: clone(res),
-      data: clone(data),
+      res: { ...res },
+      data: isPlainObject(data) ? clone(data) : data,
       req: {
         headers: new Headers(headers),
-        ...clone(rest),
+        ...rest,
       },
     };
   };

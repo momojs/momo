@@ -865,6 +865,29 @@ type Realizable<T, Args extends unknown[] = []> = T | ((...args: Args) => T);
 
 普通值或返回普通值的可具体化形式，供 `realize` 使用。
 
+### Updater
+
+```ts
+type Updater<T> = (
+  updater: Realizable<T, [T | undefined]>,
+  ...rest: unknown[]
+) => void;
+```
+
+状态更新器签名：第一个参数可以是新值，也可以是接收当前值并返回新值的函数；其余参数透传（例如 React 的 `setState` 回调）。适合描述受控 / 非受控组件中的 `setValue`。
+
+```ts
+import type { Updater } from '@momots/core/types';
+
+const setCount: Updater<number> = (updater) => {
+  const next = typeof updater === 'function' ? updater(0) : updater;
+  console.log(next);
+};
+
+setCount(1);
+setCount((prev) => (prev ?? 0) + 1);
+```
+
 ### MaybeArray
 
 ```ts
@@ -889,6 +912,14 @@ type NonEmptyish<T> = Exclude<T, Emptyish<T>>;
 
 从类型中排除 emptyish 成员，供 `compact` 等使用。
 
+### NonFalseish
+
+```ts
+type NonFalseish<T> = Exclude<T, false | Emptyish<T>>;
+```
+
+从类型中排除 `false` 与 emptyish 成员。
+
 ### Stringifiable
 
 ```ts
@@ -897,10 +928,54 @@ type Stringifiable = { toString(): string };
 
 具备 `toString()` 的值，供 `substitute` 插值使用。
 
+### Callable
+
 ```ts
-import type { MaybeArray, Realizable, NonEmptyish } from '@momots/core/types';
+type Callable = (...args: never[]) => unknown;
+```
+
+可调用函数的基础约束，供内部类型推导使用。
+
+```ts
+import type {
+  MaybeArray,
+  NonEmptyish,
+  Realizable,
+  Updater,
+} from '@momots/core/types';
 
 type Names = MaybeArray<string>;                    // string | string[] | readonly string[]
 type Thunk = Realizable<number, [string]>;           // number | ((s: string) => number)
 type Clean = NonEmptyish<string | '' | null>;       // string
+type SetValue = Updater<string>;                     // (updater, ...rest) => void
+```
+
+## 类型断言
+
+子路径：`cast/*`
+
+以下函数仅影响 TypeScript 类型，运行时不复制、不修改输入。
+
+### writable
+
+将只读类型断言为可写类型。调用方需自行保证后续写入安全。仅可通过子路径导入（根入口不重新导出）。
+
+```ts
+const writable = <T>(value: T): Writable<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `T` | 需要移除只读约束的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `Writable<T>` | 类型上可写的同一个值 |
+
+```ts
+import { writable } from '@momots/core/cast/writable';
+
+const source = { name: 'momo' } as const;
+const draft = writable(source);
+draft.name = 'kit';
 ```

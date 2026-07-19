@@ -1,5 +1,6 @@
 {
   "recommendations": [
+    "TypeScriptTeam.native-preview",
     "biomejs.biome",
     "lokalise.i18n-ally",
     "bradlc.vscode-tailwindcss",
@@ -11,6 +12,6 @@
     "ms-python.python",
     "ms-python.vscode-pylance",
     "tamasfe.even-better-toml",
-    "eamodio.gitlens",
+    "eamodio.gitlens"
   ]
 }

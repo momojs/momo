@@ -31,6 +31,57 @@ export const TodoApi = {
 };
 ```
 
+## 按外部配置重复发送幂等请求
+
+`repeat` 用于替换 `send` 阶段。下面的配置按路径选择最大发送次数，并将重复发送限制为 `GET` 和 `HEAD`：
+
+```ts
+import { Drive, repeat } from "@momots/drive";
+
+const rules = [
+  { prefix: "/api/reports/", attempts: 3, delay: 200 },
+  { prefix: "/api/search/", attempts: 2, delay: 100 },
+];
+
+function matchRule(path: string) {
+  return rules.find((rule) => path.startsWith(rule.prefix));
+}
+
+export const drive = new Drive({
+  send: repeat({
+    eligible: (attempt, context) => {
+      const method = context.req.method?.toUpperCase();
+      const rule = matchRule(context.path);
+      return (
+        rule !== undefined &&
+        (method === "GET" || method === "HEAD") &&
+        attempt < rule.attempts
+      );
+    },
+    delay: (attempt, context) =>
+      (matchRule(context.path)?.delay ?? 0) * 2 ** (attempt - 1),
+  }),
+});
+```
+
+该阶段只按发送序号和请求快照决策，并不检查响应是否失败；配置命中时，即使响应成功也会继续发送。`eligible` 必须包含可终止条件，且不应复用 `ReadableStream` 等一次性请求体。若需要按响应状态码或网络错误重试，应改用自定义 `send` 阶段或上层请求库。
+
+需要在下一次发送前修改请求时，可使用 `effect`：
+
+```ts
+const drive = new Drive({
+  send: repeat({
+    eligible: (attempt) => attempt === 1 && tokenStore.shouldRefresh(),
+    effect: async (_attempt, context) => {
+      const token = await refreshToken();
+      context.req.headers.set("Authorization", `Bearer ${token}`);
+    },
+  }),
+});
+```
+
+执行顺序为 `eligible → effect → delay → 下一次发送`。`effect` 只在 `eligible` 返回 `true` 时执行，其异常会终止 repeat。
+
 ## 401 响应时刷新令牌并重试
 
 下列写法仅适用于无请求体或请求体可安全重放的请求；`ReadableStream` 等一次性 body 被消费后不能直接复用。

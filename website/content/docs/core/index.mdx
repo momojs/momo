@@ -11,10 +11,10 @@ icon: Rocket
 ## 安装
 
 ```bash
-bun add @momots/core remeda type-fest
+bun add @momots/core@alpha remeda type-fest
 ```
 
-`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+当前发布通道为 `alpha`（`0.1.0-alpha.1`）。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
 
 ## 两种导入方式
 
@@ -44,7 +44,8 @@ import { toCamelCaseKeys } from "@momots/core/casing/toCamelCaseKeys";
 | 模板插值   | `substitute`          | `substitute`                                |
 | 数位求和   | `sumdig`              | `sumdig`                                    |
 | 树结构     | `tree/*`              | `unflat`、`flat`、`visit`、`prune` …        |
-| 类型工具   | `types`               | `MaybeArray`、`Realizable`、`NonEmptyish` … |
+| 类型断言   | `cast/*`              | `writable`                                  |
+| 类型工具   | `types`               | `MaybeArray`、`Realizable`、`Updater` …     |
 
 接下来可以阅读 [教程](/docs/core/tutorial) 完成一个完整场景，或直接查阅 [向导](/docs/core/guide) 了解每个 API。
 

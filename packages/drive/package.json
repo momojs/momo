@@ -1,6 +1,6 @@
 {
   "name": "@momots/drive",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.3",
   "description": "Bun-first Fetch API client with onion-style middleware for MomoTS packages and apps.",
   "keywords": [
     "momo",
@@ -30,6 +30,14 @@
       "types": "./dist/parser.d.ts",
       "import": "./dist/parser.js"
     },
+    "./stages": {
+      "types": "./dist/stages/index.d.ts",
+      "import": "./dist/stages/index.js"
+    },
+    "./stages/repeat": {
+      "types": "./dist/stages/repeat.d.ts",
+      "import": "./dist/stages/repeat.js"
+    },
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
@@ -52,6 +60,11 @@
   },
   "devDependencies": {
     "@momots/cli": "workspace:*"
+  },
+  "dependencies": {
+    "mime": "^4.1.0",
+    "nanoid": "^3.3.15",
+    "wildcard-match": "^5.1.4"
   },
   "peerDependencies": {
     "@momots/core": ">=0.1.0-alpha.0 <0.2.0",

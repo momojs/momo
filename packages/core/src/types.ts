@@ -47,6 +47,14 @@ export type Realizable<T, Args extends unknown[] = []> =
   | ((...args: Args) => T);
 
 /**
+ * 更新器。
+ */
+export type Updater<T, Args extends unknown[] = []> = (
+  prev: T,
+  ...args: Args
+) => T;
+
+/**
  * 单个值或数组值。
  */
 export type MaybeArray<Type> = Type | Type[] | readonly Type[];
@@ -65,16 +73,17 @@ export type Emptyish<T> =
 
 type EmptyishObject<T extends object> = T extends Callable
   ? never
-  : | (T extends { length: 0 } ? T : never)
-    | (T extends { size: 0 } ? T : never)
-    | (T extends readonly unknown[] ? EmptyishArray<T> : never)
-    | (T extends ReadonlyMap<infer _K, infer V> ? EmptyishMap<T, V> : never)
-    | (T extends ReadonlySet<infer V> ? EmptyishSet<T, V> : never)
-    | (T extends Date ? T : never)
-    | (T extends RegExp ? T : never)
-    | (T extends WeakMap<WeakKey, unknown> ? T : never)
-    | (T extends WeakSet<WeakKey> ? T : never)
-    | EmptyishPlainObject<T>;
+  :
+      | (T extends { length: 0 } ? T : never)
+      | (T extends { size: 0 } ? T : never)
+      | (T extends readonly unknown[] ? EmptyishArray<T> : never)
+      | (T extends ReadonlyMap<infer _K, infer V> ? EmptyishMap<T, V> : never)
+      | (T extends ReadonlySet<infer V> ? EmptyishSet<T, V> : never)
+      | (T extends Date ? T : never)
+      | (T extends RegExp ? T : never)
+      | (T extends WeakMap<WeakKey, unknown> ? T : never)
+      | (T extends WeakSet<WeakKey> ? T : never)
+      | EmptyishPlainObject<T>;
 
 type EmptyishArray<T extends readonly unknown[]> = T extends readonly []
   ? T

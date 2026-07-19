@@ -11,6 +11,20 @@ export type DriveContextSnap<T = unknown> = ReturnType<
   DriveContext<T>['toSnap']
 >;
 
+export interface DriveRepeatPolicy<T = unknown> {
+  /** 当前发送完成后是否继续。 */
+  eligible?: (
+    attempt: number,
+    context: DriveContextSnap<T>,
+  ) => boolean | Promise<boolean>;
+
+  /** 下一次发送前等待多久。 */
+  delay?: Realizable<number, [number, DriveContextSnap<T>]>;
+
+  /** 继续发送前执行的副作用。 */
+  effect?: (attempt: number, context: DriveContext<T>) => void | Promise<void>;
+}
+
 export type DrivePredicate = (snap: DriveContextSnap) => boolean;
 
 /** 中间件匹配模式：路径通配字符串，或基于上下文快照的谓词。 */

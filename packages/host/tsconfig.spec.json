@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "noEmit": true,
     "paths": {
       "bunwright": ["./node_modules/bunwright/dist/index.d.ts"]

@@ -14,6 +14,7 @@ import type {
   Realizable,
   RequiredPick,
   Stringifiable,
+  Updater,
 } from './types';
 
 describe('types', () => {
@@ -26,6 +27,7 @@ describe('types', () => {
     type _PlainObject = PlainObject;
     type _OmitOf = OmitOf<{ a: string; b: number }, 'a'>;
     type _Realizable = Realizable<string>;
+    type _Updater = Updater<number>;
     type _MaybeArray = MaybeArray<string>;
     type _Emptyish = Emptyish<''>;
     type _NonEmptyish = NonEmptyish<string | ''>;

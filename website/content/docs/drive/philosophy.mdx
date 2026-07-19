@@ -16,7 +16,7 @@ Drive 是构建在 Fetch API 之上的编排层，而非另一套独立的 HTTP 
 
 - **请求侧**：`RequestInit`、`Headers`、`AbortSignal` 等对象原样传递，不做额外转换；
 - **响应侧**：保留原生 `Response` 对象，解析结果写入 `ctx.res.body`；
-- **未内置的能力**：重试、异常抛出、缓存等，以避免与 Effect、TanStack Query 等上层库功能重复。
+- **默认不启用的能力**：重试、异常抛出、缓存等，以避免与 Effect、TanStack Query 等上层库功能重复；其中按请求条件重复发送可通过可选的 `repeat` 阶段启用。
 
 因此，熟悉 Fetch API 的开发者可以较低成本地理解本库的行为；同时，本库的实现可随平台 API 的演进而自然兼容。
 
@@ -83,7 +83,7 @@ flowchart TD
 
 > 用户定义的中间件在 `encode()` 调用 **之前** 执行。
 
-### 2.4 错误与重试由外部定义
+### 2.5 错误与重试由外部定义
 
 Drive **不会** 因 HTTP 4xx 或 5xx 状态码自动抛出异常。理由如下：
 
@@ -97,10 +97,13 @@ Drive **不会** 因 HTTP 4xx 或 5xx 状态码自动抛出异常。理由如下
 2. 通过 `request()` 读取 `ctx.res.status` 与可选的 `ctx.res.body`，自行分支处理；
 3. 使用 Effect 或 TanStack Query 包装请求；
 4. 在 `use('*', ...)` 中间件中统一检查状态码并抛出异常。
+5. 仅需按请求快照和业务条件重复发送时，以 `repeat(policy)` 替换 `send` 阶段。
 
 本库负责完成 HTTP 传输与数据编解码；错误判定策略由应用层或上层库负责。
 
-### 2.5 简洁性与可扩展性的统一
+可选的 `repeat` 阶段不会定义“失败”的含义。它在每次成功取得 `Response` 后，以当前发送序号和请求上下文快照调用 `eligible`；返回 `true` 时等待 `delay` 并再次发送。当前响应和网络异常不会传入策略，因此按状态码或异常类型重试仍应由上层库或自定义 `send` 阶段实现。
+
+### 2.6 简洁性与可扩展性的统一
 
 默认实现力求简单，同时保留充分的替换能力：
 
@@ -109,6 +112,7 @@ Drive **不会** 因 HTTP 4xx 或 5xx 状态码自动抛出异常。理由如下
 | 使用 `JSON.stringify` 序列化请求体 | 替换 `stringifier`                         |
 | 按 `Content-Type` 解析响应         | 替换 `parser`                              |
 | 使用 `fetch` 发起请求              | 替换 `send`                                |
+| 默认只发送一次                     | 使用可选的 `repeat` 发送阶段                |
 | 固定中间件管线                     | 实例级与单次请求级均可覆盖各阶段           |
 | `get` / `post` 返回响应体          | `request()` 返回完整 `DriveFetchedContext` |
 

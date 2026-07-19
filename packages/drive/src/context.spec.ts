@@ -37,15 +37,28 @@ describe('DriveContext', () => {
   });
 
   test('returns a cloned object snapshot', () => {
+    const data = { profile: { name: 'Ada' } };
     const ctx = new DriveContext('https://api.test/users', {
-      data: { name: 'Ada' },
+      data,
       headers: { 'X-Trace': '1' },
     });
     const snapshot = ctx.toSnap();
 
     snapshot.req.headers.set('X-Trace', '2');
+    (snapshot.data as typeof data).profile.name = 'Grace';
 
     expect(ctx.req.headers.get('X-Trace')).toBe('1');
-    expect(snapshot.data).toEqual({ name: 'Ada' });
+    expect(data.profile.name).toBe('Ada');
+  });
+
+  test('preserves non-plain platform values in snapshots', () => {
+    const data = new URLSearchParams({ page: '2' });
+    const signal = new AbortController().signal;
+    const ctx = new DriveContext('https://api.test/users', { data, signal });
+
+    const snapshot = ctx.toSnap();
+
+    expect(snapshot.data).toBe(data);
+    expect(snapshot.req.signal).toBe(signal);
   });
 });

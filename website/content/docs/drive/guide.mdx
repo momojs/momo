@@ -427,9 +427,45 @@ drive.use(
 2. 按 `Content-Type` 选择解析方式并填充 `body`；
 3. 在流式 `receiver` 模式下不填充 `body`。
 
+## repeat
+
+可选的 `send` 阶段工厂，根据请求上下文快照与当前发送序号决定是否继续发送。
+
+```ts
+import { repeat } from "@momots/drive";
+// 也可从 "@momots/drive/stages/repeat" 导入
+
+const send = repeat({
+  eligible: (attempt, context) =>
+    context.req.method === "GET" && attempt < 3,
+  effect: async (_attempt, context) => {
+    const token = await refreshToken();
+    context.req.headers.set("Authorization", `Bearer ${token}`);
+  },
+  delay: (attempt) => 200 * 2 ** (attempt - 1),
+});
+```
+
+```ts
+function repeat(options: DriveRepeatPolicy): DriveSend;
+```
+
+执行规则：
+
+1. 至少调用一次 `fetch(context.api, context.req)`；
+2. `fetch` 成功返回后，以从 `1` 开始的发送序号和发送前的上下文快照调用 `eligible`；
+3. `eligible` 返回 `true` 时，调用并等待可选的 `effect`；
+4. `effect` 完成后等待 `delay` 毫秒并再次发送；
+5. `eligible` 返回 `false` 或未提供时，将当前 `Response` 写入 `context.res.raw`，调用 `context.decode()`，再进入 `receive`；
+6. 中间响应不会被 parser 读取，只有最终响应进入默认解析流程。
+
+`eligible` 接收只读用途的上下文快照，适合保持为纯判断；`effect` 接收原始、可写的 `DriveContext`，可以异步刷新凭证、修改下一次发送使用的 headers 或记录日志。`effect` 仅在 `eligible` 返回 `true` 时调用，其异常会直接终止 repeat。
+
+`eligible` 不会收到本次 `Response` 或网络异常，且此时 `context.res` 尚未写入当前响应；`fetch` reject 也会直接传播。条件必须自行保证最终返回 `false`，且重复发送仅适用于可安全重放的请求。实例级配置使用 `new Drive({ send: repeat(policy) })`；单次请求可通过 `init.send` 覆盖。
+
 ## 类型
 
-本节列出 `@momots/drive` 从根入口导出的全部类型。类 `Drive`、`DriveContext` 与函数 `parser` 见上文各节。
+本节列出 `@momots/drive` 从根入口导出的全部类型。类 `Drive`、`DriveContext` 与函数 `parser`、`repeat` 见上文各节。
 
 ### DrivePattern
 
@@ -672,6 +708,32 @@ type DriveSend = <T>() => DriveMiddleware<T>;
 ```
 
 默认实现调用 `fetch(context.api, context.req)`，写入 `context.res.raw` 并调用 `context.decode()`。
+
+### DriveRepeatPolicy
+
+`repeat()` 的外部策略类型。
+
+```ts
+interface DriveRepeatPolicy<T = unknown> {
+  eligible?: (
+    attempt: number,
+    context: DriveContextSnap<T>,
+  ) => boolean | Promise<boolean>;
+  delay?: Realizable<number, [number, DriveContextSnap<T>]>;
+  effect?: (
+    attempt: number,
+    context: DriveContext<T>,
+  ) => void | Promise<void>;
+}
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `eligible` | `(attempt, context) => boolean \| Promise<boolean>` | 当前发送完成后是否继续；未提供时只发送一次 |
+| `delay` | `number \| ((attempt, context) => number)` | 相邻发送之间的等待时间（毫秒），默认 `0` |
+| `effect` | `(attempt, context) => void \| Promise<void>` | 继续发送前执行的副作用；可修改原始 Context |
+
+`attempt` 从 `1` 开始，表示刚完成的发送序号。调用顺序固定为 `eligible → effect → delay → 下一次发送`。若 `eligible` 持续返回 `true`，请求会持续执行，因此条件必须自行提供明确的终止规则。
 
 ### DriveReceive
 

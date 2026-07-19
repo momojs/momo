@@ -3,7 +3,6 @@
   "compilerOptions": {
     "rootDir": "src",
     "types": ["bun"],
-    "baseUrl": ".",
     "paths": {
       "@momots/cli": ["./src/index.ts"],
       "@momots/cli/build": ["./src/build.ts"],

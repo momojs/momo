@@ -1,6 +1,7 @@
 export * from './context';
 export * from './core';
 export * from './parser';
+export * from './stages';
 export type {
   DriveBodyParse,
   DriveConstructorParams,
@@ -21,6 +22,7 @@ export type {
   DrivePrepare,
   DriveReceive,
   DriveReceiver,
+  DriveRepeatPolicy,
   DriveRequest,
   DriveSend,
 } from './types';
