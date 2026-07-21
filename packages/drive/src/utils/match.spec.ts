@@ -47,6 +47,8 @@ describe('filtering', () => {
       url: new URL('https://api.test/api/users'),
       path: '/api/users',
       data: undefined,
+      query: undefined,
+      json: undefined,
       req: { id: '1', headers: new Headers() },
       res: {},
     }));

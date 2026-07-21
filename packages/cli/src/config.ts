@@ -9,6 +9,8 @@ export interface MomoBuildConfig {
   target?: 'browser' | 'bun' | 'node';
   /** 依赖处理方式，默认 `external`（不打包依赖）。 */
   packages?: 'bundle' | 'external';
+  /** 是否为多个 ESM 入口提取共享 chunk，以保留跨入口的引用身份。 */
+  splitting?: boolean;
   /** 构建前依次执行的 package 脚本（`bun run <script>`），默认 `['typecheck', 'types']`。 */
   scripts?: string[];
   /** 构建后需要置为可执行（0o755）的产物，相对 outdir，如 `['bin.js']`。 */

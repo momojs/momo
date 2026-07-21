@@ -1,32 +1,60 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, expectTypeOf, test } from 'bun:test';
 
-import { Drive } from './core';
-import type { DriveBodyParse, DriveMiddleware } from './types';
+import { Drive as DriveCore } from './core';
+import type {
+  DriveBodyParse,
+  DriveConstructorParams,
+  DriveMethodInit,
+  DriveMethodOptions,
+  DriveMiddleware,
+  DriveMiddlewareEntry,
+  DriveReceiver,
+  DriveRequest,
+  DriveStageSend,
+  ExtraOptions,
+} from './types';
 
-type FetchInit = RequestInit & {
-  headers: Headers;
-  id?: string;
-  signal?: AbortSignal;
-};
 type FetchHandler = (
   url: string,
-  init: FetchInit,
+  init: DriveRequest,
 ) => Response | Promise<Response>;
 
 interface Captured {
   url: string;
-  init: FetchInit;
+  init: DriveRequest;
 }
 
-const originalFetch = globalThis.fetch;
 let calls: Captured[] = [];
+let handler: FetchHandler;
 
-/** 用受控的处理器替换全局 fetch，并记录每次调用（类似 axios 的 mock adapter）。 */
-function respond(handler: FetchHandler): void {
-  globalThis.fetch = (async (url: unknown, init: FetchInit) => {
-    calls.push({ url: String(url), init });
-    return handler(String(url), init);
-  }) as unknown as typeof fetch;
+/** 通过公开 send 扩展点提供内存响应，不修改运行时的全局 fetch。 */
+const unitSend: DriveStageSend = () => async (context, next) => {
+  const init = {
+    ...context.req,
+    headers: new Headers(context.req.headers),
+  };
+  calls.push({ url: context.api, init });
+  const response = await handler(context.api, context.req);
+  context.res.raw = response;
+  context.decode(response);
+  await next();
+};
+
+class Drive extends DriveCore {
+  constructor(options: DriveConstructorParams = {}) {
+    const params = Array.isArray(options) ? { middlewares: options } : options;
+    super({
+      ...params,
+      stages: {
+        send: unitSend,
+        ...params.stages,
+      },
+    });
+  }
+}
+
+function respond(next: FetchHandler): void {
+  handler = next;
 }
 
 beforeEach(() => {
@@ -34,11 +62,15 @@ beforeEach(() => {
   respond(() => Response.json({}));
 });
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
-
 describe('Drive requests', () => {
+  test('uses the platform fetch in the default send stage', async () => {
+    const body = await new DriveCore().get<{ ok: boolean }>(
+      'data:application/json,%7B%22ok%22%3Atrue%7D',
+    );
+
+    expect(body).toEqual({ ok: true });
+  });
+
   test('get() resolves the parsed JSON body', async () => {
     respond(() => Response.json({ id: 1, name: 'momo' }));
 
@@ -59,6 +91,8 @@ describe('Drive requests', () => {
     expect(typeof drive.post).toBe('function');
     expect(typeof drive.put).toBe('function');
     expect(typeof drive.delete).toBe('function');
+    expect('trace' in drive).toBe(false);
+    expect('connect' in drive).toBe(false);
   });
 
   test('runs every lowercase method helper', async () => {
@@ -68,10 +102,8 @@ describe('Drive requests', () => {
     await drive.put('https://api.test/put');
     await drive.head('https://api.test/head');
     await drive.post('https://api.test/post');
-    await drive.trace('https://api.test/trace');
     await drive.patch('https://api.test/patch');
     await drive.delete('https://api.test/delete');
-    await drive.connect('https://api.test/connect');
     await drive.options('https://api.test/options');
 
     expect(calls.map(({ init }) => init.method)).toEqual([
@@ -79,21 +111,16 @@ describe('Drive requests', () => {
       'PUT',
       'HEAD',
       'POST',
-      'TRACE',
       'PATCH',
       'DELETE',
-      'CONNECT',
       'OPTIONS',
     ]);
   });
 
-  test('accepts an object-shaped helper target at runtime', async () => {
+  test('supports the object-shaped helper API without a cast', async () => {
     const drive = new Drive();
-    const get = drive.get as unknown as (opts: {
-      api: string;
-    }) => Promise<unknown>;
 
-    await get({ api: 'https://api.test/object-target' });
+    await drive.get({ api: 'https://api.test/object-target' });
 
     expect(calls[0]?.url).toBe('https://api.test/object-target');
     expect(calls[0]?.init.method).toBe('GET');
@@ -119,6 +146,31 @@ describe('Drive requests', () => {
     const body = await drive.get<string>('https://api.test/ping');
 
     expect(body).toBe('pong');
+  });
+
+  test('supports an explicit void generic for responses without a body', async () => {
+    respond(() => new Response(null, { status: 204 }));
+
+    const body = await new Drive().delete<void>({
+      api: 'https://api.test/users/1',
+    });
+
+    expect(body).toBeUndefined();
+  });
+
+  test('requires request() when a helper is given a receiver at runtime', async () => {
+    const get = new Drive().get as unknown as (options: {
+      api: string;
+      receiver: DriveReceiver<unknown>;
+    }) => Promise<unknown>;
+
+    await expect(
+      get({
+        api: 'https://api.test/file',
+        receiver: () => undefined,
+      }),
+    ).rejects.toThrow('Drive receiver requires request()');
+    expect(calls).toHaveLength(0);
   });
 });
 
@@ -176,6 +228,16 @@ describe('Drive data & headers', () => {
     expect(calls[0]?.url).toContain('active=1');
   });
 
+  test('preserves a URL fragment while adding query data', async () => {
+    const drive = new Drive();
+    await drive.get(
+      '/users?active=1#details',
+      new URLSearchParams({ page: '2' }),
+    );
+
+    expect(calls[0]?.url).toBe('/users?page=2&active=1#details');
+  });
+
   test('passes native body values through without JSON headers', async () => {
     const body = new Blob(['file']);
     const drive = new Drive();
@@ -183,6 +245,61 @@ describe('Drive data & headers', () => {
 
     expect(calls[0]?.init.body).toBe(body);
     expect(calls[0]?.init.headers.has('Content-Type')).toBe(false);
+  });
+
+  test('uses explicit query, json, and body fields in object helpers', async () => {
+    const drive = new Drive();
+    const upload = new Blob(['file']);
+
+    await drive.get({
+      api: 'https://api.test/users?active=1',
+      query: new URLSearchParams({ page: '2' }),
+    });
+    await drive.post({
+      api: 'https://api.test/users',
+      json: { name: 'momo' },
+    });
+    await drive.post({
+      api: 'https://api.test/upload',
+      body: upload,
+    });
+
+    expect(calls[0]?.url).toBe('https://api.test/users?page=2&active=1');
+    expect(calls[0]?.init.body).toBeUndefined();
+    expect(calls[1]?.init.body).toBe('{"name":"momo"}');
+    expect(calls[1]?.init.headers.get('Content-Type')).toBe('application/json');
+    expect(calls[2]?.init.body).toBe(upload);
+    expect(calls[2]?.init.headers.has('Content-Type')).toBe(false);
+  });
+
+  test('lets middleware supply json before the prepare stage', async () => {
+    const drive = new Drive();
+    drive.use('*', async (context, next) => {
+      context.json = { source: 'middleware' };
+      await next();
+    });
+
+    await drive.post({ api: 'https://api.test/users' });
+
+    expect(calls[0]?.init.body).toBe('{"source":"middleware"}');
+    expect(calls[0]?.init.headers.get('Content-Type')).toBe('application/json');
+  });
+
+  test('rejects positional payload data combined with an explicit body before send', async () => {
+    const drive = new Drive();
+
+    await expect(
+      drive.post(
+        'https://api.test/users',
+        { automatic: true },
+        {
+          body: new Blob(['explicit']),
+        },
+      ),
+    ).rejects.toThrow(
+      'Drive request cannot combine payload data with json or body',
+    );
+    expect(calls).toHaveLength(0);
   });
 });
 
@@ -300,7 +417,7 @@ describe('Drive middlewares (interceptors)', () => {
 
   test('can be constructed from a middleware-entry array', async () => {
     const hits: string[] = [];
-    const drive = new Drive([
+    const drive = new DriveCore([
       [
         '*',
         async (_ctx, next) => {
@@ -310,9 +427,45 @@ describe('Drive middlewares (interceptors)', () => {
       ],
     ]);
 
-    await drive.get('https://api.test/users');
+    await drive.get('https://api.test/users', undefined, {
+      stages: { send: unitSend },
+    });
 
     expect(hits).toEqual(['global']);
+  });
+
+  test('copies constructor middlewares instead of retaining the input array', async () => {
+    const hits: string[] = [];
+    const track =
+      (label: string): DriveMiddleware =>
+      async (_ctx, next) => {
+        hits.push(label);
+        await next();
+      };
+    const entries: DriveMiddlewareEntry[] = [['*', track('initial')]];
+    const drive = new DriveCore(entries);
+
+    entries.push(['*', track('external')]);
+    drive.use('*', track('instance'));
+    await drive.get('https://api.test/users', undefined, {
+      stages: { send: unitSend },
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(hits).toEqual(['initial', 'instance']);
+  });
+
+  test('matches relative APIs by path without query or hash', async () => {
+    const hits: string[] = [];
+    const drive = new Drive();
+    drive.use('/users', async (_ctx, next) => {
+      hits.push('users');
+      await next();
+    });
+
+    await drive.get('/users?active=1#details');
+
+    expect(hits).toEqual(['users']);
   });
 });
 
@@ -394,172 +547,47 @@ describe('Drive timeout', () => {
     await expect(request).rejects.toThrow();
   });
 
-  test('falls back when AbortSignal.any is unavailable', async () => {
-    const originalAny = AbortSignal.any;
-    Object.defineProperty(AbortSignal, 'any', {
-      configurable: true,
-      value: undefined,
+  test('uses an AbortController for a consistent timeout lifecycle', async () => {
+    const drive = new Drive();
+    await drive.get('https://api.test/users', undefined, {
+      timeout: 1000,
     });
 
-    try {
-      const drive = new Drive();
-      const controller = new AbortController();
-      await drive.get('https://api.test/users', undefined, {
-        timeout: 1000,
-        signal: controller.signal,
-      });
-
-      expect(calls[0]?.init.signal).toBeInstanceOf(AbortSignal);
-      expect(calls[0]?.init.signal).not.toBe(controller.signal);
-    } finally {
-      Object.defineProperty(AbortSignal, 'any', {
-        configurable: true,
-        value: originalAny,
-      });
-    }
+    expect(calls[0]?.init.signal).toBeInstanceOf(AbortSignal);
   });
 
-  test('propagates later caller aborts in the fallback merger', async () => {
-    const originalAny = AbortSignal.any;
-    Object.defineProperty(AbortSignal, 'any', {
-      configurable: true,
-      value: undefined,
+  test('ends the timeout lifecycle when a streaming request returns', async () => {
+    respond(() => new Response('abc'));
+
+    const context = await new Drive().request({
+      api: 'https://api.test/file',
+      timeout: 5,
+      receiver: () => undefined,
     });
+    const signal = calls[0]?.init.signal;
 
-    try {
-      respond(
-        (_url, init) =>
-          new Promise<Response>((_resolve, reject) => {
-            init.signal?.addEventListener('abort', () =>
-              reject(new DOMException('Aborted', 'AbortError')),
-            );
-          }),
-      );
+    await new Promise((resolve) => setTimeout(resolve, 15));
 
-      const drive = new Drive();
-      const controller = new AbortController();
-      const request = drive.get('https://api.test/slow', undefined, {
-        timeout: 10_000,
-        signal: controller.signal,
-      });
-
-      controller.abort();
-
-      await expect(request).rejects.toThrow();
-    } finally {
-      Object.defineProperty(AbortSignal, 'any', {
-        configurable: true,
-        value: originalAny,
-      });
-    }
+    expect(signal?.aborted).toBe(false);
+    await context.res.stream?.cancel();
   });
 
-  test('preserves an already aborted caller signal in the fallback merger', async () => {
-    const originalAny = AbortSignal.any;
-    Object.defineProperty(AbortSignal, 'any', {
-      configurable: true,
-      value: undefined,
+  test('keeps caller cancellation active for returned streams', async () => {
+    respond(() => new Response('abc'));
+    const controller = new AbortController();
+    const context = await new Drive().request({
+      api: 'https://api.test/file',
+      timeout: 1000,
+      signal: controller.signal,
+      receiver: () => undefined,
     });
+    const reason = new Error('stop stream');
 
-    try {
-      const drive = new Drive();
-      const controller = new AbortController();
-      controller.abort();
+    controller.abort(reason);
 
-      await drive.get('https://api.test/users', undefined, {
-        timeout: 1000,
-        signal: controller.signal,
-      });
-
-      expect(calls[0]?.init.signal?.aborted).toBe(true);
-    } finally {
-      Object.defineProperty(AbortSignal, 'any', {
-        configurable: true,
-        value: originalAny,
-      });
-    }
-  });
-
-  test('uses AbortController when AbortSignal.timeout is unavailable', async () => {
-    const originalTimeout = AbortSignal.timeout;
-    Object.defineProperty(AbortSignal, 'timeout', {
-      configurable: true,
-      value: undefined,
-    });
-
-    try {
-      const drive = new Drive();
-      await drive.get('https://api.test/users', undefined, {
-        timeout: 1000,
-      });
-
-      expect(calls[0]?.init.signal).toBeInstanceOf(AbortSignal);
-    } finally {
-      Object.defineProperty(AbortSignal, 'timeout', {
-        configurable: true,
-        value: originalTimeout,
-      });
-    }
-  });
-
-  test('clears fallback timeout timers after the request finishes', async () => {
-    const originalTimeout = AbortSignal.timeout;
-    const originalClearTimeout = globalThis.clearTimeout;
-    let cleared = false;
-    Object.defineProperty(AbortSignal, 'timeout', {
-      configurable: true,
-      value: undefined,
-    });
-    globalThis.clearTimeout = ((timer) => {
-      cleared = true;
-      return originalClearTimeout(timer as Parameters<typeof clearTimeout>[0]);
-    }) as typeof clearTimeout;
-
-    try {
-      const drive = new Drive();
-      await drive.get('https://api.test/users', undefined, {
-        timeout: 1000,
-      });
-
-      expect(cleared).toBe(true);
-    } finally {
-      Object.defineProperty(AbortSignal, 'timeout', {
-        configurable: true,
-        value: originalTimeout,
-      });
-      globalThis.clearTimeout = originalClearTimeout;
-    }
-  });
-
-  test('skips timeout wiring when no timeout primitive is available', async () => {
-    const originalTimeout = AbortSignal.timeout;
-    const originalController = globalThis.AbortController;
-    Object.defineProperty(AbortSignal, 'timeout', {
-      configurable: true,
-      value: undefined,
-    });
-    Object.defineProperty(globalThis, 'AbortController', {
-      configurable: true,
-      value: undefined,
-    });
-
-    try {
-      const drive = new Drive();
-      await drive.get('https://api.test/users', undefined, {
-        timeout: 1000,
-      });
-
-      expect(calls[0]?.init.signal).toBeUndefined();
-    } finally {
-      Object.defineProperty(AbortSignal, 'timeout', {
-        configurable: true,
-        value: originalTimeout,
-      });
-      Object.defineProperty(globalThis, 'AbortController', {
-        configurable: true,
-        value: originalController,
-      });
-    }
+    expect(calls[0]?.init.signal?.aborted).toBe(true);
+    expect(calls[0]?.init.signal?.reason).toBe(reason);
+    await context.res.stream?.cancel();
   });
 });
 
@@ -615,6 +643,104 @@ describe('Drive response', () => {
       drive.exec<{ ok: boolean }>({ api: 'https://api.test/exec' }),
     ).resolves.toEqual({ ok: true });
   });
+
+  test('body-only APIs cancel raw bodies that no parser consumes', async () => {
+    let cancellations = 0;
+    respond(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              cancel() {
+                cancellations += 1;
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+          { headers: { 'Content-Type': 'application/octet-stream' } },
+        ),
+    );
+    const drive = new Drive();
+
+    await expect(
+      drive.get<void>({ api: 'https://api.test/binary' }),
+    ).resolves.toBeUndefined();
+    await expect(
+      drive.exec<void>({ api: 'https://api.test/binary' }),
+    ).resolves.toBeUndefined();
+    await Promise.resolve();
+
+    expect(cancellations).toBe(2);
+  });
+
+  test('request() preserves an unparsed raw body for the caller', async () => {
+    let cancelled = false;
+    respond(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              cancel() {
+                cancelled = true;
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+          { headers: { 'Content-Type': 'application/octet-stream' } },
+        ),
+    );
+
+    const context = await new Drive().request<void>({
+      api: 'https://api.test/binary',
+    });
+
+    expect(context.res.body).toBeUndefined();
+    expect(context.res.raw.bodyUsed).toBe(false);
+    expect(cancelled).toBe(false);
+
+    await context.res.raw.body?.cancel();
+    expect(cancelled).toBe(true);
+  });
+
+  test('body-only APIs reject parser-produced streams', async () => {
+    let cancelledWith: unknown;
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        cancel(reason) {
+          cancelledWith = reason;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const drive = new Drive({
+      parser: () => async (_response, context) => {
+        context.res.stream = stream;
+      },
+    });
+
+    await expect(
+      drive.get({ api: 'https://api.test/custom-stream' }),
+    ).rejects.toThrow('Drive stream response requires request()');
+    await Promise.resolve();
+
+    expect(cancelledWith).toBeInstanceOf(TypeError);
+  });
+
+  test('requires request() when exec() is given a receiver at runtime', async () => {
+    const drive = new Drive();
+    const exec = drive.exec as unknown as (options: {
+      api: string;
+      receiver: DriveReceiver<unknown>;
+    }) => Promise<unknown>;
+
+    await expect(
+      exec({
+        api: 'https://api.test/file',
+        receiver: () => undefined,
+      }),
+    ).rejects.toThrow('Drive receiver requires request()');
+    expect(calls).toHaveLength(0);
+  });
 });
 
 describe('Drive customization', () => {
@@ -638,13 +764,15 @@ describe('Drive customization', () => {
 
   test('uses a custom prepare hook', async () => {
     const drive = new Drive({
-      prepare:
-        ({ stringify }) =>
-        async (ctx, next) => {
-          ctx.req.headers.set('X-Custom', '1');
-          ctx.encode({ stringify });
-          await next();
-        },
+      stages: {
+        prepare:
+          ({ stringify }) =>
+          async (ctx, next) => {
+            ctx.req.headers.set('X-Custom', '1');
+            ctx.encode({ stringify });
+            await next();
+          },
+      },
     });
 
     await drive.get('https://api.test/users');
@@ -654,16 +782,18 @@ describe('Drive customization', () => {
 
   test('uses a custom send hook', async () => {
     const drive = new Drive({
-      send: () => async (ctx, next) => {
-        ctx.res.raw = Response.json({ mocked: true });
-        ctx.decode(ctx.res.raw);
-        await next();
+      stages: {
+        send: () => async (ctx, next) => {
+          ctx.res.raw = Response.json({ staged: true });
+          ctx.decode(ctx.res.raw);
+          await next();
+        },
       },
     });
 
-    const body = await drive.get<{ mocked: boolean }>('https://api.test/users');
+    const body = await drive.get<{ staged: boolean }>('https://api.test/users');
 
-    expect(body).toEqual({ mocked: true });
+    expect(body).toEqual({ staged: true });
     expect(calls).toHaveLength(0);
   });
 
@@ -671,9 +801,11 @@ describe('Drive customization', () => {
     respond(() => Response.json({ ignored: true }));
 
     const drive = new Drive({
-      receive: () => async (ctx, next) => {
-        ctx.res.body = { custom: true } as never;
-        await next();
+      stages: {
+        receive: () => async (ctx, next) => {
+          ctx.res.body = { custom: true } as never;
+          await next();
+        },
       },
     });
 
@@ -703,13 +835,15 @@ describe('Drive customization', () => {
 
     await drive.request({
       api: 'https://api.test/users',
-      prepare:
-        ({ stringify }) =>
-        async (ctx, next) => {
-          ctx.req.headers.set('X-Once', '1');
-          ctx.encode({ stringify });
-          await next();
-        },
+      stages: {
+        prepare:
+          ({ stringify }) =>
+          async (ctx, next) => {
+            ctx.req.headers.set('X-Once', '1');
+            ctx.encode({ stringify });
+            await next();
+          },
+      },
     });
 
     expect(calls[0]?.init.headers.get('X-Once')).toBe('1');
@@ -718,33 +852,192 @@ describe('Drive customization', () => {
   test('uses per-request send hook', async () => {
     const drive = new Drive();
 
-    const body = await drive.get<{ mocked: boolean }>(
+    const body = await drive.get<{ staged: boolean }>(
       'https://api.test/users',
       undefined,
       {
-        send: () => async (ctx, next) => {
-          ctx.res.raw = Response.json({ mocked: true });
-          ctx.decode(ctx.res.raw);
-          await next();
+        stages: {
+          send: () => async (ctx, next) => {
+            ctx.res.raw = Response.json({ staged: true });
+            ctx.decode(ctx.res.raw);
+            await next();
+          },
         },
       },
     );
 
-    expect(body).toEqual({ mocked: true });
+    expect(body).toEqual({ staged: true });
     expect(calls).toHaveLength(0);
   });
 
-  test('allows send hooks to skip raw responses', async () => {
-    const drive = new Drive();
-    const ctx = await drive.request({
-      api: 'https://api.test/no-raw',
-      send: () => async (_ctx, next) => {
-        await next();
+  test('prefers a per-request stage over the instance stage', async () => {
+    let instanceCalls = 0;
+    let requestCalls = 0;
+    const drive = new Drive({
+      stages: {
+        send: () => async (ctx, next) => {
+          instanceCalls += 1;
+          ctx.res.raw = Response.json({ source: 'instance' });
+          ctx.decode(ctx.res.raw);
+          await next();
+        },
       },
     });
 
-    expect(ctx.res.raw).toBeUndefined();
-    expect(ctx.res.body).toBeUndefined();
+    const body = await drive.get<{ source: string }>(
+      'https://api.test/users',
+      undefined,
+      {
+        stages: {
+          send: () => async (ctx, next) => {
+            requestCalls += 1;
+            ctx.res.raw = Response.json({ source: 'request' });
+            ctx.decode(ctx.res.raw);
+            await next();
+          },
+        },
+      },
+    );
+
+    expect(body).toEqual({ source: 'request' });
+    expect(instanceCalls).toBe(0);
+    expect(requestCalls).toBe(1);
+    expect(calls).toHaveLength(0);
+  });
+
+  test('rejects when a send hook omits required response metadata', async () => {
+    const drive = new Drive();
+    await expect(
+      drive.request({
+        api: 'https://api.test/no-raw',
+        stages: {
+          send: () => async (_ctx, next) => {
+            await next();
+          },
+        },
+      }),
+    ).rejects.toThrow(
+      'Drive send stage must set res.raw, res.status, and res.headers',
+    );
+  });
+
+  test('rejects raw-only send hooks before receive can repair metadata', async () => {
+    let cancelledWith: unknown;
+    const response = new Response(
+      new ReadableStream<Uint8Array>(
+        {
+          cancel(reason) {
+            cancelledWith = reason;
+          },
+        },
+        { highWaterMark: 0 },
+      ),
+    );
+    const drive = new Drive({
+      stages: {
+        send: () => async (context, next) => {
+          context.res.raw = response;
+          await next();
+        },
+      },
+    });
+
+    await expect(
+      drive.get({ api: 'https://api.test/raw-only' }),
+    ).rejects.toThrow(
+      'Drive send stage must set res.raw, res.status, and res.headers',
+    );
+    await Promise.resolve();
+
+    expect(cancelledWith).toBeInstanceOf(TypeError);
+    expect(response.body?.locked).toBe(false);
+  });
+
+  test('lets the default parser decode a complete custom send response', async () => {
+    const response = Response.json({ staged: true });
+    const drive = new Drive({
+      stages: {
+        send: () => async (context, next) => {
+          context.res.raw = response;
+          context.res.status = response.status;
+          context.res.headers = response.headers;
+          await next();
+        },
+      },
+    });
+
+    await expect(
+      drive.get<{ staged: boolean }>({
+        api: 'https://api.test/complete-send',
+      }),
+    ).resolves.toEqual({ staged: true });
+  });
+
+  test('cancels an unreachable monitored stream when middleware rejects', async () => {
+    const failure = new Error('after receive');
+    let cancelledWith: unknown;
+    let response: Response | undefined;
+    respond(() => {
+      response = new Response(
+        new ReadableStream<Uint8Array>(
+          {
+            cancel(reason) {
+              cancelledWith = reason;
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+      );
+      return response;
+    });
+    const drive = new Drive();
+    drive.use('*', async (_context, next) => {
+      await next();
+      throw failure;
+    });
+
+    await expect(
+      drive.request({
+        api: 'https://api.test/file',
+        receiver: () => undefined,
+      }),
+    ).rejects.toBe(failure);
+    await Promise.resolve();
+
+    expect(cancelledWith).toBe(failure);
+    expect(response?.body?.locked).toBe(false);
+  });
+
+  test('cancels an untouched raw body when a custom parser rejects', async () => {
+    const failure = new Error('parser failed');
+    let cancelledWith: unknown;
+    let response: Response | undefined;
+    respond(() => {
+      response = new Response(
+        new ReadableStream<Uint8Array>(
+          {
+            cancel(reason) {
+              cancelledWith = reason;
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+      );
+      return response;
+    });
+    const drive = new Drive({
+      parser: () => async () => {
+        throw failure;
+      },
+    });
+
+    await expect(drive.request({ api: 'https://api.test/file' })).rejects.toBe(
+      failure,
+    );
+    await Promise.resolve();
+
+    expect(cancelledWith).toBe(failure);
+    expect(response?.body?.locked).toBe(false);
   });
 
   test('uses per-request receive hook', async () => {
@@ -755,9 +1048,11 @@ describe('Drive customization', () => {
       'https://api.test/users',
       undefined,
       {
-        receive: () => async (ctx, next) => {
-          ctx.res.body = { custom: true } as never;
-          await next();
+        stages: {
+          receive: () => async (ctx, next) => {
+            ctx.res.body = { custom: true } as never;
+            await next();
+          },
         },
       },
     );
@@ -767,22 +1062,107 @@ describe('Drive customization', () => {
 
   test('uses per-request parser factory', async () => {
     respond(() => new Response('once'));
+    let factoryCalls = 0;
+    let parserCalls = 0;
 
     const drive = new Drive();
     const body = await drive.get<{ text: string }>(
       'https://api.test/raw',
       undefined,
       {
-        parser:
-          <T>(): DriveBodyParse<T> =>
-          async (response, context) => {
-            context.res.status = response.status;
-            context.res.headers = response.headers;
-            context.res.body = { text: await response.text() } as never;
-          },
+        parser: () => {
+          factoryCalls += 1;
+          return async (response, context) => {
+            parserCalls += 1;
+            context.res.body = { text: await response.text() };
+          };
+        },
       },
     );
 
     expect(body).toEqual({ text: 'once' });
+    expect(factoryCalls).toBe(1);
+    expect(parserCalls).toBe(1);
+  });
+
+  test('uses a per-request receiver as the callback itself', async () => {
+    respond(
+      () =>
+        new Response('abc', {
+          headers: { 'Content-Length': '3' },
+        }),
+    );
+    const events: Array<{
+      loaded: number;
+      total?: number;
+      percentage?: number;
+      done: boolean;
+      size?: number;
+    }> = [];
+    const receiver: DriveReceiver<unknown> = ({
+      loaded,
+      total,
+      percentage,
+      done,
+      value,
+    }) => {
+      events.push({
+        loaded,
+        total,
+        percentage,
+        done,
+        size: value?.byteLength,
+      });
+    };
+
+    const context = await new Drive().request({
+      api: 'https://api.test/file',
+      receiver,
+    });
+    expect(events).toEqual([]);
+    const body = await new Response(context.res.stream).text();
+
+    expect(body).toBe('abc');
+    expect(events).toEqual([
+      { loaded: 3, total: 3, percentage: 100, done: false, size: 3 },
+      {
+        loaded: 3,
+        total: 3,
+        percentage: 100,
+        done: true,
+        size: undefined,
+      },
+    ]);
+  });
+
+  test('exposes unambiguous per-request parser and receiver types', () => {
+    type Body = { text: string };
+
+    expectTypeOf<NonNullable<ExtraOptions<Body>['parser']>>().toEqualTypeOf<
+      () => DriveBodyParse<Body>
+    >();
+    expectTypeOf<NonNullable<ExtraOptions<Body>['receiver']>>().toEqualTypeOf<
+      DriveReceiver<Body>
+    >();
+    expectTypeOf<{
+      api: string;
+      json: { id: number };
+    }>().toExtend<DriveMethodOptions<unknown>>();
+    expectTypeOf<{
+      api: string;
+      json: { id: number };
+      body: string;
+    }>().not.toExtend<DriveMethodOptions<unknown>>();
+    expectTypeOf<{
+      api: string;
+      method: 'POST';
+    }>().not.toExtend<DriveMethodOptions<unknown>>();
+    expectTypeOf<{
+      api: string;
+      receiver: DriveReceiver<unknown>;
+    }>().not.toExtend<DriveMethodOptions<unknown>>();
+    expectTypeOf<{
+      receiver: DriveReceiver<unknown>;
+    }>().not.toExtend<DriveMethodInit<unknown>>();
   });
 });

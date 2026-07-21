@@ -1,164 +1,177 @@
 ---
 title: 开始
-description: "@momots/drive —— 基于 Fetch API 与洋葱模型中间件的 HTTP 客户端。"
+description: "理解 @momots/drive 解决什么问题、如何组织请求，以及该选择哪一种 API。"
 icon: Rocket
 ---
 
-## 1. 概述
+`@momots/drive` 是一层建立在 Fetch API 之上的请求编排工具。它保留
+`Headers`、`Response`、`AbortSignal`、`ReadableStream` 等平台概念，同时让鉴权、
+日志、错误转换和其他公共策略可以按路径组合，而不必散落在每个接口函数里。
 
-`@momots/drive` 是一个基于浏览器 **Fetch API** 的 HTTP 客户端库。它将一次 HTTP 交互组织为若干可组合的处理阶段，并采用与 Koa 框架类似的 **洋葱模型中间件** 结构：每个中间件在调用 `next()` 之前执行请求侧逻辑，在 `next()` 返回之后执行响应侧逻辑。
+## 它解决什么问题
 
-本库提供以下能力：
+随着接口增多，请求代码真正难维护的部分通常不是 `fetch()` 本身，而是不断重复的
+外围规则：哪些接口需要令牌、哪些响应需要审计、哪个业务域使用哪套策略，以及何时
+需要读取状态码或流。
 
-1. 按 URL 路径或自定义谓词条件选择并执行中间件；
-2. 在发送请求前自动编码 URL、请求体与请求头；
-3. 在收到响应后按内容类型解析响应体；
-4. 通过 `get`、`post` 等方法提供简化的调用接口；
-5. 提供可选的 `repeat` 发送阶段，由应用传入继续条件与等待策略。
+Drive 的目标是把这两类代码分开：
 
-### 1.1 职责范围
+- **接口函数表达业务意图**：访问哪个地址、使用哪种数据通道、期望什么结果；
+- **客户端表达传输策略**：哪些请求应用鉴权、日志、错误处理或重复发送规则。
 
-Drive 的设计定位是 **传输层（transport layer）** 编排：负责发起 HTTP 请求、编解码数据，以及通过中间件注入与具体路径相关的公共逻辑（例如身份验证、日志记录）。
+本文把共享同一组传输规则的请求集合称为“服务边界”。同一域名、同一后端服务或同一套
+认证规则，都可以构成这样的边界。
 
-以下能力 **不在** 本库默认行为范围内，而应由可选阶段、中间件或上层应用库自行定义：
+因此，Drive 更适合拥有多个接口或多个业务域的应用。若项目只有少量互不相关的请求，
+直接使用原生 `fetch` 往往更清楚。
 
-- 根据 HTTP 状态码自动抛出异常；
-- 根据 HTTP 状态或网络错误自动重试；
-- 响应数据的缓存；
-- 全局加载状态的管理。
+## 设计思路
 
-上述策略因项目而异，本库将其留给 [中间件](/docs/drive/philosophy)、[可选的 repeat 发送阶段](/docs/drive/tutorial#第-8-步按外部策略重复发送请求)、[Effect](https://effect.website/) 或 [TanStack Query](https://tanstack.com/query/latest) 等上层模块处理。
+Drive 围绕三个选择组织 API。
 
-### 1.2 适用场景
+### 1. 明确数据要去哪里
 
-当项目需要在多个 API 之间统一处理身份验证、日志、错误转换或按业务域划分 HTTP 逻辑时，Drive 提供结构化的扩展方式。若仅需偶尔调用少量接口，直接使用原生 `fetch` 通常更为合适。
+对象式调用把请求数据分成三个互不含糊的通道：
 
-## 2. 安装
+| 字段 | 目的 | 接受的值 |
+| --- | --- | --- |
+| `query` | 写入 URL 查询参数 | `URLSearchParams` |
+| `json` | 发送 JSON | 任意可被当前 stringifier 序列化为字符串的值 |
+| `body` | 使用 Fetch 原生请求体 | `BodyInit \| null` |
 
-```bash
-bun add @momots/drive @momots/core @momots/host remeda
+`json` 与 `body` 不能同时出现。`query` 只改变 URL，不会创建请求体；URL 中已有的查询
+参数和 fragment 会保留，但 fragment 不会进入 HTTP 请求。
+
+对象式请求、`request()` 与 `exec()` 也接受 `data`。快捷方法的位置式
+`get(api, data, init)`（其他方法同理）只是把第二参映射到同一个自动通道：
+
+- `URLSearchParams` 进入 query；
+- 普通对象与数组按 JSON 发送；
+- 支持的原生 body 对象原样交给 Fetch。
+
+两种风格能力相同。对象式适合强调数据意图，位置式适合简单、稳定且含义明显的调用。
+不要同时用 `data` 和显式字段表达同一个通道。
+
+### 2. 按需要选择返回结果
+
+| 入口 | 适用目的 | 返回值 |
+| --- | --- | --- |
+| `get`、`post` 等快捷方法 | 只关心解析后的响应体 | `Promise<T>` |
+| `exec` | 使用自定义 HTTP 方法，但仍只关心响应体 | `Promise<T>` |
+| `request` | 需要状态码、响应头、原始响应或响应流 | `Promise<DriveFetchedContext<T>>` |
+
+快捷方法与 `exec()` 的泛型 `T` 是调用方对接口契约的断言，不是运行时校验。已知响应为空
+时使用 `void`；响应体可能不存在时使用 `T | undefined`；需要亲自判断时使用
+`request()`，因为它的 `res.body` 始终是可选字段。默认响应解析器（parser）根据响应头
+和响应内容选择解析方式，`T` 不参与这项选择。
+
+### 3. 把公共策略放到边界上
+
+中间件通过路径或谓词选择请求，并采用洋葱式执行语义：`await next()` 之前处理请求，
+之后处理响应。业务域越清晰，中间件的职责也越容易保持单一。
+
+```mermaid
+flowchart LR
+  A["业务 API 函数"] --> B["匹配的公共策略"]
+  B --> C["Fetch 请求与响应"]
+  C --> D["body 或完整 Context"]
 ```
 
-`@momots/core`、`@momots/host`、`remeda` 为 **同级依赖（peer dependencies）**，须由使用方项目一并安装。
+Drive 不默认把 `4xx` 或 `5xx` 判为异常，也不默认缓存或重复发送。不同协议和业务对
+“失败”的定义不同，这些决定应由中间件、`repeat` 或 TanStack Query、Effect 等上层
+工具承担。
 
-## 3. 运行环境
+## 如何开始
 
-Drive 面向现代 Web API 运行时，默认实现依赖下列全局能力：
+### 安装
 
-- `fetch`、`Response`、`Headers` 与 `RequestInit`；
-- `URL` 与 `URLSearchParams`；
-- `AbortController` / `AbortSignal`（使用 `timeout` 或请求取消时需要）；
-- `ReadableStream`、`Blob`、`FormData` 等原生 body 类型（仅在传入相应数据时需要）。
+当前版本为 alpha：
 
-Bun、现代 Node.js 与现代浏览器通常已提供这些能力；旧浏览器或受限运行时需要由应用侧提供 polyfill。
+```bash
+bun add @momots/drive@alpha @momots/core@alpha @momots/host@alpha remeda
+```
 
-## 4. 阅读顺序
+`@momots/core`、`@momots/host` 与 `remeda` 是 peer dependencies，需要由应用一并安装。
 
-建议按下列顺序阅读文档，以便由概念到实践逐步建立理解：
+Drive 面向提供现代 Fetch 与 Stream API 的运行时，主要包括 Bun、现代浏览器和现代
+Node.js。若运行时缺少相应 Web API，应由应用提供兼容层。
 
-| 顺序 | 章节                           | 内容                                     |
-| ---- | ------------------------------ | ---------------------------------------- |
-| 1    | 本页                           | 概述、安装、最小示例、与其他库的比较     |
-| 2    | [理念](/docs/drive/philosophy) | 设计原则、中间件模型、路径匹配规则       |
-| 3    | [教程](/docs/drive/tutorial)   | 构造客户端、请求编码、响应解析与进度回调 |
-| 4    | [示例](/docs/drive/examples)   | 常见用法的参考实现                       |
-| 5    | [向导](/docs/drive/guide)      | 类、函数与类型的完整说明                 |
+Drive 不提供 `baseURL`，也不会自行解析相对地址。浏览器通常可以按当前 origin 发送
+`/api/...`；Bun 与 Node.js 通常需要绝对 URL。下方网站示例假设运行在浏览器同源环境，
+未定义的 `getToken()` 等标识符代表应用侧依赖。
 
-## 5. 最小示例
+### 创建服务边界
 
-下列代码展示 Drive 的基本用法：
+建议为一个服务边界创建一个 Drive 实例，再按业务域导出 API 函数。
 
 ```ts
 import { Drive } from "@momots/drive";
 
-export const drive = new Drive();
+export const drive = new Drive().use("/api/**", async (context, next) => {
+  context.req.headers.set("Authorization", `Bearer ${getToken()}`);
+  await next();
+});
 
 type User = { id: string; name: string };
 
-// 快捷方法返回经解析的响应体；泛型 T 由调用方指定
-const user = await drive.get<User>("/api/users/1");
-
-// 传入普通对象时，库将自动序列化为 JSON 并设置 Content-Type
-const created = await drive.post<User>("/api/users", { name: "Ada" });
-
-// 需要读取状态码、响应头或原始 Response 对象时，使用 request 方法
-const ctx = await drive.request<User>({ api: "/api/users/1" });
-ctx.res.status; // number
-ctx.res.raw; // Response
-ctx.res.body; // User | undefined
+export const UserApi = {
+  list: (page: number) =>
+    drive.get<User[]>({
+      api: "/api/users",
+      query: new URLSearchParams({ page: String(page) }),
+    }),
+  create: (name: string) =>
+    drive.post<User>({ api: "/api/users", json: { name } }),
+  remove: (id: string) =>
+    drive.delete<void>({ api: `/api/users/${id}` }),
+};
 ```
 
-## 6. 请求处理流程
+这个结构让页面和业务逻辑只依赖 `UserApi`，而令牌、日志或错误策略集中在服务边界。
 
-每次调用 `get(...)` 或 `request(opts)` 时，库按固定顺序执行下列步骤：
+### 在需要元数据时升级到 `request()`
 
-```mermaid
-flowchart TD
-  A["调用入口"] --> B["构造 DriveContext"]
-  B --> C["按匹配规则筛选并排序中间件"]
-  C --> D["组合为洋葱式中间件栈"]
-  D --> M1["用户定义的中间件"]
-  D --> M2["单次请求中间件"]
-  D --> M3["prepare：编码与超时"]
-  D --> M4["send：发起 fetch"]
-  D --> M5["receive：解析响应"]
-  M5 --> R{返回形式}
-  R -->|get / post 等| BODY["res.body"]
-  R -->|request| CTX["DriveFetchedContext"]
+```ts
+async function findUser(id: string): Promise<User | undefined> {
+  const context = await drive.request<User>({
+    api: `/api/users/${id}`,
+    method: "GET",
+  });
+
+  if (context.res.status === 404) return undefined;
+  if (context.res.status >= 400) {
+    throw new Error(`HTTP ${context.res.status}`);
+  }
+  return context.res.body;
+}
 ```
 
-从功能上，Drive 可分为三个层次：
+`request()` 成功返回时，`raw`、`status` 与 `headers` 一定存在；parser 是否得到 body
+则取决于响应内容和解析策略。
 
-| 层次     | 说明                                                                  | 主要接口                            |
-| -------- | --------------------------------------------------------------------- | ----------------------------------- |
-| 请求入口 | 发起 HTTP 请求；返回响应体或完整上下文                                | `get`、`post`、`request`            |
-| 中间件   | 在请求生命周期中插入公共逻辑                                          | `use(pattern, middleware)`          |
-| 编解码   | 将 `data` 编码为 URL、请求体与请求头；将 `Response` 解析为 `res.body` | `stringifier`、`parser`、`receiver` |
+## 明确的职责边界
 
-## 7. 设计特点
+Drive 负责：
 
-### 6.1 结构简单
+- 组织 Fetch 请求参数和响应元数据；
+- 解析常见 JSON、文本与附件响应；
+- 按路径或谓词组合中间件；
+- 在调用方明确要求时提供流进度与重复发送策略。
 
-- 核心实现规模较小，不依赖 XMLHttpRequest，也不内置复杂的状态机；
-- 直接基于 Fetch API 的类型与对象（`RequestInit`、`Headers`、`AbortSignal`），不引入额外的 HTTP 抽象层；
-- 提供两种调用方式：快捷方法返回响应体；`request` 方法返回包含元数据的完整上下文；
-- 内置处理流程固定为三个阶段——`prepare`（准备）、`send`（发送）、`receive`（接收），职责划分清晰。
+Drive 不负责：
 
-### 6.2 易于扩展
+- 推断后端业务模型或校验泛型 `T`；
+- 自动将 HTTP 状态码转换成业务异常；
+- 自动判断写请求是否可以安全重放；
+- 代替缓存、服务端状态或 UI 加载状态工具。
 
-下列扩展点均可在 **实例级** 或 **单次请求级** 覆盖：
+这些边界能避免客户端悄悄替业务做决定，也让每一种策略都有清晰的归属。
 
-| 扩展点                             | 作用                                       |
-| ---------------------------------- | ------------------------------------------ |
-| `use(pattern, middleware)`         | 按路径或谓词注册中间件                     |
-| `prepare` / `send` / `receive`     | 替换编码、传输或解析阶段的实现             |
-| `parser` / `stringifier` / `stamp` | 自定义响应解析、请求体序列化、请求标识生成 |
+## 下一步读什么
 
-例如，测试环境中可将 `send` 替换为不访问网络的实现；业务中可通过自定义 `parser` 处理非标准响应格式；中间件中可封装公共请求头、鉴权、日志记录等逻辑。本库提供扩展接口，具体策略由应用代码决定。
-
-### 6.3 与上层库的分工
-
-Drive 不在内部定义「何种 HTTP 响应应视为错误」。例如，REST 接口可能在 404 时仍返回结构化 JSON；GraphQL 可能在 HTTP 200 的响应体中包含错误字段。因此：
-
-- 调用方决定快捷方法的泛型是否包含 `undefined`，也可通过 `request()` 精确检查响应体是否存在；
-- 错误判定与按响应结果重试可交由 Effect、TanStack Query 或自定义 `send` 阶段实现；仅按请求快照与业务条件重复发送时，也可使用可选的 `repeat` 阶段。
-
-## 8. 与其他 HTTP 客户端的比较
-
-| 特性            | **Drive**                        | **fetch**  | **ky**           | **ofetch**        | **axios**          |
-| --------------- | -------------------------------- | ---------- | ---------------- | ----------------- | ------------------ |
-| 底层 API        | Fetch                            | Fetch      | Fetch            | Fetch             | XHR / Fetch 适配器 |
-| 中间件模型      | 洋葱模型 + 路径匹配              | 无         | 钩子函数         | 钩子函数          | 请求/响应拦截器    |
-| 按路径注册逻辑  | 支持                             | 不支持     | 不支持           | 不支持            | 不支持             |
-| 处理阶段可替换  | 支持（prepare / send / receive） | 不支持     | 部分支持         | 部分支持          | 通过适配器         |
-| 默认对 4xx 抛错 | 否（由外部决定）                 | 否         | 是               | 可配置            | 可配置             |
-| 默认自动重试    | 否（提供可选 repeat 阶段）       | 否         | 是               | 是                | 否（需插件）       |
-| 体量与复杂度    | 较小                             | 无额外依赖 | 较小             | 中等              | 中等               |
-| 典型用途        | 多域 API 与可组合的中间件逻辑    | 单次请求   | Fetch 的便捷封装 | 全功能 Fetch 封装 | 传统拦截器模式     |
-
-Drive 在功能丰富度上介于轻量封装（如 ky）与全功能客户端（如 ofetch、axios）之间：它通过中间件与路径匹配提供更强的组合能力，同时避免引入适配器体系等较重的设计。
-
-## 9. 其他章节
-
-- [理念](/docs/drive/philosophy) — 设计原则与中间件组织方式
-- [教程](/docs/drive/tutorial) — 从零构造可用的 API 客户端
+| 你的问题 | 阅读 |
+| --- | --- |
+| 为什么采用中间件、Context 和显式数据通道？ | [理念](/docs/drive/philosophy) |
+| 如何建立一个可用的客户端？ | [教程](/docs/drive/tutorial) |
+| 常见任务如何写？ | [示例](/docs/drive/examples) |
+| 某个字段、重载或类型的精确含义是什么？ | [API 参考](/docs/drive/guide) |

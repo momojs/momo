@@ -1,6 +1,5 @@
 import type { Realizable } from '@momots/core';
 import { realize } from '@momots/core';
-import { methods } from '@momots/host/fetch/type';
 import { isArray, isFunction, isObjectType } from 'remeda';
 
 import { DriveContext } from './context';
@@ -11,15 +10,17 @@ import type {
   DriveDataStringify,
   DriveFetchedContext,
   DriveHttp,
-  DriveInit,
+  DriveHttpMethod,
+  DriveMethodInit,
+  DriveMethodOptions,
   DriveMiddleware,
   DriveMiddlewareEntry,
   DriveOpts,
   DriveParams,
   DrivePattern,
-  DrivePrepare,
-  DriveReceive,
-  DriveSend,
+  DriveStagePrepare,
+  DriveStageReceive,
+  DriveStageSend,
   DriveTarget,
 } from './types';
 import { compose } from './utils/compose';
@@ -27,11 +28,21 @@ import { filtering } from './utils/match';
 import { stamp } from './utils/stamp';
 import { stringifier } from './utils/stringifier';
 
+const methods = [
+  'GET',
+  'PUT',
+  'POST',
+  'HEAD',
+  'PATCH',
+  'DELETE',
+  'OPTIONS',
+] as const satisfies readonly DriveHttpMethod[];
+
 function over<T>(
   first: DriveTarget<T>,
   data?: object,
-  init?: DriveInit<T>,
-): DriveOpts<T> {
+  init?: DriveMethodInit<T>,
+): DriveMethodOptions<T> {
   if (isObjectType(first)) return first;
   return { api: first, data, ...init };
 }
@@ -45,10 +56,19 @@ function mergeAbortSignals(...signals: AbortSignal[]): AbortSignal {
   if (isFunction(AbortSignal?.any)) return AbortSignal.any(signals);
 
   const controller = new AbortController();
-  const onAbort = () => controller.abort();
+  const dispose = () => {
+    for (const signal of signals) {
+      signal.removeEventListener('abort', onAbort);
+    }
+  };
+  const onAbort = (event: Event) => {
+    controller.abort((event.currentTarget as AbortSignal).reason);
+    dispose();
+  };
   for (const signal of signals) {
     if (signal.aborted) {
-      controller.abort();
+      controller.abort(signal.reason);
+      dispose();
       return controller.signal;
     }
     signal.addEventListener('abort', onAbort, { once: true });
@@ -56,7 +76,59 @@ function mergeAbortSignals(...signals: AbortSignal[]): AbortSignal {
   return controller.signal;
 }
 
-type DriveArgs<T> = Parameters<typeof over<T>>;
+function assertFetched<T>(
+  context: DriveContext<T>,
+): asserts context is DriveFetchedContext<T> {
+  const { raw, headers, status } = context.res;
+  if (!raw || !headers || typeof status !== 'number') {
+    throw new TypeError(
+      'Drive send stage must set res.raw, res.status, and res.headers',
+    );
+  }
+}
+
+function assertBodyOnly(options: { receiver?: unknown }): void {
+  if (options.receiver !== undefined) {
+    throw new TypeError('Drive receiver requires request()');
+  }
+}
+
+function fetchedBoundary<T>(): DriveMiddleware<T> {
+  return async (context, next) => {
+    assertFetched(context);
+    await next();
+  };
+}
+
+function cancelUnreachableBody<T>(
+  context: DriveContext<T>,
+  reason: unknown,
+): void {
+  const { stream } = context.res;
+  if (stream && !stream.locked) {
+    void stream.cancel(reason).catch(() => undefined);
+  }
+
+  const { raw } = context.res;
+  if (raw?.body && !raw.bodyUsed && !raw.body.locked) {
+    void raw.body.cancel(reason).catch(() => undefined);
+  }
+}
+
+function extractBody<T>(context: DriveFetchedContext<T>): T {
+  if (context.res.stream) {
+    const error = new TypeError('Drive stream response requires request()');
+    cancelUnreachableBody(context, error);
+    throw error;
+  }
+
+  cancelUnreachableBody(context, undefined);
+  return context.res.body as T;
+}
+
+type DriveArgs<T> =
+  | [options: DriveMethodOptions<T>]
+  | [api: string, data?: object, init?: DriveMethodInit<T>];
 
 export class Drive implements DriveHttp {
   private middlewares: DriveMiddlewareEntry[] = [];
@@ -67,7 +139,7 @@ export class Drive implements DriveHttp {
 
   private stringifier: Realizable<DriveDataStringify> = stringifier;
 
-  private prepare: DrivePrepare =
+  private prepare: DriveStagePrepare =
     ({ stringify, timeout }) =>
     async (ctx, next) => {
       ctx.encode({ stringify });
@@ -80,35 +152,36 @@ export class Drive implements DriveHttp {
       const signals: AbortSignal[] = [];
       if (ctx.req.signal) signals.push(ctx.req.signal);
 
-      let dispose: (() => void) | undefined;
-      if (isFunction(AbortSignal?.timeout)) {
-        signals.push(AbortSignal.timeout(ms));
-      } else if (isFunction(AbortController)) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), ms);
-        dispose = () => clearTimeout(timer);
-        signals.push(controller.signal);
-      } else {
+      if (!isFunction(AbortController)) {
         await next();
         return;
       }
 
+      const controller = new AbortController();
+      const timer = setTimeout(
+        () =>
+          controller.abort(
+            new DOMException('The operation timed out', 'TimeoutError'),
+          ),
+        ms,
+      );
+      signals.push(controller.signal);
       ctx.req.signal = mergeAbortSignals(...signals);
       try {
         await next();
       } finally {
-        dispose?.();
+        clearTimeout(timer);
       }
     };
 
-  private receive: DriveReceive =
+  private receive: DriveStageReceive =
     ({ parse, receiver }) =>
     async (ctx, next) => {
       if (ctx.res.raw) await parse(ctx.res.raw, ctx, { receiver });
       await next();
     };
 
-  private send: DriveSend = () => async (ctx, next) => {
+  private send: DriveStageSend = () => async (ctx, next) => {
     const res = await fetch(ctx.api, ctx.req);
     ctx.res.raw = res;
     ctx.decode(res);
@@ -119,39 +192,45 @@ export class Drive implements DriveHttp {
   declare put: DriveHttp['put'];
   declare head: DriveHttp['head'];
   declare post: DriveHttp['post'];
-  declare trace: DriveHttp['trace'];
   declare patch: DriveHttp['patch'];
   declare delete: DriveHttp['delete'];
-  declare connect: DriveHttp['connect'];
   declare options: DriveHttp['options'];
 
   private derived() {
     methods.forEach((method) => {
       const name = method.toLowerCase() as Lowercase<typeof method>;
-      this[name] = (async (...args: DriveArgs<unknown>) =>
-        (await this.request({ ...over(...args), method })).res
-          .body) as DriveHttp[typeof name];
+      this[name] = (async (...args: DriveArgs<unknown>) => {
+        const options =
+          typeof args[0] === 'string'
+            ? over(args[0], args[1], args[2])
+            : over(args[0]);
+        assertBodyOnly(options);
+        return extractBody(await this.request({ ...options, method }));
+      }) as DriveHttp[typeof name];
     });
   }
 
   constructor(opts: DriveConstructorParams = {}) {
     const {
-      send,
+      stages,
       stamp,
       parser,
-      prepare,
-      receive,
       stringifier,
       middlewares, //
     } = toParams(opts);
 
+    const {
+      send,
+      prepare,
+      receive, //
+    } = stages ?? {};
     if (send) this.send = send;
     if (stamp) this.stamp = stamp;
     if (parser) this.parser = parser;
     if (prepare) this.prepare = prepare;
     if (receive) this.receive = receive;
     if (stringifier) this.stringifier = stringifier;
-    if (middlewares) this.middlewares = middlewares;
+    if (middlewares) this.middlewares = [...middlewares];
 
     this.derived();
   }
@@ -167,17 +246,21 @@ export class Drive implements DriveHttp {
   public request = async <T>({
     api,
     data,
+    stages,
     timeout,
     middlewares: use,
     stringifier,
     receiver,
     parser,
-    prepare,
-    send,
-    receive,
     ...rest
   }: DriveOpts<T>) => {
     const { middlewares, stamp } = this;
+
+    const {
+      send,
+      prepare,
+      receive, //
+    } = stages ?? {};
 
     const context = new DriveContext<T>(api, {
       data,
@@ -200,15 +283,23 @@ export class Drive implements DriveHttp {
       ...(use ?? []),
       (prepare ?? this.prepare)({ stringify, timeout }),
       (send ?? this.send)(),
+      fetchedBoundary<T>(),
       (receive ?? this.receive)({ parse, receiver }),
     ]);
 
-    await composed(context);
+    try {
+      await composed(context);
+      assertFetched(context);
+    } catch (error) {
+      cancelUnreachableBody(context, error);
+      throw error;
+    }
 
-    return context as DriveFetchedContext<T>;
+    return context;
   };
 
-  public exec = async <T>(opts: DriveOpts<T>) => {
-    return this.request(opts).then(({ res }) => res.body as T);
+  public exec = async <T>(opts: DriveOpts<T> & { receiver?: never }) => {
+    assertBodyOnly(opts);
+    return extractBody(await this.request(opts));
   };
 }

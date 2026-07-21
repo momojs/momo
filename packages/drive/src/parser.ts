@@ -1,27 +1,105 @@
 import { isFunction } from 'remeda';
 
 import type { DriveContext } from './context';
-import type { DriveReceiver, ReadableValue } from './types';
+import type { DriveReceiver } from './types';
 
-/**
- * 用于读取流数据，并将其传递给控制器
- * @param reader 读取器
- * @param controller 控制器
- * @param percentage 百分比回调
- */
-async function pump(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  controller: ReadableStreamDefaultController,
-  percentage?: (current: ReadableValue) => void,
-): Promise<void> {
-  const res = await reader.read();
-  if (res.done) {
-    controller.close();
-  } else {
-    percentage?.(res);
-    controller.enqueue(res.value);
-    await pump(reader, controller, percentage);
-  }
+function contentLength(headers: Headers): number | undefined {
+  const value = headers.get('Content-Length')?.trim();
+  if (!value || !/^\d+$/.test(value)) return undefined;
+
+  const total = Number(value);
+  return Number.isSafeInteger(total) ? total : undefined;
+}
+
+function percentage(
+  loaded: number,
+  total: number | undefined,
+  done: boolean,
+): number | undefined {
+  if (total === undefined) return undefined;
+  if (done) return 100;
+  if (total === 0) return undefined;
+  return Math.min(100, (100 * loaded) / total);
+}
+
+function monitored<T>(
+  body: ReadableStream<Uint8Array>,
+  context: DriveContext<T>,
+  receiver: DriveReceiver<T>,
+  total?: number,
+): ReadableStream<Uint8Array> {
+  const reader = body.getReader();
+  let loaded = 0;
+  let settled = false;
+
+  const release = () => {
+    reader.releaseLock();
+  };
+
+  const notify = (done: boolean, value?: Uint8Array) => {
+    const current = percentage(loaded, total, done);
+    receiver({
+      loaded,
+      done,
+      context,
+      ...(total === undefined ? {} : { total }),
+      ...(current === undefined ? {} : { percentage: current }),
+      ...(value === undefined ? {} : { value }),
+    });
+  };
+
+  return new ReadableStream<Uint8Array>(
+    {
+      async pull(controller) {
+        let result: Awaited<ReturnType<typeof reader.read>>;
+        try {
+          result = await reader.read();
+        } catch (error) {
+          if (settled) return;
+          settled = true;
+          release();
+          controller.error(error);
+          return;
+        }
+
+        if (settled) return;
+        if (result.done) {
+          settled = true;
+          try {
+            notify(true);
+            controller.close();
+          } catch (error) {
+            controller.error(error);
+          } finally {
+            release();
+          }
+          return;
+        }
+
+        loaded += result.value.byteLength;
+        try {
+          notify(false, result.value);
+          controller.enqueue(result.value);
+        } catch (error) {
+          settled = true;
+          controller.error(error);
+          const cancellation = reader.cancel(error);
+          release();
+          void cancellation.catch(() => undefined);
+        }
+      },
+      async cancel(reason) {
+        if (settled) return;
+        settled = true;
+        try {
+          await reader.cancel(reason);
+        } finally {
+          release();
+        }
+      },
+    },
+    { highWaterMark: 0 },
+  );
 }
 
 export type RawTextBodyType =
@@ -61,43 +139,27 @@ export const parser =
       receiver?: DriveReceiver<T>;
     } = {},
   ) => {
+    context.decode(response);
     const { res } = context;
-    const { body, ok, headers, status } = response;
+    const { body, ok, headers } = response;
 
-    context.res.status = status;
-    context.res.headers = headers;
     const disposition = headers.get('Content-Disposition');
     const isAttachment = disposition?.includes('attachment');
 
     if (ok) {
       const { receiver } = params;
-      const size = Number(headers.get('Content-Length'));
-      const isShard = Number.isFinite(size) && isFunction(receiver);
-
-      if (body && isShard && size > 0) {
-        const received = { bytes: 0 };
-        const reader = body.getReader();
-        const stream = new ReadableStream({
-          async start(controller) {
-            await pump(reader, controller, ({ value, done }) => {
-              received.bytes += value.length;
-              const percentage = (100 * received.bytes) / size;
-              receiver({
-                size,
-                value,
-                reader,
-                context,
-                percentage,
-                done: percentage === 100 || done,
-              });
-            });
-          },
-        });
-
-        context.res.raw = new Response(stream);
+      if (body && isFunction(receiver)) {
+        context.res.stream = monitored(
+          body,
+          context,
+          receiver,
+          contentLength(headers),
+        );
         return;
       }
     }
+
+    if (!body) return;
 
     if (isAttachment) {
       context.res.body = (await response.blob()) as T;

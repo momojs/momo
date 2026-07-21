@@ -1,170 +1,132 @@
 ---
 title: 示例
-description: "@momots/drive 常见用法的参考实现。"
+description: "按常见任务查找 @momots/drive 的使用方式与边界提醒。"
 icon: Code
 ---
 
-本章提供若干可直接使用的代码片段。推荐的项目结构为：在独立模块中创建 `Drive` 实例并注册中间件，再按业务域导出 API 函数。
+每个示例只解决一个问题。组合使用时，优先保持领域 API 简单，把跨接口的规则放到共享
+客户端。示例中的 `drive` 表示应用已经创建的服务客户端，`getToken()`、`file` 等其他
+未定义标识符代表应用侧依赖；代码用于说明 API 组合，不是完整应用。示例中的
+`/api/...` 假设浏览器同源环境；Bun/Node.js 通常应改用绝对 URL。
 
-## 共享的 API 客户端
+## 基础调用速查
+
+优先使用显式字段，让数据的去向在调用处一眼可见：
 
 ```ts
-import { Drive } from "@momots/drive";
+// query
+const users = await drive.get<User[]>({
+  api: "/api/users?active=1#results",
+  query: new URLSearchParams({ page: "2" }),
+});
 
-export const drive = new Drive({ stamp: () => `req-${Date.now()}` }).use(
-  "/api/**",
-  async (ctx, next) => {
-    const token = localStorage.getItem("token");
-    if (token) ctx.req.headers.set("Authorization", `Bearer ${token}`);
-    await next();
-  },
+// JSON
+const user = await drive.post<User>({
+  api: "/api/users",
+  json: { name: "Ada" },
+});
+
+// FormData
+const form = new FormData();
+form.set("avatar", file);
+await drive.post<void>({ api: "/api/avatar", body: form });
+
+// 原始文本必须使用 body，而不是 data
+await drive.post<void>({ api: "/api/source", body: "plain text" });
+```
+
+数据含义明显时，也可以使用位置式写法：
+
+```ts
+const user = await drive.post<User>("/api/users", { name: "Ada" });
+
+const users = await drive.get<User[]>(
+  "/api/users",
+  new URLSearchParams({ page: "2" }),
+  { headers: { "X-View": "compact" } },
 );
-
-type Todo = { id: string; title: string; done: boolean };
-
-export const TodoApi = {
-  list: () => drive.get<Todo[]>("/api/todos"),
-  create: (title: string) => drive.post<Todo>("/api/todos", { title }),
-  toggle: (id: string, done: boolean) =>
-    drive.put<Todo>(`/api/todos/${id}`, { done }),
-  remove: (id: string) => drive.delete(`/api/todos/${id}`),
-};
 ```
 
-## 按外部配置重复发送幂等请求
+`json` 与 `body` 互斥；`URLSearchParams` 若应作为表单 body，必须显式放在 `body`，放在
+`query` 或 `data` 中会进入 URL。位置式第二参就是 `data` 自动通道，与对象式
+`{ api, data }` 语义相同，不是旧接口；复杂请求仍建议使用显式字段。
 
-`repeat` 用于替换 `send` 阶段。下面的配置按路径选择最大发送次数，并将重复发送限制为 `GET` 和 `HEAD`：
+Drive 在合并 query 时保留 fragment，但 fragment 遵循 URL/Fetch 语义，不会进入 HTTP
+请求。
 
-```ts
-import { Drive, repeat } from "@momots/drive";
+## 统一 HTTP 状态错误
 
-const rules = [
-  { prefix: "/api/reports/", attempts: 3, delay: 200 },
-  { prefix: "/api/search/", attempts: 2, delay: 100 },
-];
-
-function matchRule(path: string) {
-  return rules.find((rule) => path.startsWith(rule.prefix));
-}
-
-export const drive = new Drive({
-  send: repeat({
-    eligible: (attempt, context) => {
-      const method = context.req.method?.toUpperCase();
-      const rule = matchRule(context.path);
-      return (
-        rule !== undefined &&
-        (method === "GET" || method === "HEAD") &&
-        attempt < rule.attempts
-      );
-    },
-    delay: (attempt, context) =>
-      (matchRule(context.path)?.delay ?? 0) * 2 ** (attempt - 1),
-  }),
-});
-```
-
-该阶段只按发送序号和请求快照决策，并不检查响应是否失败；配置命中时，即使响应成功也会继续发送。`eligible` 必须包含可终止条件，且不应复用 `ReadableStream` 等一次性请求体。若需要按响应状态码或网络错误重试，应改用自定义 `send` 阶段或上层请求库。
-
-需要在下一次发送前修改请求时，可使用 `effect`：
-
-```ts
-const drive = new Drive({
-  send: repeat({
-    eligible: (attempt) => attempt === 1 && tokenStore.shouldRefresh(),
-    effect: async (_attempt, context) => {
-      const token = await refreshToken();
-      context.req.headers.set("Authorization", `Bearer ${token}`);
-    },
-  }),
-});
-```
-
-执行顺序为 `eligible → effect → delay → 下一次发送`。`effect` 只在 `eligible` 返回 `true` 时执行，其异常会终止 repeat。
-
-## 401 响应时刷新令牌并重试
-
-下列写法仅适用于无请求体或请求体可安全重放的请求；`ReadableStream` 等一次性 body 被消费后不能直接复用。
+当一个服务明确把所有 `4xx` / `5xx` 视为异常时，在服务边界集中定义这项策略：
 
 ```ts
 import { Drive } from "@momots/drive";
 
-export const drive = new Drive().use("/api/**", async (ctx, next) => {
+export const drive = new Drive().use("/api/**", async (context, next) => {
   await next();
-  if (ctx.res.status === 401) {
-    await refreshToken();
-    ctx.req.headers.set("Authorization", `Bearer ${getToken()}`);
-    const retry = await fetch(ctx.api, ctx.req);
-    ctx.res.raw = retry;
-    ctx.res.headers = retry.headers;
-    ctx.res.status = retry.status;
-    ctx.decode(retry);
-    ctx.res.body = (await retry.json()) as never;
+
+  if ((context.res.status ?? 0) >= 400) {
+    throw new Error(`HTTP ${context.res.status} @ ${context.path}`);
   }
 });
 ```
 
-## 错误处理
+Drive 本身不做这项判断。若不同接口的错误语义不同，分别使用
+`request()` 判断会比全局中间件更清楚。
 
-Drive 默认不因 4xx 或 5xx 状态码抛出异常。若项目需要在 HTTP 错误时统一抛错，可通过中间件实现；
+## 为单次请求设置超时和主动取消
+
+`timeout` 为默认 Fetch 增加超时取消，调用方的 signal 保留业务主动取消能力：
 
 ```ts
-import { Drive } from "@momots/drive";
+const controller = new AbortController();
 
-export const drive = new Drive().use("*", async (ctx, next) => {
-  await next();
-  if (ctx.res.status && ctx.res.status >= 400) {
-    throw new Error(`HTTP ${ctx.res.status} @ ${ctx.path}`);
-  }
+const request = drive.get<Report>({
+  api: "/api/reports/current",
+  timeout: 5_000,
+  signal: controller.signal,
 });
+
+cancelButton.addEventListener("click", () => {
+  controller.abort(new Error("User cancelled"));
+});
+
+const report = await request;
 ```
 
-亦可交由 TanStack Query 处理。
+默认 prepare 在编码后把 timeout 取消合并到 `req.signal`。这是协作式取消：自定义扩展
+必须自行观察 signal；它也不包含编码、外层中间件自身的工作或返回后的流消费。流交给
+调用方之后，应继续使用自己的 signal 管理下载生命周期。
+
+## 下载大文件并显示进度
+
+使用 `request()` 取得流，在不预先读取全部响应的情况下观察下载进度：
 
 ```ts
-import { useQuery } from "@tanstack/react-query";
-import { drive } from "./api/client";
-
-type User = { id: string; name: string };
-
-export function useUser(id: string) {
-  return useQuery({
-    queryKey: ["user", id],
-    queryFn: async () => {
-      const ctx = await drive.request<User>({ api: `/api/users/${id}` });
-      if (!ctx.res.status || ctx.res.status >= 400) {
-        throw new Error(`Failed to load user: ${ctx.res.status}`);
-      }
-      if (!ctx.res.body) throw new Error("Empty response body");
-      return ctx.res.body;
+async function download(url: string): Promise<Blob> {
+  const context = await drive.request<void>({
+    api: url,
+    method: "GET",
+    receiver: ({ loaded, total, percentage, done }) => {
+      updateProgress({ loaded, total, percentage, done });
     },
-    retry: 2,
   });
+
+  if (!context.res.stream) {
+    throw new Error(`Expected a stream, received HTTP ${context.res.status}`);
+  }
+
+  return new Response(context.res.stream, {
+    headers: context.res.headers,
+  }).blob();
 }
 ```
 
-Effect TS 也是一个不错的选择。
+消费 `res.stream` 才会推进读取。没有有效 `Content-Length` 时，`total` 和
+`percentage` 不存在；流式请求不能使用只返回响应体的快捷方法或 `exec()`。
 
-```ts
-import { Effect } from "effect";
-import { drive } from "./api/client";
+## 只为写操作添加 CSRF 头
 
-type User = { id: string; name: string };
-
-const fetchUser = (id: string) =>
-  Effect.tryPromise({
-    try: async () => {
-      const ctx = await drive.request<User>({ api: `/api/users/${id}` });
-      if (!ctx.res.status || ctx.res.status >= 400) {
-        throw new Error(`HTTP ${ctx.res.status}`);
-      }
-      return ctx.res.body;
-    },
-    catch: (cause) => new HttpError({ cause, path: `/api/users/${id}` }),
-  });
-```
-
-## 仅对写操作附加 CSRF 头（谓词匹配）
+路径不足以表达条件时，用谓词读取请求快照：
 
 ```ts
 import { Drive } from "@momots/drive";
@@ -172,105 +134,134 @@ import { Drive } from "@momots/drive";
 const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export const drive = new Drive().use(
-  (ctx) => writeMethods.has((ctx.req.method ?? "GET").toUpperCase()),
-  async (ctx, next) => {
-    ctx.req.headers.set("X-CSRF-Token", getCsrfToken());
+  (snapshot) =>
+    writeMethods.has((snapshot.req.method ?? "").toUpperCase()),
+  async (context, next) => {
+    context.req.headers.set("X-CSRF-Token", getCsrfToken());
     await next();
   },
 );
 ```
 
-## 大文件下载进度
-
-```ts
-import { Drive } from "@momots/drive";
-
-const drive = new Drive();
-
-async function download(url: string, onProgress: (pct: number) => void) {
-  await drive.request({
-    api: url,
-    receiver: ({ percentage, done }) => {
-      onProgress(percentage);
-      if (done) onProgress(100);
-    },
-  });
-}
-```
-
-## 单次请求超时
-
-```ts
-import { drive } from "./api/client";
-
-const data = await drive.get<unknown>("/api/slow", undefined, {
-  timeout: 5_000,
-});
-```
+谓词匹配早于 `request()` 的自动方法推断。依赖方法时应使用快捷方法，或在
+`request()` / `exec()` 中显式传入 `method`。
 
 ## 自定义 RPC 响应解析
 
-```ts
-import { drive } from "./api/client";
+将服务特有的 envelope 解析和错误转换集中在 parser：
 
-type RpcBody<T> = {
+```ts
+type RpcResponse<T> = {
   code: number;
   data: T;
   message?: string;
 };
 
-const user = await drive.post<RpcBody<{ id: string; name: string }>>(
-  "/api/rpc",
-  { method: "user.detail", params: { id: "u1" } },
-  {
-    parser: () => async (response, context) => {
-      const body = (await response.json()) as RpcBody<unknown>;
-      if (body.code !== 0) {
-        throw new Error(body.message ?? "RPC failed");
-      }
-      context.res.status = response.status;
-      context.res.headers = response.headers;
-      context.res.body = body as never;
-    },
+const user = await drive.post<User>({
+  api: "/api/rpc",
+  json: { method: "user.detail", params: { id: "u1" } },
+  parser: () => async (response, context) => {
+    const body = await response.json() as RpcResponse<User>;
+    if (body.code !== 0) throw new Error(body.message ?? "RPC failed");
+    context.res.body = body.data;
+  },
+});
+```
+
+`parser` 是工厂，工厂返回解析函数。解析函数负责写入 `context.res.body`；它抛出的错误
+会使 Promise 拒绝。示例中的类型断言不做运行时结构校验；需要校验 envelope 时，应在
+这里调用应用选择的 schema 工具。
+
+## 隔离不同服务边界
+
+使用不同实例，避免令牌、租户头和错误策略跨边界泄漏：
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const appDrive = new Drive().use("/api/**", async (context, next) => {
+  context.req.headers.set("Authorization", `Bearer ${getAppToken()}`);
+  await next();
+});
+
+export const reportDrive = new Drive().use(
+  "/reports/**",
+  async (context, next) => {
+    context.req.headers.set("X-Tenant", getTenantId());
+    await next();
   },
 );
 ```
 
-## 多实例隔离不同业务域
+多实例的意义是表达不同策略边界，不是为每个端点创建一个客户端。
+
+## 记录完整审计信息
+
+调用方确实需要原始 HTTP 结果时，使用 `request()`：
 
 ```ts
-import { Drive } from "@momots/drive";
+async function audited<T>(api: string): Promise<T | undefined> {
+  const context = await drive.request<T>({ api, method: "GET" });
 
-export const appDrive = new Drive().use("/api/**", async (ctx, next) => {
-  ctx.req.headers.set("Authorization", `Bearer ${getAppToken()}`);
-  await next();
-});
-
-export const reportDrive = new Drive().use("/reports/**", async (ctx, next) => {
-  ctx.req.headers.set("X-Report-Tenant", getTenantId());
-  await next();
-});
-
-export const ReportApi = {
-  export: (id: string) => reportDrive.get<Blob>(`/reports/${id}/export`),
-};
-```
-
-## 利用完整上下文记录审计日志
-
-```ts
-import { Drive } from "@momots/drive";
-
-const drive = new Drive();
-
-async function audited<T>(api: string, data?: object) {
-  const ctx = await drive.request<T>({ api, data });
   await saveAuditLog({
-    id: ctx.req.id,
-    path: ctx.path,
-    status: ctx.res.status,
-    at: Date.now(),
+    requestId: context.req.id,
+    path: context.path,
+    status: context.res.status,
+    contentType: context.res.headers.get("Content-Type"),
   });
-  return ctx.res.body;
+
+  return context.res.body;
 }
 ```
+
+`request()` 返回的 body 是可选的。若领域函数承诺 `Promise<T>`，应先验证
+body 存在或完成运行时 schema 校验。
+
+## 对幂等请求按响应状态重复发送
+
+当 Fetch 已取得 `503` 响应时，可以有限次重新发送安全的查询：
+
+```ts
+import { Drive, repeat } from "@momots/drive";
+
+export const reportDrive = new Drive({
+  stages: {
+    send: repeat({
+      eligible: (attempt, snapshot) =>
+        attempt < 3 &&
+        (snapshot.req.method ?? "").toUpperCase() === "GET" &&
+        snapshot.res.status === 503,
+      delay: (attempt) => attempt * 200,
+    }),
+  },
+});
+```
+
+`eligible` 只处理已取得的 Response；网络失败会直接传播。始终提供终止
+条件，并确认请求没有不可重放的 body 或重复副作用。
+
+## 首次 401 后刷新令牌
+
+刷新令牌时，把“是否继续”和“如何修改下一次请求”分开：
+
+```ts
+import { Drive, repeat } from "@momots/drive";
+
+const authDrive = new Drive({
+  stages: {
+    send: repeat({
+      eligible: (attempt, snapshot) =>
+        attempt === 1 && snapshot.res.status === 401,
+      effect: async (_attempt, context) => {
+        const token = await refreshToken();
+        context.req.headers.set("Authorization", `Bearer ${token}`);
+      },
+    }),
+  },
+});
+```
+
+`eligible`、`effect` 或 `delay` 抛错都会终止 repeat。若判断必须读取响应体，
+应读取并及时消费 `snapshot.res.raw` 的克隆，不能消费原始响应。
+
+更多精确规则见 [API 参考](/docs/drive/guide)。

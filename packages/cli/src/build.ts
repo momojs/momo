@@ -64,6 +64,7 @@ export async function build(options: BuildOptions = {}): Promise<void> {
     outdir: distRoot,
     packages: options.packages ?? 'external',
     root: srcRoot,
+    splitting: options.splitting ?? false,
     target: options.target ?? 'browser',
   });
 

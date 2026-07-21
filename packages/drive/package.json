@@ -1,6 +1,6 @@
 {
   "name": "@momots/drive",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "Bun-first Fetch API client with onion-style middleware for MomoTS packages and apps.",
   "keywords": [
     "momo",
@@ -44,7 +44,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "publishConfig": {
     "access": "public",
@@ -54,6 +55,7 @@
     "build": "momo build",
     "test": "bun test src",
     "format": "biome format --write .",
+    "test:tarball": "bun run --cwd ../.. build && bun run scripts/tarball-clean-check.ts",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "types": "tsc --project tsconfig.build.json"
