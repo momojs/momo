@@ -78,7 +78,7 @@ website -> packages 的文档消费者
 | --- | --- | --- |
 | `core` | 纯函数、类型工具、数据结构、类型守卫、值归一 | 宿主环境 API |
 | `host` | DOM/BOM/Web Platform、二进制、URL、Storage、CSS、Fetch 工具 | 请求客户端编排、业务协议 |
-| `drive` | Fetch 请求驱动、中间件、请求编码、响应解析 | 缓存、重试、全局 throw-on-error |
+| `drive` | Fetch 请求驱动、中间件、请求编码、响应解析、可选发送阶段 | 缓存、默认自动重试、全局 throw-on-error |
 | `design` | React 组件、hooks、动画效果、主题与 Tailwind 辅助 | 业务状态、产品流程 |
 | `cli` | Bun 包构建与配置 | 通用运行时工具、测试 runner |
 
@@ -271,7 +271,7 @@ matched middlewares
 
 - 快捷方法如 `drive.get<T>()` 返回 `Promise<T | undefined>`。
 - `request<T>()` 返回 `DriveFetchedContext<T>`。
-- 不内置 retry、缓存、全局 throw-on-error。
+- 默认不启用自动重试、缓存、全局 throw-on-error；`repeat` 仅作为可选的重复发送阶段提供。
 - 4xx / 5xx 是否抛错交给中间件或上层库。
 
 ### `@momots/design`

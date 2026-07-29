@@ -1,8 +1,8 @@
 import { isArray, merge } from 'remeda';
 
-import type { PlainObject } from '../types';
-import { defs } from './defs';
-import type { Names, TreeNode } from './types';
+import type { PlainObject } from '../types.js';
+import { defs } from './defs.js';
+import type { Names, TreeNode } from './types.js';
 
 /**
  * 广度优先遍历整棵树。

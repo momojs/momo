@@ -1,6 +1,6 @@
 import { mapKeys, toUpperCase } from 'remeda';
 
-import type { UpperCasedProperties } from './types';
+import type { UpperCasedProperties } from './types.js';
 
 /**
  * 将对象自身可枚举键转换为大写。

@@ -147,7 +147,8 @@
   --momo-text-nav-link-weight: 500;
 }
 
-:where(.theme-anthropic.dark, .dark .theme-anthropic) {
+.theme-anthropic.dark,
+.dark .theme-anthropic {
   color-scheme: dark;
 
   --momo-bg-canvas: var(--color-anthropic-ink-900);
@@ -173,9 +174,9 @@
   --momo-fg-success: var(--color-anthropic-green-500);
   --momo-fg-warning: var(--color-anthropic-amber-500);
 
-  --momo-border-default: var(--color-anthropic-ink-800);
-  --momo-border-muted: var(--color-anthropic-ink-850);
+  --momo-border-default: var(--color-anthropic-alpha-100);
+  --momo-border-muted: var(--color-anthropic-ink-800);
   --momo-border-strong: var(--color-anthropic-ink-500);
-  --momo-border-input: var(--color-anthropic-ink-800);
+  --momo-border-input: var(--color-anthropic-alpha-150);
   --momo-border-danger: var(--color-anthropic-red-600);
 }

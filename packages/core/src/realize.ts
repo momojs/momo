@@ -1,6 +1,6 @@
 import { isFunction } from 'remeda';
 
-import type { Realizable } from './types';
+import type { Realizable } from './types.js';
 
 /**
  * 将惰性值具体化。

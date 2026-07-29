@@ -47,12 +47,14 @@ export type Realizable<T, Args extends unknown[] = []> =
   | ((...args: Args) => T);
 
 /**
- * 更新器。
+ * 直接值或基于旧值计算新值的更新函数。
+ *
+ * `prev` 可能为 `undefined`，以覆盖尚未初始化的状态。若状态始终有值，
+ * 更新函数可以通过默认参数收窄该情况。
  */
-export type Updater<T, Args extends unknown[] = []> = (
-  prev: T,
-  ...args: Args
-) => T;
+export type Updater<T, Args extends unknown[] = []> =
+  | T
+  | ((prev?: T, ...args: Args) => T);
 
 /**
  * 单个值或数组值。

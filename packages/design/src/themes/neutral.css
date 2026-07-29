@@ -127,7 +127,8 @@
   --momo-text-nav-link-weight: 500;
 }
 
-:where(.theme-neutral.dark, .dark .theme-neutral) {
+.theme-neutral.dark,
+.dark .theme-neutral {
   color-scheme: dark;
 
   --momo-bg-canvas: var(--color-neutral-950);

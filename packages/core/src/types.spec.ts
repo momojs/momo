@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, expectTypeOf, test } from 'bun:test';
 
 import type {
   Cast,
@@ -41,5 +41,16 @@ describe('types', () => {
     type _Stringifiable = Stringifiable;
 
     expect(true).toBe(true);
+  });
+
+  test('models direct and functional updates', () => {
+    const direct: Updater<number> = 1;
+    const derived: Updater<number, [increment: number]> = (
+      previous,
+      increment,
+    ) => (previous ?? 0) + increment;
+
+    expectTypeOf(direct).toMatchTypeOf<Updater<number>>();
+    expectTypeOf(derived).toMatchTypeOf<Updater<number, [increment: number]>>();
   });
 });

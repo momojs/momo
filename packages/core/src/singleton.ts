@@ -1,4 +1,4 @@
-import { realize } from './realize';
+import { realize } from './realize.js';
 
 export interface SingletonOptions {
   /**

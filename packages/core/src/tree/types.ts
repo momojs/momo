@@ -1,4 +1,4 @@
-import type { PlainObject } from '../types';
+import type { PlainObject } from '../types.js';
 
 /**
  * 从对象类型中提取可以作为节点 id 的字段名。

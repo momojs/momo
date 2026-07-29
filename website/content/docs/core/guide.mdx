@@ -4,7 +4,7 @@ description: "@momots/core 全部公开函数的用法说明。"
 icon: BookOpen
 ---
 
-欢迎查阅 `@momots/core` 的 API 参考。下文按 [能力地图](/docs/core#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。所有 API 均可从根入口或对应子路径导入。
+欢迎查阅 `@momots/core` 的 API 参考。下文按 [能力地图](/docs/core#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。常用 API 可从根入口导入，全部公开 API 均提供对应子路径；仅子路径导出的 API 会单独说明。
 
 ```ts
 import { eliminate } from '@momots/core';
@@ -455,6 +455,48 @@ singleton(key, () => ({ count: 1 }), { scope }); // => { count: 1 }
 singleton(key, () => ({ count: 2 }), { scope }); // => 仍是 { count: 1 }
 ```
 
+## 并发去重
+
+子路径：`singleflight`（仅子路径导出）
+
+### Singleflight
+
+将同一实例上时间重叠的异步调用合并为一个进行中的 Promise。首个 `call` 会启动异步函数；在该 Promise fulfilled 或 rejected 之前，后续调用都会得到同一个 Promise，并忽略各自传入的参数。Promise settled 后，下一次调用会开启新的 flight。
+
+```ts
+class Singleflight<TRes, TArgs extends unknown[] = []> {
+  constructor(fn: (...args: TArgs) => Promise<TRes>);
+  call(...args: TArgs): Promise<TRes>;
+  forget(): void;
+}
+```
+
+| 成员 | 说明 |
+| --- | --- |
+| `constructor(fn)` | 设置每次新 flight 开始时执行的异步函数 |
+| `call(...args)` | 加入当前 flight，或使用参数创建新 flight |
+| `forget()` | 忘记当前 flight，使下次调用立即创建新 Promise；不会取消已有异步操作 |
+
+```ts
+import { Singleflight } from '@momots/core/singleflight';
+
+const profileFlight = new Singleflight(async (id: string) => {
+  const response = await fetch(`/api/profiles/${id}`);
+  return response.json();
+});
+
+const first = profileFlight.call('momo');
+const second = profileFlight.call('ignored-while-pending');
+
+first === second; // => true
+await first;
+
+// 上一个 Promise settled 后会开始新的 flight
+await profileFlight.call('kit');
+```
+
+`Singleflight` 只合并同一实例上的重叠调用，不缓存 settled 结果，也不取消请求。若需要按 key 分组，应由调用方为每个 key 维护独立实例。
+
 ## 模板插值
 
 子路径：`substitute`
@@ -868,24 +910,22 @@ type Realizable<T, Args extends unknown[] = []> = T | ((...args: Args) => T);
 ### Updater
 
 ```ts
-type Updater<T> = (
-  updater: Realizable<T, [T | undefined]>,
-  ...rest: unknown[]
-) => void;
+type Updater<T, Args extends unknown[] = []> =
+  | T
+  | ((prev?: T, ...args: Args) => T);
 ```
 
-状态更新器签名：第一个参数可以是新值，也可以是接收当前值并返回新值的函数；其余参数透传（例如 React 的 `setState` 回调）。适合描述受控 / 非受控组件中的 `setValue`。
+表示一次状态更新：既可以直接提供新值，也可以用函数根据旧值计算新值。`prev` 可能为 `undefined`，用于覆盖状态尚未初始化的场景；`Args` 用于描述计算新值时需要的额外参数。
+
+`Updater` 描述的是 setter 接收的参数，而不是 setter 本身。setter 可以组合为 `(updater: Updater<T>) => void`。
 
 ```ts
 import type { Updater } from '@momots/core/types';
 
-const setCount: Updater<number> = (updater) => {
-  const next = typeof updater === 'function' ? updater(0) : updater;
-  console.log(next);
-};
+const direct: Updater<number> = 1;
+const increment: Updater<number> = (prev = 0) => prev + 1;
 
-setCount(1);
-setCount((prev) => (prev ?? 0) + 1);
+type SetCount = (updater: Updater<number>) => void;
 ```
 
 ### MaybeArray
@@ -947,7 +987,8 @@ import type {
 type Names = MaybeArray<string>;                    // string | string[] | readonly string[]
 type Thunk = Realizable<number, [string]>;           // number | ((s: string) => number)
 type Clean = NonEmptyish<string | '' | null>;       // string
-type SetValue = Updater<string>;                     // (updater, ...rest) => void
+type Update = Updater<string>;                       // string | ((prev?: string) => string)
+type SetValue = (updater: Updater<string>) => void;  // setter
 ```
 
 ## 类型断言

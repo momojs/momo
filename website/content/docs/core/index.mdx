@@ -11,14 +11,14 @@ icon: Rocket
 ## 安装
 
 ```bash
-bun add @momots/core@alpha remeda type-fest
+bun add @momots/core@beta remeda type-fest
 ```
 
-当前发布通道为 `alpha`（`0.1.0-alpha.1`）。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+当前发布通道为 `beta`（`0.1.0-beta.0`）。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
 
 ## 两种导入方式
 
-所有函数都可以从根入口导入，也可以按子路径导入以获得最佳的 tree-shaking 效果：
+常用函数可以从根入口导入；所有公开 API 都可以从对应子路径导入，以获得明确的依赖边界与最佳的 tree-shaking 效果。标记为“仅子路径”的 API 不从根入口重新导出：
 
 ```ts
 // 从根入口导入
@@ -41,13 +41,14 @@ import { toCamelCaseKeys } from "@momots/core/casing/toCamelCaseKeys";
 | 惰性求值   | `realize`             | `realize`                                   |
 | 类型守卫   | `guard/*`             | `isUndefined`、`isStringArray` …            |
 | 单例缓存   | `singleton`           | `singleton`                                 |
+| 并发去重   | `singleflight`        | `Singleflight`                              |
 | 模板插值   | `substitute`          | `substitute`                                |
 | 数位求和   | `sumdig`              | `sumdig`                                    |
 | 树结构     | `tree/*`              | `unflat`、`flat`、`visit`、`prune` …        |
 | 类型断言   | `cast/*`              | `writable`                                  |
 | 类型工具   | `types`               | `MaybeArray`、`Realizable`、`Updater` …     |
 
-接下来可以阅读 [教程](/docs/core/tutorial) 完成一个完整场景，或直接查阅 [向导](/docs/core/guide) 了解每个 API。
+接下来可以查阅 [向导](/docs/core/guide) 了解每个 API，或前往 [示例](/docs/core/examples) 获取可直接使用的代码片段。
 
 ## 比较
 

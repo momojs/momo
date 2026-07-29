@@ -1,8 +1,8 @@
 import { clone, isEmptyish, isNot, merge } from 'remeda';
 
-import type { PlainObject } from '../types';
-import { defs } from './defs';
-import type { Fields, Names, TreeNode } from './types';
+import type { PlainObject } from '../types.js';
+import { defs } from './defs.js';
+import type { Fields, Names, TreeNode } from './types.js';
 
 /**
  * 对树进行剪枝。

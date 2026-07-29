@@ -13,6 +13,7 @@ website/**/cache
 
 # Local
 node_modules
+examples/**/ios
 .turbo
 .vercel
 .vite

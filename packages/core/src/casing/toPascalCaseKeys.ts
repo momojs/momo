@@ -1,7 +1,7 @@
 import { mapKeys } from 'remeda';
 import type { PascalCasedProperties } from 'type-fest';
 
-import { toPascalCase } from './toPascalCase';
+import { toPascalCase } from './toPascalCase.js';
 
 /**
  * 将对象自身可枚举键转换为 PascalCase。

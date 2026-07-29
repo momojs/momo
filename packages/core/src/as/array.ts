@@ -1,6 +1,6 @@
 import { isArray } from 'remeda';
 
-import type { MaybeArray } from '../types';
+import type { MaybeArray } from '../types.js';
 
 /**
  * 将单个值或数组归一化为数组形态。

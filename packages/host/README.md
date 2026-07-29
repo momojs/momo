@@ -32,6 +32,7 @@ measureText("Momo", { fontSize: "16px", fontFamily: "sans-serif" });
 
 const token = new Storagefy<string>("token");
 token.set("hello", 60);
+token.expire(120); // Refresh the TTL without changing the value.
 
 const fingerprint = await projection();
 ```

@@ -490,7 +490,11 @@ class MemoryStorage implements Storage {
 class Storagefy<T> {
   constructor(key: string, storage?: Realizable<Storage>);
 
-  set(arg: T | ((old: T | null) => T), expires?: number): void;
+  readonly key: string;
+  readonly storage: Storage;
+
+  set(arg: Realizable<T, [T | null]>, expires?: number): void;
+  expire(arg: Realizable<number, [T | null]>): void;
   get(): T | null;
   remove(): void;
 
@@ -506,9 +510,15 @@ class Storagefy<T> {
 
 | 实例方法 | 说明 |
 | --- | --- |
-| `set(arg, expires?)` | 写入值或函数式更新；`expires` 为过期秒数 |
+| `set(arg, expires?)` | 写入值或函数式更新；更新函数接收已解码的当前值，`expires` 为过期秒数 |
+| `expire(arg)` | 更新现有值的过期秒数但不改变值；可根据已解码的当前值计算秒数，键不存在时不写入 |
 | `get()` | 读取值；过期或解析失败时自动删除并返回 `null` |
 | `remove()` | 删除键并派发 `StorageEvent` |
+
+| 实例属性 | 说明 |
+| --- | --- |
+| `key` | 带 `Storagefy:` 命名空间的实际存储键 |
+| `storage` | 当前解析得到的底层 `Storage` 实例 |
 
 | 静态方法 | 说明 |
 | --- | --- |
@@ -524,6 +534,7 @@ import { Storagefy } from '@momots/host/storage';
 
 const cache = new Storagefy<{ name: string }>('profile');
 cache.set({ name: 'Momo' }, 300); // 5 分钟后过期
+cache.expire(600); // 保留当前值，将过期时间刷新为 10 分钟后
 cache.get(); // => { name: 'Momo' } | null
 ```
 
@@ -542,7 +553,8 @@ class StoragefyAsync<T> {
     },
   );
 
-  set(arg: T | ((old: T | null) => T), expires?: number): Promise<void>;
+  set(arg: Realizable<T, [T | null]>, expires?: number): Promise<void>;
+  expire(arg: Realizable<number, [T | null]>): Promise<void>;
   get(): Promise<T | null>;
   remove(): void;
 
@@ -562,8 +574,11 @@ const cell = new StoragefyAsync<Data>('k', {
   decode: codec.decode,
 });
 await cell.set(data);
+await cell.expire(600);
 await cell.get();
 ```
+
+`StoragefyAsync.expire()` 会使用实例配置的 `decode` / `encode` 重新写入条目，因此 AES 等自定义编解码器仍会保持原有存储格式。
 
 ## 持久缓冲
 

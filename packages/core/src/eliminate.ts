@@ -1,4 +1,4 @@
-import { cardinality } from './cardinality';
+import { cardinality } from './cardinality.js';
 
 /**
  * 当输入值与指定哨兵值相同时，将其消除为替代值。

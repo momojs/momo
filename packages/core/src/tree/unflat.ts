@@ -1,8 +1,8 @@
 import { isNullish, merge } from 'remeda';
 
-import type { Nil, PlainObject } from '../types';
-import { defs } from './defs';
-import type { Fields, Names, TreeNode } from './types';
+import type { Nil, PlainObject } from '../types.js';
+import { defs } from './defs.js';
+import type { Fields, Names, TreeNode } from './types.js';
 
 /**
  * 扁平列表还原为树时遇到孤儿节点的处理策略。

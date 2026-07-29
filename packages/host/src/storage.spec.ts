@@ -53,6 +53,29 @@ describe('Storagefy', () => {
     expect(cell.get()).toBeNull();
   });
 
+  test('updates expiration without changing the stored value', () => {
+    const store = new MemoryStorage();
+    const cell = new Storagefy<{ count: number }>('expiring', store);
+
+    cell.set({ count: 1 });
+    cell.expire((value) => (value?.count === 1 ? 60 : -1));
+
+    expect(cell.get()).toEqual({ count: 1 });
+
+    cell.expire(-1);
+
+    expect(cell.get()).toBeNull();
+  });
+
+  test('does not create an entry when expiring a missing value', () => {
+    const store = new MemoryStorage();
+    const cell = new Storagefy<number>('missing', store);
+
+    cell.expire(60);
+
+    expect(Storagefy.has('Storagefy:missing', store)).toBe(false);
+  });
+
   test('clears values and removes malformed entries on read', () => {
     const errors = spyOn(console, 'error').mockImplementation(() => undefined);
     const store = new MemoryStorage();
@@ -125,6 +148,12 @@ describe('StoragefyAsync', () => {
     const raw = store.getItem('StoragefyAsync:secure');
     expect(raw?.startsWith('v1:')).toBe(true);
     expect(raw).not.toContain('Momo');
+
+    await cell.expire((value) => (value?.name === 'Momo' ? 60 : -1));
+
+    const refreshed = store.getItem('StoragefyAsync:secure');
+    expect(refreshed?.startsWith('v1:')).toBe(true);
+    expect(refreshed).not.toContain('Momo');
     expect(await cell.get()).toEqual({ name: 'Momo' });
   });
 

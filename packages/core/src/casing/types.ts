@@ -1,4 +1,4 @@
-import type { Callable } from '../types';
+import type { Callable } from '../types.js';
 
 /**
  * 将对象类型中的字符串键映射为大写形式。

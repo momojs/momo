@@ -1,9 +1,9 @@
 import { merge, omit } from 'remeda';
 
-import type { PlainObject } from '../types';
-import { defs } from './defs';
-import type { Fields, Names, TreeNode } from './types';
-import { visit } from './visit';
+import type { PlainObject } from '../types.js';
+import { defs } from './defs.js';
+import type { Fields, Names, TreeNode } from './types.js';
+import { visit } from './visit.js';
 
 /**
  * 将树结构扁平化为列表。

@@ -22,9 +22,15 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react';
 
 import { Accordion } from '../../../../packages/design/src/components/accordion';
+import { Badge } from '../../../../packages/design/src/components/badge';
 import { Button } from '../../../../packages/design/src/components/button';
-import { Calendar } from '../../../../packages/design/src/components/calendar';
 import { Checkbox } from '../../../../packages/design/src/components/checkbox';
+import {
+  Dialog,
+  DialogClose,
+} from '../../../../packages/design/src/components/dialog';
+import { Input } from '../../../../packages/design/src/components/input';
+import { Numeric } from '../../../../packages/design/src/components/numeric';
 import { PickerDate } from '../../../../packages/design/src/components/picker-date';
 import { PickerTime } from '../../../../packages/design/src/components/picker-time';
 import { Select } from '../../../../packages/design/src/components/select';
@@ -163,6 +169,15 @@ const buttonVariantOptions = [
   { value: 'link', label: 'Link' },
 ] as const;
 
+const badgeVariantOptions = [
+  { value: 'default', label: 'Default' },
+  { value: 'brand', label: 'Brand' },
+  { value: 'success', label: 'Success' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'danger', label: 'Danger' },
+  { value: 'outline', label: 'Outline' },
+] as const;
+
 const buttonSizeOptions = [
   { value: 'default', label: 'Default' },
   { value: 'sm', label: 'Small' },
@@ -189,31 +204,48 @@ const orientationOptions = [
   { value: 'vertical', label: 'Vertical' },
 ] as const;
 
-const calendarPagerVariantOptions = [
-  { value: 'ghost', label: 'Ghost' },
-  { value: 'default', label: 'Default' },
-  { value: 'outline', label: 'Outline' },
-  { value: 'secondary', label: 'Secondary' },
-  { value: 'destructive', label: 'Destructive' },
-  { value: 'link', label: 'Link' },
-] as const;
-
-const calendarCaptionLayoutOptions = [
-  { value: 'label', label: 'Label' },
-  { value: 'dropdown', label: 'Dropdown' },
-  { value: 'dropdown-months', label: 'Months' },
-  { value: 'dropdown-years', label: 'Years' },
-] as const;
-
 type ButtonVariant = (typeof buttonVariantOptions)[number]['value'];
 type ButtonSize = (typeof buttonSizeOptions)[number]['value'];
+type BadgeVariant = (typeof badgeVariantOptions)[number]['value'];
 type ControlSizeValue = (typeof controlSizeOptions)[number]['value'];
 type ToggleGroupVariant = (typeof toggleGroupVariantOptions)[number]['value'];
 type TabsOrientation = (typeof orientationOptions)[number]['value'];
-type CalendarPagerVariant =
-  (typeof calendarPagerVariantOptions)[number]['value'];
-type CalendarCaptionLayout =
-  (typeof calendarCaptionLayoutOptions)[number]['value'];
+
+export function BadgePlayground() {
+  const [variant, setVariant] = useState<BadgeVariant>('default');
+  const [size, setSize] = useState<ControlSizeValue>('md');
+
+  return (
+    <PlaygroundFrame
+      controls={
+        <>
+          <SelectControl
+            label='Variant'
+            value={variant}
+            options={badgeVariantOptions}
+            onChange={setVariant}
+          />
+          <SelectControl
+            label='Size'
+            value={size}
+            options={controlSizeOptions}
+            onChange={setSize}
+          />
+        </>
+      }
+      state={
+        <code>
+          status: In progress; variant: {variant}; size: {size}
+        </code>
+      }
+    >
+      <Badge variant={variant} size={size}>
+        <Icon icon={Clock01Icon} />
+        In progress
+      </Badge>
+    </PlaygroundFrame>
+  );
+}
 
 export function ButtonPlayground() {
   const [clicks, setClicks] = useState(0);
@@ -384,6 +416,196 @@ export function CheckboxPlayground() {
   );
 }
 
+export function DialogPlayground() {
+  const [open, setOpen] = useState(false);
+  const [size, setSize] = useState<ControlSizeValue>('md');
+  const [disablePointerDismissal, setDisablePointerDismissal] = useState(false);
+
+  return (
+    <PlaygroundFrame
+      controls={
+        <>
+          <SelectControl
+            label='Size'
+            value={size}
+            options={controlSizeOptions}
+            onChange={setSize}
+          />
+          <CheckboxControl
+            label='Prevent outside close'
+            checked={disablePointerDismissal}
+            onChange={setDisablePointerDismissal}
+          />
+        </>
+      }
+      state={
+        <code>
+          open: {String(open)}; size: {size}; prevent outside close:{' '}
+          {String(disablePointerDismissal)}
+        </code>
+      }
+    >
+      <Dialog
+        open={open}
+        size={size}
+        title='Review sync settings'
+        description='Confirm how this workspace should keep local changes in sync.'
+        disablePointerDismissal={disablePointerDismissal}
+        trigger={<Button>Open dialog</Button>}
+        footer={
+          <>
+            <DialogClose render={<Button variant='secondary' />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={() => setOpen(false)}>Apply changes</Button>
+          </>
+        }
+        onChange={setOpen}
+      >
+        <div className='grid gap-3'>
+          <div className='rounded-momo-md border border-momo-border-default bg-momo-bg-surface-muted p-momo-sm'>
+            <p className='font-medium text-momo-fg-default'>
+              Automatic conflict resolution
+            </p>
+            <p className='mt-1 text-momo-fg-muted'>
+              Prefer the newest saved value and keep a local recovery copy.
+            </p>
+          </div>
+          <p className='text-momo-fg-muted'>
+            You can change this later from workspace settings.
+          </p>
+        </div>
+      </Dialog>
+    </PlaygroundFrame>
+  );
+}
+
+export function InputPlayground() {
+  const [value, setValue] = useState('hello@momo.dev');
+  const [size, setSize] = useState<ControlSizeValue>('md');
+  const [disabled, setDisabled] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+  const [invalid, setInvalid] = useState(false);
+
+  return (
+    <PlaygroundFrame
+      controls={
+        <>
+          <SelectControl
+            label='Size'
+            value={size}
+            options={controlSizeOptions}
+            onChange={setSize}
+          />
+          <CheckboxControl
+            label='Disabled'
+            checked={disabled}
+            onChange={setDisabled}
+          />
+          <CheckboxControl
+            label='Read only'
+            checked={readOnly}
+            onChange={setReadOnly}
+          />
+          <CheckboxControl
+            label='Invalid'
+            checked={invalid}
+            onChange={setInvalid}
+          />
+        </>
+      }
+      state={
+        <code>
+          value: {value || 'empty'}; size: {size}; disabled: {String(disabled)};
+          readOnly: {String(readOnly)}; invalid: {String(invalid)}
+        </code>
+      }
+    >
+      <div className='grid w-full max-w-sm gap-momo-xxs text-left'>
+        <label
+          htmlFor='input-playground-email'
+          className='text-momo-body-sm font-medium text-momo-fg-default'
+        >
+          Email
+        </label>
+        <Input
+          id='input-playground-email'
+          type='email'
+          value={value}
+          size={size}
+          disabled={disabled}
+          readOnly={readOnly}
+          aria-invalid={invalid || undefined}
+          aria-describedby='input-playground-email-description'
+          placeholder='name@example.com'
+          onValueChange={setValue}
+        />
+        <p
+          id='input-playground-email-description'
+          className={cn(
+            'text-momo-caption',
+            invalid ? 'text-momo-fg-danger' : 'text-momo-fg-muted',
+          )}
+        >
+          {invalid
+            ? 'Enter a valid email address.'
+            : 'Used for workspace notifications.'}
+        </p>
+      </div>
+    </PlaygroundFrame>
+  );
+}
+
+export function NumericPlayground() {
+  const [value, setValue] = useState<number | null>(125);
+  const [size, setSize] = useState<ControlSizeValue>('md');
+  const [disabled, setDisabled] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+
+  return (
+    <PlaygroundFrame
+      controls={
+        <>
+          <SelectControl
+            label='Size'
+            value={size}
+            options={controlSizeOptions}
+            onChange={setSize}
+          />
+          <CheckboxControl
+            label='Disabled'
+            checked={disabled}
+            onChange={setDisabled}
+          />
+          <CheckboxControl
+            label='Read only'
+            checked={readOnly}
+            onChange={setReadOnly}
+          />
+        </>
+      }
+      state={
+        <code>
+          value: {value ?? 'null'}; size: {size}; disabled: {String(disabled)};
+          readOnly: {String(readOnly)}
+        </code>
+      }
+    >
+      <Numeric
+        label='Amount'
+        value={value}
+        min={0}
+        max={1_000}
+        step={5}
+        size={size}
+        disabled={disabled}
+        readOnly={readOnly}
+        onChange={setValue}
+      />
+    </PlaygroundFrame>
+  );
+}
+
 export function AccordionPlayground() {
   const [value, setValue] = useState<string[]>(['tokens']);
 
@@ -452,7 +674,10 @@ export function ToggleGroupPlayground() {
         size={size}
         value={value}
         variant={variant}
-        onChange={setValue}
+        onChange={(next) => {
+          if (next !== undefined) setValue(next);
+          return next;
+        }}
         options={[
           { value: 'left', label: 'Left', icon: <Icon icon={AlignLeftIcon} /> },
           {
@@ -724,73 +949,22 @@ export function TabsPlayground() {
             value: 'usage',
             label: 'Usage',
             icon: <Icon icon={Notification01Icon} />,
-            content:
+            content: [
               'Use value/onChange for controlled flows or defaultValue for local state.',
+              'Use value/onChange for controlled flows or defaultValue for local state.',
+              'Use value/onChange for controlled flows or defaultValue for local state.',
+            ].join('\n'),
           },
           {
             value: 'settings',
             label: 'Settings',
             icon: <Icon icon={Settings02Icon} />,
-            content:
+            content: [
               'Panels inherit the default Tailwind theme and stay unstyled enough to compose.',
+              'Panels inherit the default Tailwind theme and stay unstyled enough to compose.',
+            ].join('\n'),
           },
         ]}
-      />
-    </PlaygroundFrame>
-  );
-}
-
-export function CalendarPlayground() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [pagerVariant, setPagerVariant] =
-    useState<CalendarPagerVariant>('ghost');
-  const [captionLayout, setCaptionLayout] =
-    useState<CalendarCaptionLayout>('label');
-  const [showWeekNumber, setShowWeekNumber] = useState(false);
-  const [showOutsideDays, setShowOutsideDays] = useState(true);
-
-  return (
-    <PlaygroundFrame
-      controls={
-        <>
-          <SelectControl
-            label='Pager'
-            value={pagerVariant}
-            options={calendarPagerVariantOptions}
-            onChange={setPagerVariant}
-          />
-          <SelectControl
-            label='Caption'
-            value={captionLayout}
-            options={calendarCaptionLayoutOptions}
-            onChange={setCaptionLayout}
-          />
-          <CheckboxControl
-            label='Week No.'
-            checked={showWeekNumber}
-            onChange={setShowWeekNumber}
-          />
-          <CheckboxControl
-            label='Outside'
-            checked={showOutsideDays}
-            onChange={setShowOutsideDays}
-          />
-        </>
-      }
-      state={
-        <code>
-          selected: {date ? date.toLocaleDateString() : 'undefined'}; pager:{' '}
-          {pagerVariant}; caption: {captionLayout}
-        </code>
-      }
-    >
-      <Calendar
-        selected={date}
-        onSelect={setDate}
-        caption={{ layout: captionLayout }}
-        pager={{ variant: pagerVariant }}
-        showWeekNumber={showWeekNumber}
-        showOutsideDays={showOutsideDays}
       />
     </PlaygroundFrame>
   );
@@ -844,7 +1018,11 @@ export function PickerDatePlayground() {
 }
 
 export function PickerTimePlayground() {
-  const [value, setValue] = useState('09:30 AM');
+  const [value, setValue] = useState(() => {
+    const date = new Date();
+    date.setHours(9, 30, 0, 0);
+    return date;
+  });
   const [disabled, setDisabled] = useState(false);
 
   return (
@@ -858,7 +1036,7 @@ export function PickerTimePlayground() {
       }
       state={
         <code>
-          value: {value}; disabled: {String(disabled)}
+          value: {value.toISOString()}; disabled: {String(disabled)}
         </code>
       }
     >

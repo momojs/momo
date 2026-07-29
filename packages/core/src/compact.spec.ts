@@ -61,7 +61,7 @@ describe('compact', () => {
   test('narrows literal tuple types', () => {
     const result = compact(['momo', '', null, false] as const);
 
-    result satisfies ('momo')[];
+    result satisfies 'momo'[];
     expect(result).toEqual(['momo']);
   });
 

@@ -199,7 +199,7 @@ const codec = {
 export class Storagefy<T> {
   static readonly namespace = 'Storagefy';
 
-  private key: string;
+  private readonly _key: string;
 
   private target?: Realizable<Storage>;
 
@@ -227,10 +227,20 @@ export class Storagefy<T> {
 
   constructor(key: string, storage?: Realizable<Storage>) {
     this.target = storage;
-    this.key = store.key(Storagefy.namespace, key);
+    this._key = store.key(Storagefy.namespace, key);
   }
 
-  private get storage(): Storage {
+  /**
+   * 带命名空间的实际存储键。
+   */
+  public get key(): string {
+    return this._key;
+  }
+
+  /**
+   * 当前解析得到的底层存储实例。
+   */
+  public get storage(): Storage {
     return store.resolve(this.target);
   }
 
@@ -243,16 +253,49 @@ export class Storagefy<T> {
   };
 
   /**
+   * 写入值，或根据已解码的当前值进行函数式更新。
    *
-   * @param value
-   * @param expires 过期时间秒
+   * @param arg 新值，或接收当前值的更新函数。
+   * @param expires 过期时间，单位为秒。
    */
-  public set(arg: T | ((oldValue: T | null) => T), expires?: number) {
-    const value = isFunction(arg) ? arg(this.get()) : arg;
+  public set(arg: Realizable<T, [T | null]>, expires?: number) {
     try {
-      const oldValue = this.storage.getItem(this.key);
+      const value = realize(arg, this.get());
+      const storage = this.storage;
+      const oldValue = storage.getItem(this.key);
       const newValue = codec.json.encode(entry.pack(value, expires));
-      this.storage.setItem(this.key, newValue);
+      storage.setItem(this.key, newValue);
+      this.dispatch(newValue, oldValue);
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === 'QuotaExceededError'
+      ) {
+        console.error(`Storage quota exceeded for key "${this.key}"`);
+      } else {
+        console.error(`Failed to set storage key "${this.key}":`, error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 更新现有值的过期时间，不改变存储值。
+   *
+   * 键不存在、已过期或内容无法解析时不写入新条目。
+   *
+   * @param arg 过期秒数，或接收当前值并返回过期秒数的函数。
+   */
+  public expire(arg: Realizable<number, [T | null]>) {
+    try {
+      const value = this.get();
+      const storage = this.storage;
+      const oldValue = storage.getItem(this.key);
+      if (oldValue === null) return;
+
+      const expires = realize(arg, value);
+      const newValue = codec.json.encode(entry.pack(value, expires));
+      storage.setItem(this.key, newValue);
       this.dispatch(newValue, oldValue);
     } catch (error) {
       if (
@@ -303,7 +346,7 @@ type StoragefyAsyncDecoded<T> = (
 export class StoragefyAsync<T> {
   static readonly namespace = 'StoragefyAsync';
 
-  private key: string;
+  private _key: string;
 
   private target?: Realizable<Storage>;
 
@@ -344,9 +387,13 @@ export class StoragefyAsync<T> {
     } = {},
   ) {
     this.target = params.store;
-    this.key = store.key(StoragefyAsync.namespace, key);
+    this._key = store.key(StoragefyAsync.namespace, key);
     if (params.encode) this.encode = params.encode;
     if (params.decode) this.decode = params.decode;
+  }
+
+  private get key(): string {
+    return this._key;
   }
 
   private get storage(): Storage {
@@ -362,16 +409,49 @@ export class StoragefyAsync<T> {
   };
 
   /**
+   * 写入值，或根据已解码的当前值进行函数式更新。
    *
-   * @param value
-   * @param expires 过期时间秒
+   * @param arg 新值，或接收当前值的更新函数。
+   * @param expires 过期时间，单位为秒。
    */
-  public async set(arg: T | ((oldValue: T | null) => T), expires?: number) {
-    const value = isFunction(arg) ? arg(await this.get()) : arg;
+  public async set(arg: Realizable<T, [T | null]>, expires?: number) {
     try {
-      const oldValue = this.storage.getItem(this.key);
+      const value = realize(arg, await this.get());
+      const storage = this.storage;
+      const oldValue = storage.getItem(this.key);
       const newValue = await this.encode(entry.pack(value, expires));
-      this.storage.setItem(this.key, newValue);
+      storage.setItem(this.key, newValue);
+      this.dispatch(newValue, oldValue);
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === 'QuotaExceededError'
+      ) {
+        console.error(`Storage quota exceeded for key "${this.key}"`);
+      } else {
+        console.error(`Failed to set storage key "${this.key}":`, error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 使用当前编解码器更新现有值的过期时间，不改变存储值。
+   *
+   * 键不存在、已过期或内容无法解析时不写入新条目。
+   *
+   * @param arg 过期秒数，或接收当前值并返回过期秒数的函数。
+   */
+  public async expire(arg: Realizable<number, [T | null]>) {
+    try {
+      const value = await this.get();
+      const storage = this.storage;
+      const oldValue = storage.getItem(this.key);
+      if (oldValue === null) return;
+
+      const expires = realize(arg, value);
+      const newValue = await this.encode(entry.pack(value as T, expires));
+      storage.setItem(this.key, newValue);
       this.dispatch(newValue, oldValue);
     } catch (error) {
       if (

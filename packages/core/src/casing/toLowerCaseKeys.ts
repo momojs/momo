@@ -1,6 +1,6 @@
 import { mapKeys, toLowerCase } from 'remeda';
 
-import type { LowerCasedProperties } from './types';
+import type { LowerCasedProperties } from './types.js';
 
 /**
  * 将对象自身可枚举键转换为小写。

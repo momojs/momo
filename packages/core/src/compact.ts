@@ -1,6 +1,6 @@
 import { isEmptyish, isNot } from 'remeda';
 
-import type { NonFalseish } from './types';
+import type { NonFalseish } from './types.js';
 
 /**
  * 从数组中移除所有 falseish 值。

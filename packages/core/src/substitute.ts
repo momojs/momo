@@ -1,4 +1,4 @@
-import type { Stringifiable } from './types';
+import type { Stringifiable } from './types.js';
 
 type Interpolation = Record<
   string,
