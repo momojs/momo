@@ -12,7 +12,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue, usePresenceGate } from '../hooks';
 import type { ControlOption, ControlValue } from '../shared';
-import { cx } from '../shared';
+import { cx } from '../tailwind';
 
 type ItemProps = {
   value: ControlValue;
@@ -148,7 +148,6 @@ export function Accordion<T extends ControlValue>({
   const [currents, setCurrents] = useControllableValue({
     value,
     defaultValue,
-    onChange: onValueChange,
   });
 
   const values = asArray(currents);
@@ -164,7 +163,10 @@ export function Accordion<T extends ControlValue>({
       <BaseAccordion.Root
         value={currents}
         multiple={multiple}
-        onValueChange={setCurrents}
+        onValueChange={(next, details) => {
+          onValueChange?.(next, details);
+          if (!details.isCanceled) setCurrents(next);
+        }}
         className={cx(
           'w-full min-w-72 max-w-lg overflow-hidden rounded-momo-lg border border-momo-border-default bg-momo-bg-surface-raised text-momo-fg-default shadow-momo-sm',
           className,

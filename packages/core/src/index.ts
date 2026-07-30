@@ -13,6 +13,7 @@ export * from './guard/isPropertyKey.js';
 export * from './guard/isStringArray.js';
 export * from './guard/isUndefined.js';
 export * from './realize.js';
+export * from './singleflight.js';
 export * from './singleton.js';
 export * from './substitute.js';
 export * from './sumdig.js';

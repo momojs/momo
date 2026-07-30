@@ -13,7 +13,7 @@
 
   --momo-bg-canvas: var(--color-white);
   --momo-bg-surface: var(--color-neutral-100);
-  --momo-bg-surface-muted: var(--color-neutral-100);
+  --momo-bg-surface-muted: var(--color-neutral-200);
   --momo-bg-surface-raised: var(--color-white);
   --momo-bg-overlay: var(--color-white);
   --momo-bg-brand: var(--color-neutral-900);
@@ -133,7 +133,7 @@
 
   --momo-bg-canvas: var(--color-neutral-950);
   --momo-bg-surface: var(--color-neutral-800);
-  --momo-bg-surface-muted: var(--color-neutral-800);
+  --momo-bg-surface-muted: var(--color-neutral-700);
   --momo-bg-surface-raised: var(--color-neutral-900);
   --momo-bg-overlay: var(--color-neutral-900);
   --momo-bg-brand: var(--color-neutral-200);

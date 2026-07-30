@@ -1,0 +1,137 @@
+---
+title: Rating
+description: 支持精度、键盘操作与表单提交的评分控件。
+icon: Star
+---
+
+`Rating` 用一组图标表达并选择数值评分。它支持受控与非受控状态、整数或小数精度、键盘操作、只读展示和原生表单提交，并使用 momo semantic token 与 motion 统一焦点、预览和按压反馈。
+
+<RatingPlayground />
+
+## 使用
+
+使用 `value` 与 `onValueChange` 管理受控评分：
+
+```tsx
+import { Rating } from "@momots/design/components/rating";
+
+const [score, setScore] = useState(3);
+
+<Rating
+  aria-label="体验评分"
+  value={score}
+  onValueChange={setScore}
+/>
+```
+
+`Rating` 没有可见 label。交互场景应通过 `aria-label` 或 `aria-labelledby` 提供可访问名称。
+
+只需要组件管理初始值时，使用 `defaultValue`：
+
+```tsx
+<Rating
+  aria-label="内容质量"
+  defaultValue={4}
+  name="quality"
+/>
+```
+
+传入 `name` 后，组件会渲染一个 hidden input，让当前评分参与原生表单提交。控件位于其他 `form` 元素之外时，可以通过 `form` 关联表单。
+
+## 精度与数量
+
+`max` 设置最大评分，默认是 `5`。`precision` 设置一次选择或键盘调整的最小步长，默认是 `1`：
+
+```tsx
+<Rating
+  aria-label="商品评分"
+  defaultValue={3.5}
+  max={5}
+  precision={0.5}
+  variant="yellow"
+/>
+```
+
+`precision` 必须大于 `0` 且小于等于 `1`，并能均匀划分单个图标，例如 `1`、`0.5` 或 `0.25`；无效值会回退到 `1`。组件会把显示值限制在 `0` 到 `max` 之间并吸附到最近的精度步长。
+
+## 指针交互
+
+鼠标或触控笔在图标内移动时会按 `precision` 预览评分，离开控件后恢复已选择值；`onValueHover` 可用于同步显示预览数值。点击或轻触会确认评分，再次选择当前值会清空为 `0`。
+
+图标的填充、悬停和按压反馈由 motion 驱动，并遵循用户的 reduced-motion 设置。动画只表达即时交互状态，不改变评分值或表单行为。
+
+## 只读与禁用
+
+只展示已有评分时使用 `readOnly`：
+
+```tsx
+<Rating
+  aria-label="用户评分"
+  value={4.5}
+  precision={0.5}
+  readOnly
+/>
+```
+
+`readOnly` 会移除选择交互，但保留正常视觉表现。`disabled` 表示控件当前不可用，会同时移除交互并降低视觉强调。不要用 `disabled` 代替只读展示。
+
+## 图标与样式
+
+默认使用星形图标。`icon` 接受 Hugeicons 的图标定义，可以在保持评分行为不变的情况下替换外观：
+
+```tsx
+import { FavouriteIcon } from "@hugeicons/core-free-icons";
+import { Rating } from "@momots/design/components/rating";
+
+<Rating
+  aria-label="喜爱程度"
+  icon={FavouriteIcon}
+  variant="destructive"
+/>
+```
+
+使用 `itemClassName` 调整每个评分项的布局或交互区域；使用 `emptyIconClassName` 与 `filledIconClassName` 分别扩展空态和填充态图标样式。业务侧应优先选择内置 `variant`，只在确有主题扩展需求时覆盖样式插槽。
+
+## 键盘与可访问性
+
+控件聚焦后支持以下操作：
+
+- `ArrowRight` / `ArrowUp`：按 `precision` 增加评分，到 `max` 后停止。
+- `ArrowLeft` / `ArrowDown`：按 `precision` 减少评分，到 `0` 后停止。
+- `Home` / `End`：跳到 `0` 或最大评分。
+- `Space` / `Enter`：当前为 `0` 时选择第一个步长，否则清空为 `0`。
+
+`getValueLabel` 可以为辅助技术生成本地化描述：
+
+```tsx
+<Rating
+  aria-label="服务评分"
+  value={score}
+  getValueLabel={(value, max) => `${value} 分，共 ${max} 分`}
+/>
+```
+
+不要只通过图标颜色传达评分含义；需要展示结果时，可在控件附近补充文字数值。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `number` | 受控评分值 |
+| `defaultValue` | `number` | 非受控初始值，默认 `0` |
+| `max` | `number` | 最大评分，默认 `5` |
+| `precision` | `number` | 选择与键盘调整步长，默认 `1` |
+| `size` | `"xs" \| "sm" \| "md" \| "lg"` | 图标尺寸，默认 `"sm"` |
+| `variant` | `"default" \| "destructive" \| "outline" \| "secondary" \| "yellow"` | 图标视觉变体，默认 `"default"` |
+| `icon` | Hugeicons icon definition | 自定义评分图标 |
+| `name` / `form` | `string` | 表单字段名与所属表单 |
+| `readOnly` | `boolean` | 只读展示，移除选择交互 |
+| `disabled` | `boolean` | 禁用控件 |
+| `getValueLabel` | `(value: number, max: number) => string` | 生成当前值的可访问描述 |
+| `onValueChange` | `(value: number) => void` | 评分变化回调 |
+| `onValueHover` | `(value: number) => void` | 指针预览值变化回调，离开时返回 `0` |
+| `className` | `string` | 根元素追加 Tailwind class |
+| `itemClassName` | `string` | 每个评分项追加 Tailwind class |
+| `emptyIconClassName` | `string` | 空态图标追加 Tailwind class |
+| `filledIconClassName` | `string` | 填充态图标追加 Tailwind class |
+| `...props` | `React.ComponentProps<"div">` | 其余原生 div 属性 |

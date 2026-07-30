@@ -10,6 +10,8 @@
   --color-anthropic-cream-200: #efe9de;
   --color-anthropic-cream-300: #ebe6df;
   --color-anthropic-cream-400: #e8e0d2;
+  --color-anthropic-alpha-100: rgb(250 249 245 / 10%);
+  --color-anthropic-alpha-150: rgb(250 249 245 / 15%);
   --color-anthropic-ink-950: #141413;
   --color-anthropic-ink-900: #181715;
   --color-anthropic-ink-850: #1f1e1b;
@@ -151,11 +153,11 @@
 .dark .theme-anthropic {
   color-scheme: dark;
 
-  --momo-bg-canvas: var(--color-anthropic-ink-900);
-  --momo-bg-surface: var(--color-anthropic-ink-850);
-  --momo-bg-surface-muted: var(--color-anthropic-ink-800);
+  --momo-bg-canvas: var(--color-anthropic-ink-950);
+  --momo-bg-surface: var(--color-anthropic-ink-900);
+  --momo-bg-surface-muted: var(--color-anthropic-ink-850);
   --momo-bg-surface-raised: var(--color-anthropic-ink-800);
-  --momo-bg-overlay: var(--color-anthropic-ink-800);
+  --momo-bg-overlay: var(--color-anthropic-ink-700);
   --momo-bg-brand: var(--color-anthropic-coral-500);
   --momo-bg-brand-hover: var(--color-anthropic-coral-600);
   --momo-bg-brand-active: var(--color-anthropic-coral-700);

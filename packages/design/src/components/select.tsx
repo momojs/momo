@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useRef } from 'react';
 
 import type {
   SelectItemProps as BaseSelectItemProps,
@@ -13,7 +14,6 @@ import type {
   SelectScrollUpArrowProps as BaseSelectScrollUpArrowProps,
   SelectTriggerProps as BaseSelectTriggerProps,
   SelectValueProps as BaseSelectValueProps,
-  SelectRootChangeEventDetails,
 } from '@base-ui/react/select';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import {
@@ -26,12 +26,16 @@ import type { VariantProps } from 'cva';
 import { AnimatePresence, motion } from 'motion/react';
 import { isString } from 'remeda';
 
-import { Highlight, useHighlighter } from '../effects/highlight';
+import type { HighlightTrigger } from '../effects/highlight';
+import {
+  Highlight,
+  useHighlightLayer,
+  useHighlightTrigger,
+} from '../effects/highlight';
 import { usePresenceGate } from '../hooks';
 import { useControllableValue } from '../hooks/use-controllable-value';
 import type { ControlOption, ControlValue } from '../shared';
-import { cx } from '../shared';
-import { cva } from '../tailwind';
+import { cva, cx } from '../tailwind';
 
 const variants = {
   trigger: cva({
@@ -96,7 +100,7 @@ type ItemProps<T extends ControlValue> = ControlOption<T> &
       'children' | 'className' | 'disabled' | 'label' | 'style' | 'value'
     >;
     indicator?: ReactNode;
-    highlighterReference?: React.RefCallback<HTMLElement>;
+    highlightTrigger?: HighlightTrigger<HTMLElement>;
   };
 
 function Item<T extends ControlValue>({
@@ -113,12 +117,16 @@ function Item<T extends ControlValue>({
   itemTextClassName,
   itemProps,
   indicator,
-  highlighterReference,
+  highlightTrigger,
 }: ItemProps<T>) {
+  const triggerProps = highlightTrigger
+    ? highlightTrigger.getReferenceProps(itemProps)
+    : undefined;
+
   return (
     <BaseSelect.Item
       {...itemProps}
-      ref={highlighterReference}
+      {...triggerProps}
       key={String(value)}
       value={value}
       disabled={disabled}
@@ -161,18 +169,6 @@ type SelectChangeValue<
   T extends ControlValue,
   Multiple extends boolean | undefined,
 > = Multiple extends true ? T[] : T;
-
-type SelectRootValue<
-  T extends ControlValue,
-  Multiple extends boolean | undefined,
-> = BaseSelectRootProps<T, Multiple>['value'];
-
-type SelectValueChangeDetails<
-  T extends ControlValue,
-  Multiple extends boolean | undefined,
-> = Parameters<
-  NonNullable<BaseSelectRootProps<T, Multiple>['onValueChange']>
->[1];
 
 export interface SelectProps<
   T extends ControlValue,
@@ -277,54 +273,29 @@ export function Select<
     ...rootProps
   } = props;
 
-  const highlighter = useHighlighter<HTMLElement, HTMLDivElement>({
+  const listRef = useRef<HTMLDivElement>(null);
+  const highlightLayer = useHighlightLayer<HTMLElement, HTMLDivElement>(
+    listRef,
+    {
+      enabled: highlightItemOnHover,
+    },
+  );
+  const highlightTrigger = useHighlightTrigger(highlightLayer, {
     enabled: highlightItemOnHover,
+    trigger: 'hover',
   });
 
-  const [controllOpen = false, setControllOpen] = useControllableValue(
-    {
-      ...props,
-      onOpenChange: (
-        nextOpen: boolean,
-        eventDetails: SelectRootChangeEventDetails,
-      ) => {
-        if (!nextOpen) highlighter.exit();
-        onOpenChange?.(nextOpen, eventDetails);
-      },
-    },
-    {
-      defaultValuePropName: 'defaultOpen',
-      triggerPropName: 'onOpenChange',
-      valuePropName: 'open',
-    },
-  );
+  const [isOpen = false, setOpen] = useControllableValue({
+    value: open,
+    defaultValue: defaultOpen,
+  });
 
-  const [controllValue, setControllValue] = useControllableValue(
-    {
-      ...props,
-      onValueChange: (
-        nextValue: SelectRootValue<T, Multiple>,
-        eventDetails: SelectValueChangeDetails<T, Multiple>,
-      ) => {
-        if (nextValue === undefined) return;
+  const [selected, setSelected] = useControllableValue({
+    value,
+    defaultValue,
+  });
 
-        onValueChange?.(
-          nextValue as Parameters<
-            NonNullable<BaseSelectRootProps<T, Multiple>['onValueChange']>
-          >[0],
-          eventDetails,
-        );
-        if (nextValue !== null) {
-          onChange?.(nextValue as SelectChangeValue<T, Multiple>);
-        }
-      },
-    },
-    {
-      triggerPropName: 'onValueChange',
-    },
-  );
-
-  const { visible, createGate } = usePresenceGate(controllOpen);
+  const { visible, createGate } = usePresenceGate(isOpen);
 
   return (
     <BaseSelect.Root
@@ -333,11 +304,30 @@ export function Select<
       readOnly={readOnly}
       required={required}
       items={items ?? options}
-      open={controllOpen}
-      value={controllValue ?? null}
+      open={isOpen}
+      value={selected ?? null}
       highlightItemOnHover={highlightItemOnHover}
-      onValueChange={setControllValue}
-      onOpenChange={setControllOpen}
+      onValueChange={(next, details) => {
+        onValueChange?.(
+          next as Parameters<
+            NonNullable<BaseSelectRootProps<T, Multiple>['onValueChange']>
+          >[0],
+          details,
+        );
+        if (details.isCanceled) return;
+
+        setSelected(next);
+        if (next !== null) {
+          onChange?.(next as SelectChangeValue<T, Multiple>);
+        }
+      }}
+      onOpenChange={(next, details) => {
+        onOpenChange?.(next, details);
+        if (details.isCanceled) return;
+
+        if (!next) highlightLayer.clear();
+        setOpen(next);
+      }}
     >
       <BaseSelect.Trigger
         {...triggerProps}
@@ -383,7 +373,7 @@ export function Select<
               })}
             >
               <AnimatePresence onExitComplete={createGate('popup')}>
-                {controllOpen && (
+                {isOpen && (
                   <BaseSelect.Popup
                     {...popupProps}
                     data-slot='popup'
@@ -415,14 +405,14 @@ export function Select<
                     </BaseSelect.ScrollUpArrow>
                     <BaseSelect.List
                       {...listProps}
-                      ref={highlighter.container}
+                      ref={listRef}
                       className={variants.list({
                         className: listClassName,
                       })}
                     >
                       <Highlight
                         className='rounded-momo-sm bg-momo-bg-surface-muted'
-                        highlightStyle={highlighter.style}
+                        highlightStyle={highlightLayer.style}
                       />
                       {children ??
                         options.map((option) => (
@@ -435,7 +425,7 @@ export function Select<
                             itemTextClassName={itemTextClassName}
                             itemProps={itemProps}
                             indicator={indicator}
-                            highlighterReference={highlighter.reference}
+                            highlightTrigger={highlightTrigger}
                           />
                         ))}
                     </BaseSelect.List>

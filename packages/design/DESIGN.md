@@ -18,9 +18,11 @@ colors:
   surface-soft: "#f5f0e8"
   surface-card: "#efe9de"
   surface-cream-strong: "#e8e0d2"
+  surface-dark-deep: "#141413"
   surface-dark: "#181715"
-  surface-dark-elevated: "#252320"
   surface-dark-soft: "#1f1e1b"
+  surface-dark-elevated: "#252320"
+  surface-dark-overlay: "#3d3d3a"
   on-primary: "#ffffff"
   on-dark: "#faf9f5"
   on-dark-soft: "#a09d96"
@@ -339,9 +341,11 @@ The dark surfaces are where Claude shows its product chrome — code blocks, ter
 - **Surface Soft** (`{colors.surface-soft}` — #f5f0e8): Section dividers, very-soft band backgrounds.
 - **Surface Card** (`{colors.surface-card}` — #efe9de): Feature cards, content cards. One step darker than canvas.
 - **Surface Cream Strong** (`{colors.surface-cream-strong}` — #e8e0d2): A strongest-cream variant used on selected category tabs and emphasized section bands.
-- **Surface Dark** (`{colors.surface-dark}` — #181715): Code editor mockups, model showcase cards, footer. The dominant dark surface.
-- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #252320): Elevated cards inside dark bands (settings panels in mockups).
-- **Surface Dark Soft** (`{colors.surface-dark-soft}` — #1f1e1b): Slightly lighter dark, used for code block backgrounds inside larger dark cards.
+- **Surface Dark Deep** (`{colors.surface-dark-deep}` — #141413): The deepest dark floor — the page canvas in dark mode. Everything else steps lighter from here to signal elevation.
+- **Surface Dark** (`{colors.surface-dark}` — #181715): Code editor mockups, model showcase cards, footer. The dominant dark surface; the default panel one step up from the deep floor.
+- **Surface Dark Soft** (`{colors.surface-dark-soft}` — #1f1e1b): Slightly lighter dark, used for muted / recessed panels and code block backgrounds inside larger dark cards.
+- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #252320): Elevated / raised cards inside dark bands (settings panels in mockups).
+- **Surface Dark Overlay** (`{colors.surface-dark-overlay}` — #3d3d3a): The lightest dark step — floating overlays (modals, popovers, sheets, dropdowns) that must pop above every other surface. Since the system runs shadowless, elevation reads purely through this color ladder.
 - **Hairline** (`{colors.hairline}` — #e6dfd8): The 1px border tone on cream surfaces. Same hex as `{colors.primary-disabled}` — borders feel like one elevation step rather than ink lines.
 - **Hairline Soft** (`{colors.hairline-soft}` — #ebe6df): Barely-visible divider used inside the same band.
 

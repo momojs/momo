@@ -1,159 +1,85 @@
 'use client';
 
 import type { OmitOf } from '@momots/core';
-import {
-  differenceInCalendarDays,
-  differenceInCalendarMonths,
-  endOfMonth,
-  endOfYear,
-  getYear,
-  isDate,
-  startOfMonth,
-  startOfYear,
-} from 'date-fns';
 
 import { useControllableValue } from '../hooks';
 import type { PickerCoreProps } from './picker-core';
 import { PickerCore } from './picker-core';
+import type { PickerDatePrecision } from './picker-date.utils';
+import {
+  fromPickerDateValue,
+  isPickerDateControlled,
+  normalizePickerDate,
+  toPickerDateColumns,
+  toPickerDateValue,
+} from './picker-date.utils';
 
-const today = new Date();
+export type { PickerDatePrecision } from './picker-date.utils';
 
-const toYears = (date: Date) => {
-  const year = getYear(date);
-  return Array.from({ length: 200 }, (_, i) => {
-    const value = year + i - 100;
-    return { label: value.toString(), value };
-  });
-};
-
-const toMonths = (date: Date) => {
-  const end = endOfYear(date);
-  const start = startOfYear(date);
-  const length = differenceInCalendarMonths(end, start) + 1;
-  return Array.from({ length }, (_, i) => {
-    const value = start.getMonth() + i + 1;
-    return { label: value.toString(), value };
-  });
-};
-
-const toDays = (date: Date) => {
-  const end = endOfMonth(date);
-  const start = startOfMonth(date);
-  const length = differenceInCalendarDays(end, start) + 1;
-  return Array.from({ length }, (_, i) => {
-    const value = start.getDate() + i;
-    return { label: value.toString(), value };
-  });
-};
-
-const toCols = (
-  date: Date,
-  params?: {
-    max?: Date;
-    min?: Date;
-  },
-) => {
-  const { max, min } = params ?? {};
-  const years = toYears(today).filter((year) => {
-    if (isDate(max) && max.getFullYear() < year.value) {
-      return false;
-    }
-    if (isDate(min) && min.getFullYear() > year.value) {
-      return false;
-    }
-    return true;
-  });
-
-  const months = toMonths(date).filter((month) => {
-    if (
-      isDate(max) &&
-      max.getMonth() + 1 < month.value &&
-      max.getFullYear() === date.getFullYear()
-    ) {
-      return false;
-    }
-    if (
-      isDate(min) &&
-      min.getMonth() + 1 > month.value &&
-      min.getFullYear() === date.getFullYear()
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  const days = toDays(date).filter((day) => {
-    if (
-      isDate(max) &&
-      max.getDate() < day.value &&
-      max.getFullYear() === date.getFullYear() &&
-      max.getMonth() === date.getMonth()
-    ) {
-      return false;
-    }
-    if (
-      isDate(min) &&
-      min.getDate() > day.value &&
-      min.getFullYear() === date.getFullYear() &&
-      min.getMonth() === date.getMonth()
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  return [years, months, days];
-};
-
-const toDate = (value: number[]) => {
-  return new Date(value[0], value[1] - 1, value[2]);
-};
-
-const toPickerValue = (date: Date) => {
-  return [date.getFullYear(), date.getMonth() + 1, date.getDate()];
-};
+const columnAriaLabels = ['Year', 'Month', 'Day'];
 
 export interface PickerDateProps
-  extends OmitOf<PickerCoreProps<number>, 'value' | 'onChange'> {
+  extends OmitOf<PickerCoreProps<number>, 'columns' | 'value' | 'onChange'> {
+  /** Latest selectable date at the active precision. */
   max?: Date;
+  /** Earliest selectable date at the active precision. */
   min?: Date;
+  /** Controlled date. */
   value?: Date;
+  /** Initial date when the component is uncontrolled. */
   defaultDate?: Date;
+  /** Visible and emitted date precision. */
+  precision?: PickerDatePrecision;
+  /** Prevents pointer, wheel, and keyboard interaction. */
   disabled?: boolean;
+  /** Receives a local date normalized to the active precision. */
   onChange?: (value: Date) => void;
 }
 
-export function PickerDate({
-  max,
-  min,
-  value,
-  disabled,
-  className,
-  defaultDate = today,
-  onChange,
-}: PickerDateProps) {
-  const [date = today, onDateChange] = useControllableValue(
-    {
-      value,
-      onChange,
-      defaultDate,
-    },
-    {
-      defaultValuePropName: 'defaultDate',
-    },
+export function PickerDate(props: PickerDateProps) {
+  const today = new Date();
+  const {
+    max,
+    min,
+    value,
+    defaultDate = today,
+    precision = 'date',
+    columnAriaLabels: ariaLabels,
+    'aria-label': ariaLabel = 'Date picker',
+    onChange,
+    ...pickerProps
+  } = props;
+  const options = { max, min, precision };
+  const normalizedDefaultDate = normalizePickerDate(
+    defaultDate,
+    today,
+    options,
   );
+  const normalizedValue =
+    value === undefined
+      ? undefined
+      : normalizePickerDate(value, today, options);
+  const [current = normalizedDefaultDate, onDateChange] = useControllableValue({
+    controlled: isPickerDateControlled(props),
+    value: normalizedValue,
+    defaultValue: normalizedDefaultDate,
+    onChange,
+  });
+  const date = normalizePickerDate(current, today, options);
+  const pickerValue = toPickerDateValue(date, precision);
+  const columns = toPickerDateColumns(date, { ...options, now: today });
 
   return (
     <PickerCore<number>
-      value={toPickerValue(date)}
-      columns={toCols(date, {
-        max,
-        min,
-      })}
-      disabled={disabled}
-      className={className}
+      {...pickerProps}
+      aria-label={ariaLabel}
+      columnAriaLabels={
+        ariaLabels ?? columnAriaLabels.slice(0, pickerValue.length)
+      }
+      value={pickerValue}
+      columns={columns}
       onChange={(next) => {
-        onDateChange(toDate(next));
+        onDateChange(fromPickerDateValue(next, date, options));
       }}
     />
   );

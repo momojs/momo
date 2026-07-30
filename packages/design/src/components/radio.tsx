@@ -12,7 +12,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks';
 import type { ControlOption, ControlValue } from '../shared';
-import { cx } from '../shared';
+import { cx } from '../tailwind';
 
 interface RadioIndicatorProps
   extends Pick<React.ComponentProps<typeof BaseRadio.Indicator>, 'keepMounted'>,
@@ -106,7 +106,6 @@ export function RadioGroup<T extends ControlValue>({
   const [current, setCurrent] = useControllableValue({
     value,
     defaultValue,
-    onChange: onValueChange,
   });
 
   return (
@@ -115,7 +114,10 @@ export function RadioGroup<T extends ControlValue>({
         data-slot='radio-group'
         value={current}
         className={(...args) => cx('grid gap-3', realize(className, ...args))}
-        onValueChange={setCurrent}
+        onValueChange={(next, details) => {
+          onValueChange?.(next, details);
+          if (!details.isCanceled) setCurrent(next);
+        }}
         {...props}
       >
         {options?.map(({ value }) => (

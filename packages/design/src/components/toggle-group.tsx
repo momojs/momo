@@ -11,19 +11,19 @@ import { isString } from 'remeda';
 
 import {
   Highlight,
-  useHighlighter,
-  useHighlighters,
+  useHighlightLayer,
+  useHighlightRegistrar,
+  useHighlightTrigger,
 } from '../effects/highlight';
 import type { RippleRef } from '../effects/ripples';
 import { Ripples } from '../effects/ripples';
 import { useControllableValue } from '../hooks/use-controllable-value';
 import type { ControlOption } from '../shared';
-import { cx } from '../shared';
-import { cva } from '../tailwind';
+import { cva, cx } from '../tailwind';
 
 const variants = {
   toggle: cva({
-    base: 'relative flex shrink-0 items-center justify-center rounded-md leading-none text-momo-fg-muted transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 data-[pressed]:text-momo-fg-on-brand',
+    base: 'relative flex shrink-0 items-center justify-center rounded-md leading-none text-momo-fg-muted transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 data-pressed:text-momo-fg-on-brand',
     variants: {
       size: {
         sm: 'h-8 min-w-8 text-xs [&_svg]:size-4',
@@ -33,7 +33,7 @@ const variants = {
       variant: {
         button: 'w-full px-2',
         segmented:
-          'w-auto px-2.5 font-medium data-[pressed]:text-momo-fg-default',
+          'w-auto px-2.5 font-medium data-pressed:text-momo-fg-default',
         tabbar: 'w-full flex-col p-2.5',
       },
     },
@@ -86,7 +86,7 @@ const variants = {
         button: 'grid w-full grid-cols-2 gap-3',
         segmented:
           'inline-flex w-fit rounded-lg border border-momo-border-default bg-momo-bg-surface-muted p-1 shadow-sm',
-        tabbar: 'grid w-full grid-cols-4 gap-3',
+        tabbar: 'grid w-full grid-cols-4 gap-3 overflow-hidden',
       },
     },
     defaultVariants: {
@@ -101,11 +101,13 @@ interface ToggleProps
     React.ComponentProps<typeof motion.button> {
   value: string;
   active?: boolean;
-  activeRef?: React.Ref<HTMLButtonElement>;
   icon?: React.ReactNode;
   children?: React.ReactNode;
   ref?: React.Ref<HTMLButtonElement>;
 }
+
+const FOCUS_BOX_SHADOW =
+  '0 0 0 2px color-mix(in srgb, var(--momo-ring-focus) 45%, transparent)';
 
 function Toggle({
   ref,
@@ -113,7 +115,6 @@ function Toggle({
   style,
   value,
   active,
-  activeRef,
   variant,
   disabled,
   children,
@@ -124,12 +125,13 @@ function Toggle({
   const root = useRef<HTMLButtonElement>(null!);
 
   useImperativeHandle(ref, () => root.current, [ref]);
-  useImperativeHandle(activeRef, () => root.current, [activeRef]);
 
   const ripples = useRef<RippleRef>(null);
 
   const onTap = (event: PointerEvent) => {
-    ripples.current?.call(event);
+    if (variant === 'tabbar') {
+      ripples.current?.call(event);
+    }
   };
 
   return (
@@ -141,18 +143,20 @@ function Toggle({
           ref={root}
           disabled={disabled}
           whileTap={{ scale: variant === 'segmented' ? 0.97 : 0.9 }}
-          whileFocus={{
-            boxShadow:
-              '0 0 0 2px color-mix(in srgb, var(--momo-ring-focus) 45%, transparent)',
-          }}
+          whileFocus={eliminate(
+            variant === 'button' && { boxShadow: FOCUS_BOX_SHADOW },
+          )}
           className={variants.toggle({ size, variant, className })}
           style={style}
-          onTap={variant === 'tabbar' ? onTap : undefined}
+          onTap={onTap}
           {...rest}
         >
           {icon && <span className='relative z-9'>{icon}</span>}
           <motion.span
             className='relative z-9'
+            initial={{
+              fontSize: variant === 'tabbar' ? '0em' : '1em',
+            }}
             animate={eliminate(
               variant === 'tabbar' && { fontSize: active ? '1em' : '0em' },
             )}
@@ -172,28 +176,40 @@ export interface ToggleGroupProps<T extends string>
   defaultValue?: T;
   className?: string;
   options?: ControlOption<T>[];
-  onChange?: (value: T) => void;
+  onChange?: (value: T | undefined) => void;
 }
 
-export function ToggleGroup<T extends string>({
-  value,
-  options,
-  className,
-  defaultValue,
-  size = 'md',
-  variant = 'button',
-  onChange,
-}: ToggleGroupProps<T>) {
+export function ToggleGroup<T extends string>(props: ToggleGroupProps<T>) {
+  const {
+    value,
+    options,
+    className,
+    defaultValue,
+    size = 'md',
+    variant = 'button',
+    onChange,
+  } = props;
   const hasHoverHighlight = variant === 'button' || variant === 'segmented';
-  const hoverHighlighter = useHighlighter({ enabled: hasHoverHighlight });
-  const activeHighlighter = useHighlighter({ trigger: 'manual' });
 
-  const { container } = useHighlighters(hoverHighlighter, activeHighlighter);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hoverLayer = useHighlightLayer<HTMLButtonElement, HTMLDivElement>(
+    containerRef,
+    { enabled: hasHoverHighlight },
+  );
+  const activeLayer = useHighlightLayer<HTMLButtonElement, HTMLDivElement>(
+    containerRef,
+  );
+  const hoverTrigger = useHighlightTrigger(hoverLayer, {
+    enabled: hasHoverHighlight,
+    trigger: 'hover',
+  });
+  const activeRegistrar = useHighlightRegistrar(activeLayer);
 
   const [
     current,
     setCurrent, //
   ] = useControllableValue({
+    controlled: Object.hasOwn(props, 'value'),
     value,
     defaultValue,
     onChange,
@@ -201,40 +217,40 @@ export function ToggleGroup<T extends string>({
 
   useEffect(() => {
     if (!hasHoverHighlight) {
-      hoverHighlighter.exit();
+      hoverLayer.clear();
     }
-  }, [hasHoverHighlight, hoverHighlighter.exit]);
+  }, [hasHoverHighlight, hoverLayer.clear]);
 
   useEffect(() => {
     if (current == null) {
-      activeHighlighter.exit();
+      activeRegistrar.clear();
       return;
     }
 
-    activeHighlighter.flush();
+    activeRegistrar.activate(current);
   }, [
-    activeHighlighter.exit,
-    activeHighlighter.flush,
+    activeRegistrar.activate,
+    activeRegistrar.clear,
     current,
     options,
     size,
     variant,
   ]);
 
-  const activeHighlightStyle = activeHighlighter.style
+  const activeHighlightStyle = activeLayer.style
     ? {
-        ...activeHighlighter.style,
+        ...activeLayer.style,
         zIndex: 1,
       }
     : null;
 
   return (
     <BaseToggleGroup
-      ref={container}
+      ref={containerRef}
       value={compact([current])}
       className={variants.group({ size, variant, className })}
       onValueChange={(value) => {
-        setCurrent(value[0] as T);
+        setCurrent(value[0]);
       }}
     >
       {hasHoverHighlight && (
@@ -244,7 +260,7 @@ export function ToggleGroup<T extends string>({
               ? 'bg-momo-bg-surface-raised'
               : 'bg-momo-bg-surface'
           }
-          highlightStyle={hoverHighlighter.style}
+          highlightStyle={hoverLayer.style}
         />
       )}
       <Highlight
@@ -267,10 +283,8 @@ export function ToggleGroup<T extends string>({
             disabled={disabled}
             className={cx(className, 'z-1')}
             active={current === value}
-            activeRef={
-              current === value ? activeHighlighter.reference : undefined
-            }
-            ref={hasHoverHighlight ? hoverHighlighter.reference : undefined}
+            ref={activeRegistrar.register(value)}
+            {...hoverTrigger.getReferenceProps()}
             aria-label={textValue ?? (isString(label) ? label : value)}
           >
             {label ?? value}

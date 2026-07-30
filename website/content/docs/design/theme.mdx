@@ -60,47 +60,11 @@ icon: Palette
 
 ## Semantic Color Tokens
 
-### Background
+下面可以切换内置主题与明暗外观，查看每个 semantic color token 的色块、primitive 来源与解析后的色值：
 
-| Token | Utility | 语义 |
-| --- | --- | --- |
-| `--momo-bg-canvas` | `bg-momo-bg-canvas` | 默认画布背景 |
-| `--momo-bg-surface` | `bg-momo-bg-surface` | hover、高亮、轻量分区背景 |
-| `--momo-bg-surface-muted` | `bg-momo-bg-surface-muted` | 弱背景、轨道、选区中段 |
-| `--momo-bg-surface-raised` | `bg-momo-bg-surface-raised` | 提升层、卡片式表面 |
-| `--momo-bg-overlay` | `bg-momo-bg-overlay` | Popover、Select 下拉等浮层背景 |
-| `--momo-bg-brand` | `bg-momo-bg-brand` | 主操作、选中态、品牌填充 |
-| `--momo-bg-brand-hover` | `bg-momo-bg-brand-hover` | 主操作 hover |
-| `--momo-bg-brand-active` | `bg-momo-bg-brand-active` | 主操作 active / pressed |
-| `--momo-bg-danger` | `bg-momo-bg-danger` | 危险操作填充 |
-| `--momo-bg-success` / `--momo-bg-warning` | `bg-momo-bg-success` / `bg-momo-bg-warning` | 成功 / 警告状态填充 |
-
-### Foreground
-
-| Token | Utility | 语义 |
-| --- | --- | --- |
-| `--momo-fg-default` | `text-momo-fg-default` | 默认文本、图标、正文 |
-| `--momo-fg-muted` | `text-momo-fg-muted` | 次级文本 |
-| `--momo-fg-subtle` | `text-momo-fg-subtle` | 更弱的辅助文本或装饰图标 |
-| `--momo-fg-inverse` | `text-momo-fg-inverse` | 反相文本 |
-| `--momo-fg-brand` | `text-momo-fg-brand` | 链接、品牌文本、选中图标 |
-| `--momo-fg-on-brand` | `text-momo-fg-on-brand` | 主色背景上的文本 |
-| `--momo-fg-danger` | `text-momo-fg-danger` | 危险文本 / ring 颜色 |
-| `--momo-fg-on-danger` | `text-momo-fg-on-danger` | 危险背景上的文本 |
-| `--momo-fg-success` / `--momo-fg-warning` | `text-momo-fg-success` / `text-momo-fg-warning` | 成功 / 警告状态文本 |
+<ThemeColorTokens />
 
 `--color-momo-fg-*` 同时注册为 Tailwind color token，因此也可以用于 `fill-momo-fg-brand`、`ring-momo-fg-danger/20` 等颜色类。
-
-### Border And Ring
-
-| Token | Utility | 语义 |
-| --- | --- | --- |
-| `--momo-border-default` | `border-momo-border-default` | 默认描边 |
-| `--momo-border-muted` | `border-momo-border-muted` | 弱描边 / 分隔线 |
-| `--momo-border-strong` | `border-momo-border-strong` | 强描边 |
-| `--momo-border-input` | `border-momo-border-input` | 输入、表单、可交互边框 |
-| `--momo-border-danger` | `border-momo-border-danger` | 危险 / invalid 边框 |
-| `--momo-ring-focus` | `ring-momo-ring-focus` | focus ring |
 
 ## Base Tokens
 

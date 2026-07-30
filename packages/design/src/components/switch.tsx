@@ -131,18 +131,10 @@ export function Switch({
   ...thumbProps
 }: SwitchProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const [isChecked = false, setIsChecked] = useControllableValue(
-    {
-      checked,
-      defaultChecked,
-      onCheckedChange,
-    },
-    {
-      valuePropName: 'checked',
-      triggerPropName: 'onCheckedChange',
-      defaultValuePropName: 'defaultChecked',
-    },
-  );
+  const [isChecked = false, setIsChecked] = useControllableValue({
+    value: checked,
+    defaultValue: defaultChecked,
+  });
 
   return (
     <BaseSwitch.Root
@@ -158,7 +150,10 @@ export function Switch({
       nativeButton={nativeButton}
       uncheckedValue={uncheckedValue}
       className={variants.root({ size, className })}
-      onCheckedChange={setIsChecked}
+      onCheckedChange={(next, details) => {
+        onCheckedChange?.(next, details);
+        if (!details.isCanceled) setIsChecked(next);
+      }}
     >
       <BaseSwitch.Thumb
         className={variants.thumb({ size })}

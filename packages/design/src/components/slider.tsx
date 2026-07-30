@@ -17,7 +17,7 @@ import {
 } from 'motion/react';
 
 import { useControllableValue } from '../hooks';
-import { cx } from '../shared';
+import { cva } from '../tailwind';
 
 // Drag detection & rubber band
 const CLICK_THRESHOLD = 3;
@@ -30,32 +30,159 @@ const HANDLE_BUFFER = 8;
 const LABEL_OFFSET = 12 + 4;
 const VALUE_OFFSET = 12 - 8;
 
-function clamp(v: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, v));
+const variants = {
+  root: cva({
+    base: 'relative h-(--elastic-slider-height) [--elastic-slider-height:--spacing(9)] [--elastic-slider-radius:var(--momo-radius-lg)] [--elastic-slider-bg:var(--momo-bg-surface-muted)] [--elastic-slider-fill:color-mix(in_srgb,var(--momo-fg-muted)_10%,transparent)] [--elastic-slider-fill-active:color-mix(in_srgb,var(--momo-fg-muted)_20%,transparent)] [--elastic-slider-hash:color-mix(in_srgb,var(--momo-fg-muted)_30%,transparent)] [--elastic-slider-handle:var(--momo-fg-default)] [--elastic-slider-label:var(--momo-fg-muted)] [--elastic-slider-focus:var(--momo-fg-default)]',
+  }),
+  track: cva({
+    base: 'absolute inset-0 cursor-pointer touch-none overflow-hidden rounded-(--elastic-slider-radius) bg-(--elastic-slider-bg) outline-none select-none',
+    variants: {
+      focusVisible: {
+        true: 'ring-2 ring-momo-ring-focus/50 ring-offset-1 ring-offset-momo-bg-canvas',
+        false: '',
+      },
+    },
+  }),
+  hashMarks: cva({
+    base: 'pointer-events-none absolute inset-0',
+  }),
+  hashMark: cva({
+    base: 'absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 rounded-momo-full transition-colors duration-200',
+    variants: {
+      active: {
+        true: 'bg-(--elastic-slider-hash)',
+        false: 'bg-transparent',
+      },
+    },
+  }),
+  fill: cva({
+    base: 'pointer-events-none absolute inset-y-0 left-0 transition-colors',
+    variants: {
+      active: {
+        true: 'bg-(--elastic-slider-fill-active)',
+        false: 'bg-(--elastic-slider-fill)',
+      },
+    },
+  }),
+  handle: cva({
+    base: 'pointer-events-none absolute top-1/2 h-5 w-1 rounded-momo-full bg-(--elastic-slider-handle)',
+  }),
+  label: cva({
+    base: 'pointer-events-none absolute top-1/2 left-3 inline-flex -translate-y-1/2 items-center font-momo-body [font-size:var(--momo-text-body-sm)] leading-none [letter-spacing:var(--momo-text-body-sm-tracking)] font-medium text-(--elastic-slider-label) transition-colors',
+  }),
+  value: cva({
+    base: 'pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-momo-mono [font-size:var(--momo-text-code)] leading-none [letter-spacing:var(--momo-text-code-tracking)] font-medium transition-colors',
+    variants: {
+      active: {
+        true: 'text-(--elastic-slider-focus)',
+        false: 'text-(--elastic-slider-label)',
+      },
+    },
+  }),
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function decimalsForStep(step: number): number {
-  const s = step.toString();
-  const dot = s.indexOf('.');
-  return dot === -1 ? 0 : s.length - dot - 1;
+  const value = step.toString();
+  const dot = value.indexOf('.');
+  return dot === -1 ? 0 : value.length - dot - 1;
 }
 
-function roundValue(val: number, step: number): number {
-  const raw = Math.round(val / step) * step;
-  return parseFloat(raw.toFixed(decimalsForStep(step)));
+function roundValue(value: number, step: number): number {
+  const raw = Math.round(value / step) * step;
+  return Number.parseFloat(raw.toFixed(decimalsForStep(step)));
 }
 
 // Magnetic snap to the nearest decile when within 3.125% of it.
-function snapToDecile(rawValue: number, min: number, max: number): number {
-  const normalized = (rawValue - min) / (max - min);
+function snapToDecile(value: number, min: number, max: number): number {
+  const normalized = (value - min) / (max - min);
   const nearest = Math.round(normalized * 10) / 10;
   if (Math.abs(normalized - nearest) <= 0.03125) {
     return min + nearest * (max - min);
   }
-  return rawValue;
+  return value;
 }
 
-export type SliderProps = {
+interface SliderVisualPositionOptions {
+  interacting: boolean;
+  percentage: number;
+  reducedMotion: boolean | null;
+}
+
+/**
+ * Owns the slider's visual position and keeps it synchronized with the
+ * committed React value whenever pointer interaction is idle.
+ */
+function useSliderVisualPosition({
+  interacting,
+  percentage,
+  reducedMotion,
+}: SliderVisualPositionOptions) {
+  const percent = useMotionValue(percentage);
+  const animationRef = useRef<ReturnType<typeof animate> | null>(null);
+
+  const stop = useCallback(() => {
+    animationRef.current?.stop();
+    animationRef.current = null;
+  }, []);
+
+  const jumpTo = useCallback(
+    (target: number) => {
+      stop();
+      percent.jump(target);
+    },
+    [percent, stop],
+  );
+
+  const animateTo = useCallback(
+    (target: number) => {
+      stop();
+
+      if (reducedMotion || Object.is(percent.get(), target)) {
+        percent.jump(target);
+        return;
+      }
+
+      const animation = animate(percent, target, {
+        type: 'spring',
+        stiffness: 300,
+        damping: 25,
+        mass: 0.8,
+        onComplete: () => {
+          if (animationRef.current === animation) {
+            animationRef.current = null;
+          }
+        },
+      });
+
+      animationRef.current = animation;
+    },
+    [percent, reducedMotion, stop],
+  );
+
+  useEffect(() => {
+    if (!interacting) {
+      animateTo(percentage);
+    }
+  }, [animateTo, interacting, percentage]);
+
+  useEffect(() => {
+    return () => stop();
+  }, [stop]);
+
+  const fillWidth = useTransform(percent, (value) => `${value}%`);
+  const handleLeft = useTransform(
+    percent,
+    (value) => `max(4px, calc(${value}% - 8px))`,
+  );
+
+  return { fillWidth, handleLeft, jumpTo, stop };
+}
+
+export type ElasticSliderProps = {
   /** Label shown inside the track. */
   label: string;
 
@@ -88,21 +215,18 @@ export type SliderProps = {
 
 export function Slider({
   label,
-
-  onValueChange,
-
   min = 0,
   max = 1,
   step = 0.01,
   formatValue,
-  value: valueProp,
-  defaultValue = min,
   className,
-  'aria-label': ariaLabel,
-}: SliderProps) {
-  const [value = min, setValue] = useControllableValue({
-    value: valueProp,
-    defaultValue: defaultValue,
+  ...props
+}: ElasticSliderProps) {
+  const { value, defaultValue = min, onValueChange } = props;
+
+  const [currentValue = min, setValue] = useControllableValue({
+    value,
+    defaultValue,
     onChange: onValueChange,
   });
 
@@ -123,38 +247,35 @@ export function Slider({
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
   const pendingPointerFocusRef = useRef(false);
   const isClickRef = useRef(true);
-  const animRef = useRef<ReturnType<typeof animate> | null>(null);
   const wrapperRectRef = useRef<DOMRect | null>(null);
   const scaleRef = useRef(1);
 
-  const percentage = ((value - min) / (max - min)) * 100;
+  const percentage = ((currentValue - min) / (max - min)) * 100;
   const isActive = isInteracting || isHovered;
   const displayValue = formatValue
-    ? formatValue(value)
-    : value.toFixed(decimalsForStep(step));
+    ? formatValue(currentValue)
+    : currentValue.toFixed(decimalsForStep(step));
 
-  // Fill + handle driven by a single motion value for imperative updates.
-  const fillPercent = useMotionValue(percentage);
-  const fillWidth = useTransform(fillPercent, (pct) => `${pct}%`);
-  const handleLeft = useTransform(
-    fillPercent,
-    (pct) => `max(4px, calc(${pct}% - 8px))`,
-  );
+  const {
+    fillWidth,
+    handleLeft,
+    jumpTo: jumpVisualTo,
+    stop: stopVisualAnimation,
+  } = useSliderVisualPosition({
+    interacting: isInteracting,
+    percentage,
+    reducedMotion: shouldReduceMotion,
+  });
 
   // Rubber band: widens the track and pulls it left when dragged past bounds.
   const rubberStretch = useMotionValue(0);
   const rubberWidth = useTransform(
     rubberStretch,
-    (s) => `calc(100% + ${Math.abs(s)}px)`,
+    (stretch) => `calc(100% + ${Math.abs(stretch)}px)`,
   );
-  const rubberX = useTransform(rubberStretch, (s) => (s < 0 ? s : 0));
-
-  // Sync from props when not interacting and no spring is in flight.
-  useEffect(() => {
-    if (!isInteracting && !animRef.current) {
-      fillPercent.jump(percentage);
-    }
-  }, [percentage, isInteracting, fillPercent]);
+  const rubberX = useTransform(rubberStretch, (stretch) =>
+    stretch < 0 ? stretch : 0,
+  );
 
   const positionToValue = useCallback(
     (clientX: number) => {
@@ -171,33 +292,8 @@ export function Slider({
   );
 
   const percentFromValue = useCallback(
-    (v: number) => ((v - min) / (max - min)) * 100,
+    (nextValue: number) => ((nextValue - min) / (max - min)) * 100,
     [min, max],
-  );
-
-  // Animate fill to a target percent, or jump instantly when the user prefers
-  // reduced motion. Position still updates — only the spring is skipped.
-  const animateFillTo = useCallback(
-    (targetPercent: number) => {
-      animRef.current?.stop();
-
-      if (shouldReduceMotion) {
-        fillPercent.jump(targetPercent);
-        animRef.current = null;
-        return;
-      }
-
-      animRef.current = animate(fillPercent, targetPercent, {
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-        mass: 0.8,
-        onComplete: () => {
-          animRef.current = null;
-        },
-      });
-    },
-    [fillPercent, shouldReduceMotion],
   );
 
   const computeRubberStretch = useCallback((clientX: number, sign: number) => {
@@ -212,41 +308,40 @@ export function Slider({
     );
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent) => {
+      event.preventDefault();
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
 
-    pointerDownPos.current = { x: e.clientX, y: e.clientY };
+      stopVisualAnimation();
+      pointerDownPos.current = { x: event.clientX, y: event.clientY };
+      isClickRef.current = true;
+      setIsInteracting(true);
 
-    isClickRef.current = true;
+      pendingPointerFocusRef.current = true;
+      setKeyboardFocusRing(false);
+      trackRef.current?.focus({ preventScroll: true });
+      requestAnimationFrame(() => {
+        pendingPointerFocusRef.current = false;
+      });
 
-    setIsInteracting(true);
-
-    pendingPointerFocusRef.current = true;
-    setKeyboardFocusRing(false);
-
-    // Pointer interactions should move focus to the slider so subsequent
-    // keyboard input is received and focus styles match the active state.
-    trackRef.current?.focus({ preventScroll: true });
-    requestAnimationFrame(() => {
-      pendingPointerFocusRef.current = false;
-    });
-
-    // Snapshot the wrapper rect so later math is immune to layout shifts.
-    const wrapper = wrapperRef.current;
-    if (wrapper) {
-      const rect = wrapper.getBoundingClientRect();
-      wrapperRectRef.current = rect;
-      scaleRef.current = rect.width / wrapper.offsetWidth;
-    }
-  }, []);
+      // Snapshot the wrapper rect so later math is immune to layout shifts.
+      const wrapper = wrapperRef.current;
+      if (wrapper) {
+        const rect = wrapper.getBoundingClientRect();
+        wrapperRectRef.current = rect;
+        scaleRef.current = rect.width / wrapper.offsetWidth;
+      }
+    },
+    [stopVisualAnimation],
+  );
 
   const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
+    (event: React.PointerEvent) => {
       if (!isInteracting || !pointerDownPos.current) return;
 
-      const dx = e.clientX - pointerDownPos.current.x;
-      const dy = e.clientY - pointerDownPos.current.y;
+      const dx = event.clientX - pointerDownPos.current.x;
+      const dy = event.clientY - pointerDownPos.current.y;
 
       if (isClickRef.current && Math.hypot(dx, dy) > CLICK_THRESHOLD) {
         isClickRef.current = false;
@@ -257,19 +352,17 @@ export function Slider({
 
       const rect = wrapperRectRef.current;
       if (rect && !shouldReduceMotion) {
-        if (e.clientX < rect.left) {
-          rubberStretch.jump(computeRubberStretch(e.clientX, -1));
-        } else if (e.clientX > rect.right) {
-          rubberStretch.jump(computeRubberStretch(e.clientX, 1));
+        if (event.clientX < rect.left) {
+          rubberStretch.jump(computeRubberStretch(event.clientX, -1));
+        } else if (event.clientX > rect.right) {
+          rubberStretch.jump(computeRubberStretch(event.clientX, 1));
         } else {
           rubberStretch.jump(0);
         }
       }
 
-      const newValue = positionToValue(e.clientX);
-      animRef.current?.stop();
-      animRef.current = null;
-      fillPercent.jump(percentFromValue(newValue));
+      const newValue = positionToValue(event.clientX);
+      jumpVisualTo(percentFromValue(newValue));
       setValue(roundValue(newValue, step));
     },
     [
@@ -278,7 +371,7 @@ export function Slider({
       percentFromValue,
       setValue,
       step,
-      fillPercent,
+      jumpVisualTo,
       rubberStretch,
       computeRubberStretch,
       shouldReduceMotion,
@@ -286,20 +379,19 @@ export function Slider({
   );
 
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
+    (event: React.PointerEvent) => {
       if (!isInteracting) return;
 
       if (isClickRef.current) {
         // Coarse sliders (≤10 positions) snap to the nearest step;
         // continuous sliders keep the decile-magnetic behavior.
-        const rawValue = positionToValue(e.clientX);
+        const rawValue = positionToValue(event.clientX);
         const discreteSteps = (max - min) / step;
         const snapped =
           discreteSteps <= 10
             ? clamp(min + Math.round((rawValue - min) / step) * step, min, max)
             : snapToDecile(rawValue, min, max);
 
-        animateFillTo(percentFromValue(snapped));
         setValue(roundValue(snapped, step));
       }
 
@@ -318,57 +410,46 @@ export function Slider({
     [
       isInteracting,
       positionToValue,
-      percentFromValue,
       setValue,
       min,
       max,
       step,
-      animateFillTo,
       rubberStretch,
       shouldReduceMotion,
     ],
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent) => {
       // Shift + Arrow is a Figma-style fast nudge: jumps by 10x the step,
       // independent of the WAI-ARIA Page step (which scales with range).
-      const arrowStep = e.shiftKey ? step * 10 : step;
-
+      const arrowStep = event.shiftKey ? step * 10 : step;
       let next: number | null = null;
 
-      switch (e.key) {
+      switch (event.key) {
         case 'ArrowRight':
         case 'ArrowUp':
-          next = value + arrowStep;
+          next = currentValue + arrowStep;
           break;
-
         case 'ArrowLeft':
         case 'ArrowDown':
-          next = value - arrowStep;
+          next = currentValue - arrowStep;
           break;
-
         case 'Home':
           next = min;
           break;
-
         case 'End':
           next = max;
           break;
-
         default:
           return;
       }
 
-      e.preventDefault();
-
+      event.preventDefault();
       setKeyboardFocusRing(true);
-
-      const snapped = roundValue(clamp(next, min, max), step);
-      animateFillTo(percentFromValue(snapped));
-      setValue(snapped);
+      setValue(roundValue(clamp(next, min, max), step));
     },
-    [value, min, max, step, animateFillTo, percentFromValue, setValue],
+    [currentValue, min, max, step, setValue],
   );
 
   const handleTrackFocus = useCallback(() => {
@@ -393,35 +474,34 @@ export function Slider({
       const trackWidth = wrapper.offsetWidth;
       if (trackWidth <= 0) return;
 
-      const labelEl = labelRef.current;
-      const valueEl = valueRef.current;
-
-      const left = labelEl
-        ? ((LABEL_OFFSET + labelEl.offsetWidth + HANDLE_BUFFER) / trackWidth) *
+      const labelElement = labelRef.current;
+      const valueElement = valueRef.current;
+      const left = labelElement
+        ? ((LABEL_OFFSET + labelElement.offsetWidth + HANDLE_BUFFER) /
+            trackWidth) *
           100
         : 38;
-
-      const right = valueEl
-        ? ((trackWidth - VALUE_OFFSET - valueEl.offsetWidth - HANDLE_BUFFER) /
+      const right = valueElement
+        ? ((trackWidth -
+            VALUE_OFFSET -
+            valueElement.offsetWidth -
+            HANDLE_BUFFER) /
             trackWidth) *
           100
         : 72;
 
-      setDodge((prev) => {
-        return prev.left === left && prev.right === right
-          ? prev
-          : { left, right };
-      });
+      setDodge((current) =>
+        current.left === left && current.right === right
+          ? current
+          : { left, right },
+      );
     };
 
     measure();
-
     const observer = new ResizeObserver(measure);
     observer.observe(wrapper);
-
     if (labelRef.current) observer.observe(labelRef.current);
     if (valueRef.current) observer.observe(valueRef.current);
-
     return () => observer.disconnect();
   }, [label, displayValue]);
 
@@ -436,47 +516,29 @@ export function Slider({
 
   const discreteSteps = (max - min) / step;
   const hashMarkCount = discreteSteps <= 10 ? discreteSteps - 1 : 9;
-
-  const hashMarkPct = (i: number) => {
-    return discreteSteps <= 10
-      ? (((i + 1) * step) / (max - min)) * 100
-      : (i + 1) * 10;
-  };
+  const hashMarkPct = (index: number) =>
+    discreteSteps <= 10
+      ? (((index + 1) * step) / (max - min)) * 100
+      : (index + 1) * 10;
 
   return (
     <div
       ref={wrapperRef}
-      data-slot='slider'
-      className={cx(
-        '[--slider-height:--spacing(9)] [--slider-radius:var(--momo-radius-lg)]',
-        '[--slider-bg:var(--momo-bg-surface-muted)]',
-        '[--slider-fill:color-mix(in_srgb,var(--momo-fg-muted)_10%,transparent)]',
-        '[--slider-fill-active:color-mix(in_srgb,var(--momo-fg-muted)_20%,transparent)]',
-        '[--slider-hash:color-mix(in_srgb,var(--momo-fg-muted)_30%,transparent)]',
-        '[--slider-handle:var(--momo-fg-default)]',
-        '[--slider-label:var(--momo-fg-muted)]',
-        '[--slider-focus:var(--momo-fg-default)]',
-        'relative h-(--slider-height)',
-        className,
-      )}
+      data-slot='elastic-slider'
+      className={variants.root({ className })}
     >
       <motion.div
         ref={trackRef}
         role='slider'
         tabIndex={0}
-        data-slot='slider-track'
-        data-active={isActive}
-        data-focus-visible={keyboardFocusRing}
-        aria-label={ariaLabel ?? label}
+        data-slot='elastic-slider-track'
+        aria-label={label}
         aria-orientation='horizontal'
         aria-valuemin={min}
         aria-valuemax={max}
-        aria-valuenow={value}
+        aria-valuenow={currentValue}
         aria-valuetext={displayValue}
-        className={cx(
-          'group/slider absolute inset-0 cursor-pointer touch-none overflow-hidden rounded-(--slider-radius) bg-(--slider-bg) outline-none select-none',
-          'data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-momo-ring-focus/50 data-[focus-visible=true]:ring-offset-1 data-[focus-visible=true]:ring-offset-momo-bg-canvas',
-        )}
+        className={variants.track({ focusVisible: keyboardFocusRing })}
         style={{ width: rubberWidth, x: rubberX }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -488,36 +550,30 @@ export function Slider({
         onMouseLeave={() => setIsHovered(false)}
       >
         <div
-          data-slot='slider-hash-marks'
+          data-slot='elastic-slider-hash-marks'
           aria-hidden='true'
-          className='pointer-events-none absolute inset-0'
+          className={variants.hashMarks()}
         >
-          {Array.from({ length: hashMarkCount }, (_, i) => (
+          {Array.from({ length: hashMarkCount }, (_, index) => (
             <div
-              key={i}
-              className={cx(
-                'absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors duration-200',
-                'bg-transparent group-data-[active=true]/slider:bg-(--slider-hash)',
-              )}
-              style={{ left: `${hashMarkPct(i)}%` }}
+              key={index}
+              className={variants.hashMark({ active: isActive })}
+              style={{ left: `${hashMarkPct(index)}%` }}
             />
           ))}
         </div>
 
         <motion.div
-          data-slot='slider-fill'
+          data-slot='elastic-slider-fill'
           aria-hidden='true'
-          className={cx(
-            'pointer-events-none absolute inset-y-0 left-0 transition-colors',
-            'bg-(--slider-fill) group-data-[active=true]/slider:bg-(--slider-fill-active)',
-          )}
+          className={variants.fill({ active: isActive })}
           style={{ width: fillWidth }}
         />
 
         <motion.div
-          data-slot='slider-handle'
+          data-slot='elastic-slider-handle'
           aria-hidden='true'
-          className='pointer-events-none absolute top-1/2 h-5 w-1 rounded-full bg-(--slider-handle)'
+          className={variants.handle()}
           style={{ left: handleLeft, y: '-50%' }}
           animate={{
             opacity: handleOpacity,
@@ -533,7 +589,11 @@ export function Slider({
                     visualDuration: 0.25,
                     bounce: 0.15,
                   },
-                  scaleY: { type: 'spring', visualDuration: 0.2, bounce: 0.1 },
+                  scaleY: {
+                    type: 'spring',
+                    visualDuration: 0.2,
+                    bounce: 0.1,
+                  },
                   opacity: { duration: 0.15 },
                 }
           }
@@ -541,21 +601,18 @@ export function Slider({
 
         <span
           ref={labelRef}
-          data-slot='slider-label'
+          data-slot='elastic-slider-label'
           aria-hidden='true'
-          className='pointer-events-none absolute top-1/2 left-3 inline-flex -translate-y-1/2 items-center text-sm/none font-medium text-(--slider-label) transition-colors'
+          className={variants.label()}
         >
           {label}
         </span>
 
         <span
           ref={valueRef}
-          data-slot='slider-value'
+          data-slot='elastic-slider-value'
           aria-hidden='true'
-          className={cx(
-            'pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-sm/none font-medium transition-colors',
-            'text-(--slider-label) group-data-[active=true]/slider:text-(--slider-focus)',
-          )}
+          className={variants.value({ active: isActive })}
         >
           {displayValue}
         </span>

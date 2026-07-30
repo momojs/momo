@@ -4,108 +4,75 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { resize } from 'motion/react';
 
-export type AutoHeightOptions = {
-  includeParentBox?: boolean;
-  includeSelfBox?: boolean;
-};
+import type { ControlValue } from '../shared';
 
-const calcDpr = () => {
-  if (typeof window !== 'undefined') {
-    return window.devicePixelRatio || 1;
-  }
-  return 1;
-};
+export function useAutoHeight<T extends HTMLElement = HTMLDivElement>() {
+  const [ref, setRef] = useState<T | null>(null);
 
-const calcVertical = (element?: HTMLElement | null) => {
+  const [rect, setRect] = useState({
+    width: 0,
+    height: 0,
+  });
 
-  if (element) {
-  const {
-    boxSizing,
-    paddingTop = '0',
-    paddingBottom = '0',
-    borderTopWidth = '0',
-    borderBottomWidth = '0',
-  } = getComputedStyle(element);
-  const paddingY =
-    (parseFloat(paddingTop) || 0) +
-    (parseFloat(paddingBottom) || 0);
-  const borderY =
-    (parseFloat(borderTopWidth) || 0) +
-    (parseFloat(borderBottomWidth) || 0);
+  const activeValue = useRef<ControlValue | undefined>(undefined);
+  const registerRef = useRef(new Map<ControlValue, React.RefCallback<T>>());
+  const registry = useRef(new Map<ControlValue, T>());
 
-  return boxSizing === 'border-box' ? paddingY + borderY : 0;
-  }
+  const register = useCallback((value: ControlValue): React.RefCallback<T> => {
+    const { current: caches } = registerRef;
+    const cached = caches.get(value);
+    if (cached) return cached;
 
-return 0
-};
+    const callback: React.RefCallback<T> = (instance) => {
+      const { current } = registry;
 
-export function useAutoHeight<T extends HTMLElement = HTMLDivElement>({
-  includeParentBox = true,
-  includeSelfBox = false,
-}: AutoHeightOptions = {}) {
-  const target = useRef<T | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const [height, setHeight] = useState(0);
+      if (!instance) {
+        const prev = current.get(value);
+        current.delete(value);
+        if (prev) {
+          setRef((active) => (active === prev ? null : active));
+        }
+        return;
+      }
 
-  const measure = useCallback(() => {
-    const { current } = target;
-    if (current) {
-      const { parentElement } = current;
-      const rect = current.getBoundingClientRect();
-      const { height: base = 0 } = rect;
-      const dpr = calcDpr();
-      const self = includeSelfBox ? calcVertical(current) : 0;
-      const parent = includeParentBox ? calcVertical(parentElement) : 0;
-      return Math.ceil((base + self + parent) * dpr) / dpr;
-    }
-    return 0;
-  }, [includeParentBox, includeSelfBox]);
+      current.set(value, instance);
 
-  const cancel = useCallback(() => {
-    if (frameRef.current === null) return;
-    cancelAnimationFrame(frameRef.current);
-    frameRef.current = null;
+      if (activeValue.current === value) {
+        setRef(instance);
+      }
+
+      return () => {
+        current.delete(value);
+        setRef((active) => (active === instance ? null : active));
+      };
+    };
+
+    caches.set(value, callback);
+    return callback;
   }, []);
 
-  const refresh = useCallback(() => {
-    const next = measure();
-    setHeight(next);
-    return next;
-  }, [measure]);
+  const activate = useCallback((value: ControlValue) => {
+    activeValue.current = value;
+    const instance = registry.current.get(value);
+    if (instance) {
+      setRef(instance);
+    }
+  }, []);
 
-  const schedule = useCallback(() => {
-    if (frameRef.current !== null) return;
-    frameRef.current = requestAnimationFrame(() => {
-      frameRef.current = null;
-      refresh();
+  useLayoutEffect(() => {
+    if (!ref) return;
+
+    const { width, height } = ref.getBoundingClientRect();
+    setRect((prev) =>
+      prev.width === width && prev.height === height ? prev : { width, height },
+    );
+
+    return resize(ref, (_, info) => {
+      setRect((prev) =>
+        prev.width === info.width && prev.height === info.height ? prev : info,
+      );
     });
-  }, [refresh]);
+  }, [ref]);
 
-  useLayoutEffect(() => {
-    const { current } = target;
-    if (current) {
-        refresh();
-        const { parentElement } = current;
-        const cleanups = [resize(current, schedule)];
-        if (includeParentBox) {
-      cleanups.push(resize(parentElement, schedule));
-        }
-    
-
-            return () => {
-      cancel();
-      cleanups.forEach((cleanup) => cleanup());
-    };
-    }
-  
-  }, [includeParentBox, refresh, schedule, cancel]);
-
-  useLayoutEffect(() => {
-    if (height === 0) {
-      const next = measure();
-      if (next !== 0) setHeight(next);
-    }
-  }, [height, measure]);
-
-  return { target, height, measure, refresh } as const;
+  return { rect, activate, register };
 }

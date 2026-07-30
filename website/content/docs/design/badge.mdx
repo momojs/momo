@@ -1,0 +1,80 @@
+---
+title: Badge
+description: 用于状态、分类与元数据的轻量标签。
+icon: BadgeInfo
+---
+
+`Badge` 基于 Base UI 的 `useRender` 封装，默认渲染为 `span`。它提供语义化的 variant、统一的尺寸与 momo semantic token，也可以通过 `render` 组合为链接。
+
+<BadgePlayground />
+
+## 使用
+
+```tsx
+import { Badge } from "@momots/design/components/badge";
+
+<Badge variant="success">已同步</Badge>
+```
+
+图标可以直接作为子元素传入。装饰性图标应从可访问树中隐藏：
+
+```tsx
+import { Clock01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+
+import { Badge } from "@momots/design/components/badge";
+
+<Badge variant="warning" size="md">
+  <HugeiconsIcon icon={Clock01Icon} aria-hidden />
+  处理中
+</Badge>
+```
+
+## 状态语义
+
+选择 variant 时应先表达内容语义，而不只是匹配页面颜色：
+
+| Variant | 适用语义 |
+| --- | --- |
+| `default` | 中性信息或一般元数据 |
+| `brand` | 品牌标签、当前分类或需要突出显示的信息 |
+| `success` | 已完成、可用或运行正常 |
+| `warning` | 待处理、需要注意或可能存在风险 |
+| `danger` | 失败、不可用或高风险状态 |
+| `outline` | 低强调的分类与辅助元数据 |
+
+状态文字应明确说明含义，例如“已同步”或“等待审核”，不要只依赖颜色传达状态。
+
+## 多态链接
+
+传入 `render` 后，Badge 会把 class、数据属性与原生属性合并到目标元素。链接仍应使用真实的 `a` 元素：
+
+```tsx
+<Badge
+  variant="brand"
+  render={<a href="/docs/design" />}
+>
+  查看组件文档
+</Badge>
+```
+
+默认的 Badge 是呈现型标签，不具备按钮交互语义。需要执行操作时使用 `Button`；只有内容确实导航到另一个位置时才组合为链接。
+
+## 可访问性
+
+- Badge 不会自动添加 `role="status"` 或 `aria-live`，因此静态标签不会被辅助技术重复播报。
+- 动态更新且需要立即通知用户的状态，应由业务场景决定是否在外层使用 live region。
+- 装饰性图标添加 `aria-hidden`；有独立含义的图标需要可访问名称。
+- 使用颜色之外的清晰文字表达状态，保证不同视觉能力的用户都能理解。
+- 组合为链接时，链接文字应能脱离上下文表达目的，并保持可见的键盘焦点。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `variant` | `"default" \| "brand" \| "success" \| "warning" \| "danger" \| "outline"` | 状态语义与视觉变体，默认 `"default"` |
+| `size` | `"sm" \| "md" \| "lg"` | 标签尺寸，默认 `"md"` |
+| `children` | `ReactNode` | 标签内容，可直接包含 SVG 图标 |
+| `render` | `ReactElement \| ((props, state) => ReactElement)` | 将默认 `span` 组合为链接等其他元素 |
+| `className` | `string` | 追加 Tailwind class |
+| `...props` | `useRender.ComponentProps<"span">` | 其余原生属性与 Base UI render 属性 |

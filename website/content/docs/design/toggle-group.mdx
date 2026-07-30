@@ -15,7 +15,9 @@ import { ToggleGroup } from "@momots/design/components/toggle-group";
 
 <ToggleGroup
   value={align}
-  onChange={setAlign}
+  onChange={(value) => {
+    if (value !== undefined) setAlign(value);
+  }}
   options={[
     { value: "left", label: "Left", icon: <LeftIcon /> },
     { value: "center", label: "Center", icon: <CenterIcon /> },
@@ -33,4 +35,4 @@ import { ToggleGroup } from "@momots/design/components/toggle-group";
 | `options` | `ControlOption<T>[]` | 选项列表，支持 `label`、`icon`、`disabled`、`className`、`style` |
 | `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
 | `variant` | `"button" \| "segmented" \| "tabbar"` | 视觉变体 |
-| `onChange` | `(value: T) => void` | 选中项变化回调 |
+| `onChange` | `(value: T \| undefined) => void` | 选中项变化回调；取消全部选中时为 `undefined` |

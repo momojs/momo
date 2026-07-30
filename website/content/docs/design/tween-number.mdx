@@ -15,8 +15,13 @@ import { TweenNumber } from "@momots/design/components/tween-number";
 
 <TweenNumber
   value={1280}
-  prefix="¥"
-  format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+  locales="zh-CN"
+  format={{
+    style: "currency",
+    currency: "CNY",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }}
 />
 ```
 
@@ -28,8 +33,6 @@ import { TweenNumber } from "@momots/design/components/tween-number";
 | `duration` | `number` | 过渡时长（秒），默认 `0.6` |
 | `format` | `Intl.NumberFormatOptions` | 数字格式化选项 |
 | `locales` | `Intl.LocalesArgument` | 区域设置，默认 `zh-CN` |
-| `prefix` | `ReactNode` | 数字前缀 |
-| `suffix` | `ReactNode` | 数字后缀 |
 | `transition` | `Transition` | 覆盖 motion 过渡配置 |
 | `className` | `string` | 容器追加 Tailwind class |
-| `...props` | `ComponentProps<"div">` | 其余容器 div 属性 |
+| `...props` | `ComponentProps<typeof motion.span>` | 其余 `motion.span` 属性 |

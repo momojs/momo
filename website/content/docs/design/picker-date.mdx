@@ -1,10 +1,10 @@
 ---
 title: PickerDate
-description: 年、月、日三列日期选择器。
+description: 支持年、月、日精度的日期选择器。
 icon: CalendarDays
 ---
 
-`PickerDate` 基于 `PickerCore` 生成 year/month/day 三列，面板、选中行、文本与 focus ring 使用 momo semantic token。
+`PickerDate` 基于 `PickerCore` 生成日期滚轮，面板、选中行、文本与 focus ring 使用 momo semantic token。通过 `precision` 可显示年、年月或完整日期。
 
 <PickerDatePlayground />
 
@@ -16,12 +16,15 @@ import { PickerDate } from "@momots/design/components/picker-date";
 <PickerDate value={date} onChange={setDate} />
 ```
 
+`precision="year"` 会输出所选年份的 1 月 1 日，`precision="month"` 会输出所选月份的 1 日，默认的 `precision="date"` 输出完整日期。`min` 与 `max` 会按相同精度比较。
+
 ## Props
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
 | `value` | `Date` | 受控日期 |
 | `defaultDate` | `Date` | 非受控默认日期 |
+| `precision` | `"year" \| "month" \| "date"` | 日期精度，默认为 `"date"` |
 | `min` | `Date` | 可选最小日期 |
 | `max` | `Date` | 可选最大日期 |
 | `disabled` | `boolean` | 是否禁用 |

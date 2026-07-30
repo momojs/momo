@@ -20,7 +20,7 @@ import { PickerTime } from "@momots/design/components/picker-time";
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
-| `value` | `string` | `hh:mm a` 格式，例如 `09:30 AM` |
-| `defaultDate` | `string` | 非受控默认时间 |
+| `value` | `Date` | 受控时间 |
+| `defaultDate` | `Date` | 非受控默认时间 |
 | `disabled` | `boolean` | 是否禁用 |
-| `onChange` | `(value: string) => void` | 时间变化回调 |
+| `onChange` | `(value: Date) => void` | 时间变化回调，保留当前年月日 |

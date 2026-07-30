@@ -5,8 +5,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Select } from '../../../../packages/design/src/components/select';
 import { ToggleGroup } from '../../../../packages/design/src/components/toggle-group';
-import type { PlaygroundThemeName } from './playground-theme';
-import { PLAYGROUND_THEMES } from './playground-theme';
+import type { PlaygroundThemeName } from './playgrounds/theme';
+import { PLAYGROUND_THEMES } from './playgrounds/theme';
 
 type ColorTokenKind = 'bg' | 'fg' | 'border' | 'ring';
 type AppearanceMode = 'light' | 'dark';
@@ -35,7 +35,7 @@ const SEMANTIC_COLOR_SOURCES = {
     light: {
       '--momo-bg-canvas': 'var(--color-white)',
       '--momo-bg-surface': 'var(--color-neutral-100)',
-      '--momo-bg-surface-muted': 'var(--color-neutral-100)',
+      '--momo-bg-surface-muted': 'var(--color-neutral-200)',
       '--momo-bg-surface-raised': 'var(--color-white)',
       '--momo-bg-overlay': 'var(--color-white)',
       '--momo-bg-brand': 'var(--color-neutral-900)',
@@ -64,7 +64,7 @@ const SEMANTIC_COLOR_SOURCES = {
     dark: {
       '--momo-bg-canvas': 'var(--color-neutral-950)',
       '--momo-bg-surface': 'var(--color-neutral-800)',
-      '--momo-bg-surface-muted': 'var(--color-neutral-800)',
+      '--momo-bg-surface-muted': 'var(--color-neutral-700)',
       '--momo-bg-surface-raised': 'var(--color-neutral-900)',
       '--momo-bg-overlay': 'var(--color-neutral-900)',
       '--momo-bg-brand': 'var(--color-neutral-200)',
@@ -122,11 +122,11 @@ const SEMANTIC_COLOR_SOURCES = {
       '--momo-ring-focus': 'var(--color-anthropic-coral-500)',
     },
     dark: {
-      '--momo-bg-canvas': 'var(--color-anthropic-ink-900)',
-      '--momo-bg-surface': 'var(--color-anthropic-ink-850)',
-      '--momo-bg-surface-muted': 'var(--color-anthropic-ink-800)',
+      '--momo-bg-canvas': 'var(--color-anthropic-ink-950)',
+      '--momo-bg-surface': 'var(--color-anthropic-ink-900)',
+      '--momo-bg-surface-muted': 'var(--color-anthropic-ink-850)',
       '--momo-bg-surface-raised': 'var(--color-anthropic-ink-800)',
-      '--momo-bg-overlay': 'var(--color-anthropic-ink-800)',
+      '--momo-bg-overlay': 'var(--color-anthropic-ink-700)',
       '--momo-bg-brand': 'var(--color-anthropic-coral-500)',
       '--momo-bg-brand-hover': 'var(--color-anthropic-coral-600)',
       '--momo-bg-brand-active': 'var(--color-anthropic-coral-700)',
@@ -143,10 +143,10 @@ const SEMANTIC_COLOR_SOURCES = {
       '--momo-fg-on-danger': 'var(--color-white)',
       '--momo-fg-success': 'var(--color-anthropic-green-500)',
       '--momo-fg-warning': 'var(--color-anthropic-amber-500)',
-      '--momo-border-default': 'var(--color-anthropic-ink-800)',
-      '--momo-border-muted': 'var(--color-anthropic-ink-850)',
+      '--momo-border-default': 'var(--color-anthropic-alpha-100)',
+      '--momo-border-muted': 'var(--color-anthropic-ink-800)',
       '--momo-border-strong': 'var(--color-anthropic-ink-500)',
-      '--momo-border-input': 'var(--color-anthropic-ink-800)',
+      '--momo-border-input': 'var(--color-anthropic-alpha-150)',
       '--momo-border-danger': 'var(--color-anthropic-red-600)',
       '--momo-ring-focus': 'var(--color-anthropic-coral-500)',
     },
@@ -486,7 +486,7 @@ function ThemeTokenPanel({
   return (
     <section
       data-theme-token-scope={scopeKey}
-      className={`${themeClass} rounded-md border border-momo-border-default bg-momo-bg-canvas p-4 text-momo-fg-default`}
+      className={`${themeClass} @container/theme-token-panel rounded-md border border-momo-border-default bg-momo-bg-canvas p-4 text-momo-fg-default`}
       style={sources as CSSProperties}
     >
       <div className='mb-4 flex items-center justify-between gap-3'>
@@ -502,7 +502,10 @@ function ThemeTokenPanel({
             <h4 className='text-xs font-medium tracking-wide text-momo-fg-muted uppercase'>
               {group.title}
             </h4>
-            <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+            <div
+              data-slot='color-tokens-group'
+              className='grid gap-3 @xs/theme-token-panel:grid-cols-2 @sm/theme-token-panel:grid-cols-3'
+            >
               {group.tokens.map((token) => (
                 <TokenCard
                   key={token.token}

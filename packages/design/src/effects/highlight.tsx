@@ -1,208 +1,250 @@
 'use client';
 
-import type { ComponentProps, RefCallback } from 'react';
-import { useCallback, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { StyleKeyframesDefinition } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
 
-import { cx } from '../shared';
+import { useIsMobile } from '../hooks/use-is-mobile';
+import type { ControlValue } from '../shared';
+import { cx } from '../tailwind';
 
-export type HighlighterTrigger = 'hover' | 'click' | 'focus' | 'manual';
+export type HighlightTriggerType = 'hover' | 'click' | 'focus';
 
 type MeasuredHighlightStyle = StyleKeyframesDefinition &
   Record<'height' | 'width' | 'x' | 'y' | 'zIndex', number>;
 
-type HighlighterOptions = {
+type HighlightLayerOptions = {
   enabled?: boolean;
-  trigger?: HighlighterTrigger;
 };
 
-export type Highlighter<
-  TReference extends Element = HTMLElement,
-  TContainer extends Element = HTMLElement,
-> = {
-  exit: () => void;
+export type HighlightLayer<TReference extends Element = HTMLElement> = {
+  clear: (target?: TReference | null) => void;
   flush: () => void;
-  reference: RefCallback<TReference>;
-  container: RefCallback<TContainer>;
+  setTarget: (target: TReference) => () => void;
   style: StyleKeyframesDefinition | null;
 };
 
-export function useHighlighter<
+export type HighlightRegistrar<TReference extends Element = HTMLElement> = {
+  activate: (value: ControlValue) => void;
+  clear: () => void;
+  register: (value: ControlValue) => React.RefCallback<TReference>;
+};
+
+type HighlightTriggerProps<TReference extends Element> = Pick<
+  React.HTMLAttributes<TReference>,
+  'onBlur' | 'onClick' | 'onFocus' | 'onPointerEnter' | 'onPointerLeave'
+>;
+
+export type HighlightTrigger<TReference extends Element = HTMLElement> = {
+  getReferenceProps: (
+    props?: HighlightTriggerProps<TReference>,
+  ) => HighlightTriggerProps<TReference>;
+};
+
+export function useHighlightLayer<
   TReference extends Element = HTMLElement,
   TContainer extends Element = HTMLElement,
->({
-  enabled = true,
-  trigger = 'hover',
-}: HighlighterOptions = {}): Highlighter<TReference, TContainer> {
+>(
+  containerRef: React.RefObject<TContainer | null>,
+  { enabled = true }: HighlightLayerOptions = {},
+): HighlightLayer<TReference> {
   const [style, setStyle] = useState<StyleKeyframesDefinition | null>(null);
 
-  const containerRef = useRef<TContainer | null>(null);
-  const referenceRef = useRef<TReference | null>(null);
+  const targetRef = useRef<TReference | null>(null);
 
   const flush = useCallback(() => {
     const container = containerRef.current;
-    const reference = referenceRef.current;
-    if (container && reference && enabled) {
+    const target = targetRef.current;
+    if (container && target && enabled) {
       const containerRect = container.getBoundingClientRect();
-      const referenceRect = reference.getBoundingClientRect();
-      const nextStyle: MeasuredHighlightStyle = {
+      const targetRect = target.getBoundingClientRect();
+      const next: MeasuredHighlightStyle = {
         zIndex: 0,
-        width: referenceRect.width,
-        height: referenceRect.height,
-        y: referenceRect.top - containerRect.top,
-        x: referenceRect.left - containerRect.left,
+        width: targetRect.width,
+        height: targetRect.height,
+        y:
+          targetRect.top -
+          containerRect.top -
+          container.clientTop +
+          container.scrollTop,
+        x:
+          targetRect.left -
+          containerRect.left -
+          container.clientLeft +
+          container.scrollLeft,
       };
-
-      setStyle((current) => {
-        if (isSameMeasuredStyle(current, nextStyle)) return current;
-        return nextStyle;
-      });
+      setStyle((prev) => (isSameMeasuredStyle(prev, next) ? prev : next));
     } else {
       setStyle(null);
     }
-  }, [enabled]);
+  }, [containerRef, enabled]);
 
-  const exit = useCallback(() => {
-    referenceRef.current = null;
+  const clear = useCallback((target?: TReference | null) => {
+    if (target && targetRef.current !== target) return;
+
+    targetRef.current = null;
     setStyle(null);
   }, []);
 
-  const setReference = useCallback(
-    (instance: TReference) => {
-      referenceRef.current = instance;
+  const setTarget = useCallback(
+    (target: TReference) => {
+      targetRef.current = target;
       flush();
+      return () => {
+        clear(target);
+      };
     },
-    [flush],
+    [clear, flush],
   );
 
-  const reference = useCallback<RefCallback<TReference>>(
-    (instance) => {
-      if (!instance) return;
+  useEffect(() => {
+    if (!enabled) {
+      setStyle(null);
+      return;
+    }
+    if (targetRef.current) {
+      flush();
+    }
+  }, [enabled, flush]);
 
-      if (trigger === 'manual') {
-        setReference(instance);
+  return {
+    clear,
+    flush,
+    setTarget,
+    style,
+  };
+}
+
+export function useHighlightRegistrar<TReference extends Element = HTMLElement>(
+  layer: HighlightLayer<TReference>,
+): HighlightRegistrar<TReference> {
+  const activeValue = useRef<ControlValue | undefined>(undefined);
+  const registerRef = useRef(
+    new Map<ControlValue, React.RefCallback<TReference>>(),
+  );
+  const registry = useRef(new Map<ControlValue, TReference>());
+  const { clear: clearLayer, setTarget } = layer;
+
+  const clear = useCallback(() => {
+    activeValue.current = undefined;
+    clearLayer();
+  }, [clearLayer]);
+
+  const register = useCallback(
+    (value: ControlValue): React.RefCallback<TReference> => {
+      const { current: caches } = registerRef;
+      const cached = caches.get(value);
+      if (cached) return cached;
+
+      const callback: React.RefCallback<TReference> = (instance) => {
+        const { current } = registry;
+        if (!instance) {
+          const prev = current.get(value);
+          current.delete(value);
+          if (prev) clearLayer(prev);
+          return;
+        }
+
+        current.set(value, instance);
+        if (activeValue.current === value) {
+          setTarget(instance);
+        }
 
         return () => {
-          if (referenceRef.current === instance) exit();
+          if (current.get(value) === instance) {
+            current.delete(value);
+          }
+          clearLayer(instance);
         };
+      };
+
+      caches.set(value, callback);
+      return callback;
+    },
+    [clearLayer, setTarget],
+  );
+
+  const activate = useCallback(
+    (value: ControlValue) => {
+      activeValue.current = value;
+      const instance = registry.current.get(value);
+      instance ? setTarget(instance) : clearLayer();
+    },
+    [clearLayer, setTarget],
+  );
+
+  return {
+    activate,
+    clear,
+    register,
+  };
+}
+
+export function useHighlightTrigger<TReference extends Element = HTMLElement>(
+  layer: HighlightLayer<TReference>,
+  {
+    enabled = true,
+    trigger = 'hover',
+  }: {
+    enabled?: boolean;
+    trigger?: HighlightTriggerType;
+  } = {},
+): HighlightTrigger<TReference> {
+  const isMobile = useIsMobile();
+  const { clear, setTarget } = layer;
+  const canTrigger = enabled && (trigger !== 'hover' || !isMobile);
+
+  const getReferenceProps = useCallback(
+    (
+      props?: HighlightTriggerProps<TReference>,
+    ): HighlightTriggerProps<TReference> => {
+      if (!canTrigger) {
+        return props ?? {};
       }
 
       if (trigger === 'hover') {
-        const enter = () => {
-          setReference(instance);
-        };
-        const leave = () => {
-          if (referenceRef.current === instance) exit();
-        };
-
-        instance.addEventListener('pointerenter', enter);
-        instance.addEventListener('pointerleave', leave);
-
-        return () => {
-          instance.removeEventListener('pointerenter', enter);
-          instance.removeEventListener('pointerleave', leave);
+        return {
+          ...props,
+          onPointerEnter(event) {
+            props?.onPointerEnter?.(event);
+            setTarget(event.currentTarget);
+          },
+          onPointerLeave(event) {
+            props?.onPointerLeave?.(event);
+            clear(event.currentTarget);
+          },
         };
       }
 
       if (trigger === 'click') {
-        const click = () => {
-          setReference(instance);
-        };
-
-        instance.addEventListener('click', click);
-
-        return () => {
-          instance.removeEventListener('click', click);
+        return {
+          ...props,
+          onClick(event) {
+            props?.onClick?.(event);
+            setTarget(event.currentTarget);
+          },
         };
       }
 
-      if (trigger === 'focus') {
-        const focus = () => {
-          setReference(instance);
-        };
-        const blur = () => {
-          if (referenceRef.current === instance) exit();
-        };
-
-        instance.addEventListener('blur', blur);
-        instance.addEventListener('focus', focus);
-
-        return () => {
-          instance.removeEventListener('blur', blur);
-          instance.removeEventListener('focus', focus);
-        };
-      }
-    },
-    [exit, setReference, trigger],
-  );
-
-  const container = useCallback<RefCallback<TContainer>>(
-    (instance) => {
-      containerRef.current = instance;
-      flush();
-      return () => {
-        exit();
+      return {
+        ...props,
+        onFocus(event) {
+          props?.onFocus?.(event);
+          setTarget(event.currentTarget);
+        },
+        onBlur(event) {
+          props?.onBlur?.(event);
+          clear(event.currentTarget);
+        },
       };
     },
-    [exit, flush],
+    [canTrigger, clear, setTarget, trigger],
   );
 
   return {
-    exit,
-    style,
-    flush,
-    reference,
-    container,
-  };
-}
-
-export function useHighlighters(...args: Highlighter<Element, Element>[]) {
-  const highlightersRef = useRef(args);
-  highlightersRef.current = args;
-
-  const exit = useCallback(() => {
-    highlightersRef.current.forEach((highlighter) => {
-      highlighter.exit();
-    });
-  }, []);
-
-  const flush = useCallback(() => {
-    highlightersRef.current.forEach((highlighter) => {
-      highlighter.flush();
-    });
-  }, []);
-
-  const reference = useCallback<RefCallback<Element>>((instance) => {
-    const cleanups: Array<() => void> = [];
-
-    highlightersRef.current.forEach((highlighter) => {
-      const cleanup = highlighter.reference(instance);
-
-      if (typeof cleanup === 'function') {
-        cleanups.push(cleanup);
-      }
-    });
-
-    if (cleanups.length > 0) {
-      return () => {
-        cleanups.forEach((cleanup) => cleanup());
-      };
-    }
-  }, []);
-
-  const container = useCallback<RefCallback<Element>>((instance) => {
-    highlightersRef.current.forEach((highlighter) => {
-      highlighter.container(instance);
-    });
-  }, []);
-
-  return {
-    exit,
-    flush,
-    container,
-    reference,
+    getReferenceProps,
   };
 }
 

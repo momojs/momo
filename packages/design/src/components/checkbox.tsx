@@ -169,25 +169,20 @@ export function Checkbox({
   size = 'md',
   ...props
 }: CheckboxProps) {
-  const [isChecked = false, setIsChecked] = useControllableValue(
-    {
-      checked,
-      defaultChecked,
-      onCheckedChange,
-    },
-    {
-      valuePropName: 'checked',
-      defaultValuePropName: 'defaultChecked',
-      triggerPropName: 'onCheckedChange',
-    },
-  );
+  const [isChecked = false, setIsChecked] = useControllableValue({
+    value: checked,
+    defaultValue: defaultChecked,
+  });
 
   return (
     <BaseCheckbox.Root
       name={name}
       form={form}
       checked={isChecked}
-      onCheckedChange={setIsChecked}
+      onCheckedChange={(next, details) => {
+        onCheckedChange?.(next, details);
+        if (!details.isCanceled) setIsChecked(next);
+      }}
       indeterminate={indeterminate}
       value={value}
       uncheckedValue={uncheckedValue}

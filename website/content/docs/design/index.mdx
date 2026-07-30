@@ -31,11 +31,26 @@ bun add @ncdai/wheel-picker
   <Card title="Accordion" href="/docs/design/accordion">
     带 motion 展开动画的折叠面板。
   </Card>
+  <Card title="Badge" href="/docs/design/badge">
+    用于状态、分类与元数据的轻量标签。
+  </Card>
   <Card title="Button" href="/docs/design/button">
     带 motion 点击反馈的基础按钮，支持多种 variant 与 size。
   </Card>
   <Card title="Checkbox" href="/docs/design/checkbox">
     表单友好的复选框，支持 indeterminate 状态。
+  </Card>
+  <Card title="Dialog" href="/docs/design/dialog">
+    带焦点管理、退出动画与模态语义的居中弹层。
+  </Card>
+  <Card title="Input" href="/docs/design/input">
+    支持 Base UI 表单状态与三档尺寸的原子输入框。
+  </Card>
+  <Card title="Numeric" href="/docs/design/numeric">
+    支持输入、步进按钮与拖拽调值的数字字段。
+  </Card>
+  <Card title="Rating" href="/docs/design/rating">
+    支持精度、键盘操作与表单提交的评分控件。
   </Card>
   <Card title="TweenNumber" href="/docs/design/tween-number">
     数值变化时带 tween 过渡的数字展示，支持 Intl 格式化。
@@ -54,9 +69,6 @@ bun add @ncdai/wheel-picker
   </Card>
   <Card title="Tabs" href="/docs/design/tabs">
     带动效指示器的标签页。
-  </Card>
-  <Card title="Calendar" href="/docs/design/calendar">
-    基于 react-day-picker 的月历面板。
   </Card>
   <Card title="PickerDate" href="/docs/design/picker-date">
     年、月、日三列选择器。
@@ -117,11 +129,11 @@ await Bun.build({
 
 ```tsx
 <div className="theme-anthropic">
-  <Calendar />
+  <Button>Action</Button>
 </div>
 
 <div className="theme-neutral dark">
-  <Calendar />
+  <Button>Action</Button>
 </div>
 ```
 

@@ -1,0 +1,91 @@
+---
+title: Input
+description: 支持 Base UI 表单状态与三档尺寸的原子输入框。
+icon: TextCursorInput
+---
+
+`Input` 基于 Base UI Input 封装，默认渲染原生 `input`。它保留受控与非受控值、原生表单属性、`render` 组合和 ref，并使用 momo semantic token 统一尺寸、焦点、禁用与校验状态。
+
+<InputPlayground />
+
+## 使用
+
+`Input` 不会自动渲染标签。独立使用时，应通过原生 `label` 提供可访问名称：
+
+```tsx
+import { Input } from "@momots/design/components/input";
+
+<label htmlFor="account-email">邮箱</label>
+<Input
+  id="account-email"
+  name="email"
+  type="email"
+  placeholder="name@example.com"
+/>
+```
+
+## 受控与非受控
+
+使用 `value` 与 `onValueChange` 管理受控值：
+
+```tsx
+const [email, setEmail] = useState("");
+
+<Input
+  value={email}
+  onValueChange={setEmail}
+  type="email"
+/>
+```
+
+只需要组件管理初始值时，使用 `defaultValue`：
+
+```tsx
+<Input defaultValue="Momo workspace" />
+```
+
+原生 `onChange` 仍会透传。`onValueChange` 直接提供新的字符串值与 Base UI event details，适合受控状态；避免同时在两个回调中重复执行同一项业务更新。
+
+## Field 集成
+
+Base UI Input 会自动接入 Base UI Field。Field 可以关联标签、说明与错误，并把 `valid`、`invalid`、`dirty`、`touched`、`filled` 和 `focused` 状态传给 Input：
+
+```tsx
+import { Field } from "@base-ui/react/field";
+import { Input } from "@momots/design/components/input";
+
+<Field.Root name="email" validationMode="onBlur">
+  <Field.Label>邮箱</Field.Label>
+  <Input type="email" required />
+  <Field.Description>用于接收工作区通知。</Field.Description>
+  <Field.Error match="valueMissing">请输入邮箱。</Field.Error>
+  <Field.Error match="typeMismatch">请输入有效的邮箱地址。</Field.Error>
+</Field.Root>
+```
+
+不使用 Field 时，可以通过 `aria-invalid` 表达外部校验状态，并用 `aria-describedby` 关联错误说明。
+
+## 组件边界
+
+`Input` 只负责单行原子输入控件，不内置 label、description、error、前后缀、清空按钮或密码显隐按钮。这些结构应由 Field 或调用方在外层组合。
+
+需要步进按钮、数字格式化或拖拽调值时使用 `Numeric`；多行内容应使用原生 `textarea` 或对应的多行输入组件。`type="file"` 等原生输入类型仍可直接透传。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `size` | `"sm" \| "md" \| "lg"` | 视觉尺寸，默认 `"md"` |
+| `nativeSize` | `number` | 映射到原生 `size` 字符宽度提示；页面布局优先使用 CSS width |
+| `value` | 原生 input value | 受控值 |
+| `defaultValue` | 原生 input default value | 非受控初始值 |
+| `onValueChange` | `(value: string, details) => void` | Base UI 值变化回调 |
+| `onChange` | 原生 input change handler | 原生 change 事件回调 |
+| `type` | 原生 input type | 输入类型，例如 `"text"`、`"email"`、`"search"` 或 `"file"` |
+| `name` / `form` / `autoComplete` | 原生 input props | 表单字段名、所属表单与自动填充提示 |
+| `disabled` / `readOnly` / `required` | `boolean` | 禁用、只读与必填状态 |
+| `aria-invalid` | `boolean \| "true" \| "false"` | 独立使用时表达外部校验状态 |
+| `className` | `string \| ((state: InputState) => string \| undefined)` | 追加样式，回调可读取 Base UI Field 状态 |
+| `render` | Base UI render prop | 组合或替换底层元素 |
+| `ref` | React ref | 获取底层元素 |
+| `...props` | Base UI Input props | 其余 Base UI 与原生 input 属性 |
