@@ -4,7 +4,7 @@ description: 支持输入、步进按钮与拖拽调值的数字字段。
 icon: Calculator
 ---
 
-`Numeric` 基于 Base UI Number Field 封装，支持直接输入、键盘微调、加减按钮和拖拽标签调值。组件保留 Base UI 的表单、格式化和校验能力，并使用 momo semantic token 统一尺寸、状态与 focus ring。
+`Numeric` 基于 Base UI Number Field 封装，支持直接输入、键盘微调、加减按钮和拖拽标签调值。组件保留 Base UI 的表单、格式化和校验能力，使用 momo semantic token 统一尺寸与状态，并由 motion 提供遵循 reduced motion 偏好的按压反馈。
 
 <NumericPlayground />
 
@@ -58,17 +58,69 @@ import { Numeric } from "@momots/design/components/numeric";
 
 ## 交互
 
-- **输入**：接受当前 locale 对应的数字格式，失焦时完成格式化与范围校正。
+- **输入**：接受当前 locale 对应的数字格式；默认在失焦时完成格式化，并把显示值校正到范围内。
 - **键盘**：方向键按 `step` 调整；按住 `Alt` 使用 `smallStep`，按住 `Shift` 使用 `largeStep`；设置 `min` / `max` 后可用 `Home` / `End` 跳到边界。
 - **步进按钮**：点击或长按加减按钮；达到 `min` / `max` 时对应按钮自动禁用。
-- **拖拽标签**：水平拖拽 label 连续调值，释放指针时触发 `onValueCommitted`。
+- **拖拽标签**：水平拖拽 label 连续调值。
 - **滚轮**：设置 `allowWheelScrub` 后，可以在输入框聚焦并悬停时用滚轮调值。
+
+`onValueCommitted` 表达一次编辑已经结束。输入内容在失焦时提交；步进按钮和标签拖拽在释放指针时提交；键盘与滚轮每次改变数值时会立即提交。
+
+## 范围与表单校验
+
+默认情况下，直接输入的值会受到 `min` / `max` 限制，失焦后显示为校正后的结果。设置 `allowOutOfRange` 后，直接输入可以在失焦后继续保留超出范围的值，以便原生表单产生 `rangeUnderflow` 或 `rangeOverflow` 校验状态；按钮、键盘、滚轮和拖拽等步进交互仍会限制在范围内。
+
+将 Numeric 放入 Base UI Field，可以关联说明与错误信息，并把 invalid 状态传给输入框和组合边框：
+
+```tsx
+import { Field } from "@base-ui/react/field";
+import { Numeric } from "@momots/design/components/numeric";
+
+<Field.Root name="quantity" validationMode="onBlur">
+  <Numeric
+    label="数量"
+    defaultValue={1}
+    min={1}
+    max={99}
+    required
+    allowOutOfRange
+  />
+  <Field.Description>请输入 1 至 99 之间的数量。</Field.Description>
+  <Field.Error match="valueMissing">请输入数量。</Field.Error>
+  <Field.Error match="rangeUnderflow">数量不能小于 1。</Field.Error>
+  <Field.Error match="rangeOverflow">数量不能大于 99。</Field.Error>
+</Field.Root>
+```
+
+不需要保留超界输入时，不要为了展示错误而开启 `allowOutOfRange`；可以在 `onValueChange` 中执行自定义校验，或通过 `Field.Root invalid` 接入外部表单状态。
+
+## 插槽与动画
+
+`scrubArea`、`scrubAreaCursor`、`group`、`input`、`decrement` 与 `increment` 都接受 slot 配置。传入 props object 会配置默认 Base UI slot，并保留其状态属性、键盘交互与可访问语义。Base UI slot 的 `className` 也可以使用 state callback；`input.nativeSize` 可设置原生字符宽度提示。
+
+```tsx
+<Numeric
+  label="Seats"
+  labelProps={{ className: "uppercase tracking-wide" }}
+  input={{
+    "aria-describedby": "seat-help",
+    className: "text-end",
+  }}
+  decrement={{ "aria-label": "减少席位" }}
+  increment={{ "aria-label": "增加席位" }}
+/>
+```
+
+直接传入 ReactNode 会完整替换对应 slot。此时调用方需要自行保留必要的 Base UI primitive、事件和 `aria` 语义；一般的样式或原生属性调整应优先使用 props object。原有的 `*ClassName` 属性继续可用，适合只追加 Tailwind class 的场景。
+
+默认加减按钮使用 motion `whileTap` 提供按压缩放，并通过 `MotionConfig reducedMotion="user"` 遵循系统的减少动态效果设置。用 ReactNode 替换按钮 slot 时，默认的按压动画也会一并被替换。
 
 ## Props
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
 | `label` | `ReactNode` | 必填的可访问标签，也是拖拽调值区域 |
+| `labelProps` | 原生 label props | 配置内部 label；`children` 与 `htmlFor` 由 Numeric 管理 |
 | `value` | `number \| null` | 受控值；`null` 表示输入为空 |
 | `defaultValue` | `number` | 非受控初始值 |
 | `size` | `"sm" \| "md" \| "lg"` | 控件尺寸，默认 `"md"` |
@@ -77,18 +129,24 @@ import { Numeric } from "@momots/design/components/numeric";
 | `smallStep` / `largeStep` | `number` | `Alt` / `Shift` 修饰键对应的步进，默认 `0.1` / `10` |
 | `format` | `Intl.NumberFormatOptions` | 输入值格式化选项 |
 | `locale` | `Intl.LocalesArgument` | 数字解析和格式化 locale，默认使用运行时 locale |
-| `allowOutOfRange` | `boolean` | 允许直接输入暂时超出 `min` / `max` 的值 |
+| `allowOutOfRange` | `boolean` | 允许直接输入在失焦后保留超界值；步进交互仍会限制范围 |
 | `allowWheelScrub` | `boolean` | 聚焦并悬停时启用滚轮调值 |
 | `snapOnStep` | `boolean` | 递增、递减时吸附到最近的 step 倍数 |
 | `disabled` / `readOnly` / `required` | `boolean` | 禁用、只读与必填状态 |
 | `name` / `form` | `string` | 表单字段名与所属表单 |
 | `onChange` | `(value: number \| null) => void` | 未取消的值变化简化回调 |
-| `onValueChange` | Base UI callback | 完整值变化回调，包含变化原因并支持取消 |
-| `onValueCommitted` | Base UI callback | 输入失焦或指针交互结束后的提交回调 |
-| `className` | `string` | 根容器追加 Tailwind class |
-| `scrubAreaClassName` / `labelClassName` | `string` | 拖拽区域与标签样式 |
-| `scrubAreaCursorClassName` | `string` | 拖拽时自定义 cursor 的样式 |
-| `groupClassName` / `inputClassName` | `string` | 输入组合容器与输入框样式 |
-| `decrementClassName` / `incrementClassName` | `string` | 减少与增加按钮样式 |
+| `onValueChange` | `(value: number \| null, details) => void` | 完整值变化回调，包含变化原因并支持取消 |
+| `onValueCommitted` | `(value: number \| null, details) => void` | 编辑提交回调；输入失焦、指针释放、键盘或滚轮操作时触发 |
+| `scrubArea` / `scrubAreaCursor` | `SlotBaseConfig` | 配置或替换拖拽区域与拖拽 cursor |
+| `group` / `input` | `SlotBaseConfig` | 配置或替换输入组合与可见输入框；input 额外支持 `nativeSize` |
+| `decrement` / `increment` | `SlotBaseConfig` | 配置或替换减少、增加按钮 |
+| `className` | `string \| ((state) => string)` | 根容器追加样式，可读取 Number Field state |
+| `scrubAreaClassName` / `labelClassName` | `string` | 兼容的拖拽区域与标签样式；新代码优先使用 slot / `labelProps` |
+| `scrubAreaCursorClassName` | `string` | 兼容的拖拽 cursor 样式；新代码优先使用 `scrubAreaCursor` |
+| `groupClassName` / `inputClassName` | `string` | 兼容的组合与输入框样式；新代码优先使用对应 slot |
+| `decrementClassName` / `incrementClassName` | `string` | 兼容的按钮样式；新代码优先使用对应 slot |
+| `id` | `string` | 可见输入框 id；内部 label 会自动与其关联 |
+| `inputRef` | `React.Ref<HTMLInputElement>` | 获取 Base UI 用于表单与校验的隐藏 input |
+| `render` | Base UI render prop | 组合或替换 Root 的底层 div |
 
 除上述属性外，其余 Base UI Number Field Root 属性会透传到内部 Root。

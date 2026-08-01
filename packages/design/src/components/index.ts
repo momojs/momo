@@ -4,6 +4,7 @@ export * from './button';
 export * from './checkbox';
 export * from './dialog';
 export * from './input';
+export * from './numeric';
 export * from './picker-core';
 export * from './picker-date';
 export * from './picker-time';

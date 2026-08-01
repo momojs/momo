@@ -8,6 +8,20 @@ export async function blobToBytes(
 }
 
 /**
+ * 将 Blob 编码为 base64 字符串（不含 `data:` 前缀）。
+ */
+export async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = await blobToBytes(blob);
+  let binary = '';
+  // 分块避免 String.fromCharCode 展开大数组时爆栈
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/**
  * 将字节数组编码为十六进制字符串。
  */
 export function bytesToHex(buffer: Uint8Array<ArrayBufferLike>): string {

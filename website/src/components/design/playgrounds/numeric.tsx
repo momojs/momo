@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { Field } from '@base-ui/react/field';
+
 import { Numeric } from '../../../../../packages/design/src/components/numeric';
 import type { ControlSizeValue } from './shared';
 import {
@@ -29,6 +31,11 @@ const localeOptions = [
 type NumericFormat = (typeof numericFormatOptions)[number]['value'];
 type NumericLocale = (typeof localeOptions)[number]['value'];
 
+function clampValue(value: number | null, min: number, max: number) {
+  if (value === null) return null;
+  return Math.min(max, Math.max(min, value));
+}
+
 export function NumericPlayground() {
   const [value, setValue] = useState<number | null>(125);
   const [size, setSize] = useState<ControlSizeValue>('md');
@@ -43,6 +50,7 @@ export function NumericPlayground() {
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [required, setRequired] = useState(false);
+  const [invalid, setInvalid] = useState(false);
   const [allowOutOfRange, setAllowOutOfRange] = useState(false);
   const [allowWheelScrub, setAllowWheelScrub] = useState(false);
   const [snapOnStep, setSnapOnStep] = useState(false);
@@ -81,13 +89,21 @@ export function NumericPlayground() {
             label='Min'
             value={min}
             step={step}
-            onChange={(next) => setMin(Math.min(next, max - step))}
+            onChange={(next) => {
+              const nextMin = Math.min(next, max - step);
+              setMin(nextMin);
+              setValue((current) => clampValue(current, nextMin, max));
+            }}
           />
           <NumberControl
             label='Max'
             value={max}
             step={step}
-            onChange={(next) => setMax(Math.max(next, min + step))}
+            onChange={(next) => {
+              const nextMax = Math.max(next, min + step);
+              setMax(nextMax);
+              setValue((current) => clampValue(current, min, nextMax));
+            }}
           />
           <NumberControl
             label='Step'
@@ -123,9 +139,19 @@ export function NumericPlayground() {
             onChange={setRequired}
           />
           <CheckboxControl
-            label='Out of range'
+            label='Invalid'
+            checked={invalid}
+            onChange={setInvalid}
+          />
+          <CheckboxControl
+            label='Allow out of range'
             checked={allowOutOfRange}
-            onChange={setAllowOutOfRange}
+            onChange={(next) => {
+              setAllowOutOfRange(next);
+              if (!next) {
+                setValue((current) => clampValue(current, min, max));
+              }
+            }}
           />
           <CheckboxControl
             label='Wheel scrub'
@@ -143,32 +169,47 @@ export function NumericPlayground() {
         <code>
           value: {value ?? 'null'}; size: {size}; disabled: {String(disabled)};
           readOnly: {String(readOnly)}; required: {String(required)}; min: {min}
-          ; max: {max}; step: {step}; smallStep: {smallStep}; largeStep:{' '}
-          {largeStep}; format: {formatPreset}; locale: {locale};
-          allowOutOfRange: {String(allowOutOfRange)}; allowWheelScrub:{' '}
+          ; invalid: {String(invalid)}; max: {max}; step: {step}; smallStep:{' '}
+          {smallStep}; largeStep: {largeStep}; format: {formatPreset}; locale:{' '}
+          {locale}; allowOutOfRange: {String(allowOutOfRange)}; allowWheelScrub:{' '}
           {String(allowWheelScrub)}; snapOnStep: {String(snapOnStep)}
         </code>
       }
     >
-      <Numeric
-        label={label || 'Amount'}
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        smallStep={smallStep}
-        largeStep={largeStep}
-        size={size}
-        format={format}
-        locale={locale}
-        disabled={disabled}
-        readOnly={readOnly}
-        required={required}
-        allowOutOfRange={allowOutOfRange}
-        allowWheelScrub={allowWheelScrub}
-        snapOnStep={snapOnStep}
-        onChange={setValue}
-      />
+      <Field.Root
+        name='numeric-playground-amount'
+        invalid={invalid}
+        className='grid justify-items-start gap-momo-xxs'
+      >
+        <Numeric
+          label={label || 'Amount'}
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          smallStep={smallStep}
+          largeStep={largeStep}
+          size={size}
+          format={format}
+          locale={locale}
+          disabled={disabled}
+          readOnly={readOnly}
+          required={required}
+          allowOutOfRange={allowOutOfRange}
+          allowWheelScrub={allowWheelScrub}
+          snapOnStep={snapOnStep}
+          onChange={setValue}
+        />
+        <Field.Description className='text-momo-caption text-momo-fg-muted'>
+          Type a value, use the steppers, or drag the label.
+        </Field.Description>
+        <Field.Error
+          match={invalid}
+          className='text-momo-caption text-momo-fg-danger'
+        >
+          This value is marked as invalid.
+        </Field.Error>
+      </Field.Root>
     </PlaygroundFrame>
   );
 }
