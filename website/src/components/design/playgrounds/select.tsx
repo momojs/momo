@@ -88,7 +88,7 @@ export function SelectPlayground() {
     },
   ];
 
-  const positionerProps = {
+  const positioner = {
     side,
     align,
     alignItemWithTrigger,
@@ -216,7 +216,7 @@ export function SelectPlayground() {
             modal={modal}
             highlightItemOnHover={highlightItemOnHover}
             placeholder={placeholder}
-            positionerProps={positionerProps}
+            positioner={positioner}
             options={options}
             onOpenChange={setOpen}
             onChange={setValues}
@@ -232,7 +232,7 @@ export function SelectPlayground() {
             modal={modal}
             highlightItemOnHover={highlightItemOnHover}
             placeholder={placeholder}
-            positionerProps={positionerProps}
+            positioner={positioner}
             options={options}
             onOpenChange={setOpen}
             onChange={setValue}

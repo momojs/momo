@@ -29,10 +29,12 @@ type SlotBaseClass<T> = Realizable<string | undefined, [T]>;
 // type InferBaseClass<T> = T extends SlotBaseClass<infer S> ? S : never;
 
 function asProps<TProps extends SlotBaseProps>(
-  arg?: React.ReactNode | Partial<SlotBaseConfig<TProps>>,
-) {
+  arg?: React.ReactNode | Partial<TProps>,
+): Partial<TProps> | undefined {
   if (arg === undefined) return undefined;
-  return isReactNode(arg) ? ({ children: arg } as Partial<TProps>) : arg;
+  return isReactNode(arg)
+    ? ({ children: arg } as Partial<TProps>)
+    : (arg as Partial<TProps>);
 }
 
 export function asAxis(direction?: ControlDirection) {
@@ -59,15 +61,17 @@ export function asClass<S>(...args: Array<SlotBaseClass<S>>) {
 
 export function render<TProps extends SlotBaseProps>(
   Component: SlotBaseComponent<TProps>,
-  config: SlotBaseConfig<TProps>,
-  arg?: React.ReactNode | Partial<SlotBaseConfig<TProps>>,
+  config: SlotBaseConfig<NoInfer<TProps>>,
+  arg?: React.ReactNode | Partial<NoInfer<TProps>>,
 ) {
-  const props = asProps(arg);
+  const props = asProps<TProps>(arg);
   if (config === true) {
-    return <Component {...(props as TProps)} />;
+    const { key, ...componentProps } = props ?? {};
+    return <Component key={key} {...(componentProps as TProps)} />;
   }
   if (!isReactNode(config)) {
-    return <Component {...config} {...props} />;
+    const { key, ...componentProps } = { ...config, ...props };
+    return <Component key={key} {...(componentProps as TProps)} />;
   }
   return config;
 }

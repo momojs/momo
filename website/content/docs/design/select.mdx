@@ -47,25 +47,46 @@ import { Select } from "@momots/design/components/select";
 ```tsx
 <Select
   options={options}
-  positionerProps={{
+  positioner={{
     alignItemWithTrigger: false,
     sideOffset: 8,
   }}
-  popupClassName="min-w-64"
-  listClassName="p-1"
+  popup={{ className: "min-w-64" }}
+  list={{ className: "p-1" }}
 />
 ```
 
-更多 Base UI 行为通过 `Select` 的 root props 与 slot props 透传，不额外暴露底层 primitive。`Select` 不会自动改写 Portal 挂载点；应用应把 momo theme class 挂在 `html` / `:root` 上，让默认挂载到 `body` 的 popup 也能继承 `--momo-*` token。需要自定义挂载点时传入 `portalProps.container`。
+所有 slot 默认开启。传入 props object 会配置默认的 Base UI primitive，并保留其交互、状态参数和可访问语义；传入 `false` 可移除 slot，传入 ReactNode 则会完整替换它。Trigger、Popup、Item 等结构性 slot 通常应优先使用 props object，自定义底层元素时使用对应 Base UI `render` prop。
 
-选项 hover 背景由 `useHighlightLayer`、`useHighlightTrigger` 与 `Highlight` 驱动，而不是 item 自身的 CSS hover 背景；`highlightItemOnHover` 默认关闭，避免 Base UI 的 pointer hover highlight 和 motion highlight 重叠。
+可配置的 slot 包括 `trigger`、`valueSlot`、`icon`、`portal`、`positioner`、`popup`、`list`、`item`、`itemText`、`itemIndicator`、`scrollUpArrow` 与 `scrollDownArrow`。`valueSlot` 特意与表示当前选中值的 `value` 分开命名。
+
+默认 Popup 保留 Motion 的进入 / 退出动画，并通过 `MotionConfig` 遵循用户的 reduced-motion 设置。只有这条默认动画路径会由 `Select` 在退出完成后调用 `unmount`；移除结构 slot 或覆盖 `popup.render` 时，卸载生命周期交回 Base UI（显式传入 `actionsRef` 时则由调用方管理）。
+
+更多 Base UI 行为通过 `Select` 的 root props 与 slot config 透传，不额外暴露底层 primitive。`Select` 不会自动改写 Portal 挂载点；应用应把 momo theme class 挂在 `html` / `:root` 上，让默认挂载到 `body` 的 popup 也能继承 `--momo-*` token。需要自定义挂载点时使用 `portal={{ container }}`。
+
+选项 hover 背景由 `useHighlightLayer`、`useHighlightTrigger` 与 `Highlight` 驱动。`highlightItemOnHover` 默认 `true`，同时启用 Base UI 的 pointer highlight 状态和 momo 的 motion highlight；设置为 `false` 时仍保留键盘导航。
+
+## 多选
+
+```tsx
+const [fruits, setFruits] = useState<Fruit[]>(["apple", "cherry"]);
+
+<Select<Fruit, true>
+  multiple
+  value={fruits}
+  onChange={setFruits}
+  options={options}
+/>
+```
+
+`multiple={true}` 时，`value`、`defaultValue` 与 `onChange` 的值都是 `T[]`；单选模式的 `value` / `defaultValue` 可以是 `T` 或 `null`。`onChange` 只跳过单选清空时的 `null`；多选清空产生的空数组 `[]` 仍会触发回调。
 
 ## Props
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
-| `value` | `T` | 当前选中值 |
-| `defaultValue` | `T` | 非受控默认值 |
+| `value` | `T \| null`；多选为 `T[]` | 当前选中值 |
+| `defaultValue` | `T \| null`；多选为 `T[]` | 非受控默认值 |
 | `options` | `ControlOption<T>[]` | 简化选项列表，支持 `label`、`icon`、`disabled`、`className`、`style`、`textValue` |
 | `items` | Base UI Root `items` | 传给内部 Root 的 value-label 映射；默认使用 `options` |
 | `children` | `ReactNode` | 自定义 `List` 内部内容，适合分组或自定义 item |
@@ -74,28 +95,43 @@ import { Select } from "@momots/design/components/select";
 | `disabled` | `boolean` | 是否禁用 |
 | `readOnly` | `boolean` | 是否只读 |
 | `multiple` | `boolean` | 是否允许多选 |
-| `highlightItemOnHover` | `boolean` | 是否启用 Base UI 的 pointer hover highlight，默认 `false`，momo hover 背景由 motion highlighter 处理 |
+| `highlightItemOnHover` | `boolean` | 是否启用 pointer hover highlight，默认 `true` |
 | `open` / `defaultOpen` | `boolean` | 受控 / 非受控弹层打开状态 |
 | `name` | `string` | 表单字段名 |
 | `form` | `string` | 关联外部表单 |
 | `autoComplete` | `string` | 浏览器自动填充提示 |
 | `required` | `boolean` | 是否必填 |
 | `modal` | `boolean` | 打开时是否进入 modal 交互模式 |
-| `actionsRef` | Base UI actions ref | 传给内部 Root 的 imperative actions，例如动画结束后手动 `unmount` |
-| `className` | `string` | 触发器样式（`triggerClassName` 的别名） |
-| `triggerClassName` | `string` | 触发器样式 |
-| `valueClassName` / `iconClassName` | `string` | Value / Icon 样式 |
-| `positionerClassName` | `string` | Positioner 样式 |
-| `popupClassName` | `string` | 下拉面板样式 |
-| `listClassName` | `string` | List 样式 |
-| `itemClassName` | `string` | 选项样式 |
-| `itemIndicatorClassName` / `itemTextClassName` | `string` | ItemIndicator / ItemText 样式 |
-| `scrollArrowClassName` | `string` | 上下滚动箭头样式 |
-| `triggerProps` / `valueProps` | Base UI props | 传给 `Select.Trigger` / `Select.Value` |
-| `portalProps` / `positionerProps` / `popupProps` / `listProps` | Base UI props | 传给对应 Base UI slot |
-| `itemProps` | Base UI props | 传给每个自动渲染的 `Select.Item` |
-| `scrollUpArrowProps` / `scrollDownArrowProps` | Base UI props | 传给上下滚动箭头 |
+| `actionsRef` | Base UI actions ref | 传给内部 Root 的 imperative actions；内置 Motion 退出完成后会通过它执行 `unmount` |
+| `trigger` | slot config | Trigger 配置，默认开启 |
+| `valueSlot` | slot config | Value 配置，默认开启 |
+| `icon` | slot config | Icon 配置，默认开启 |
+| `portal` | slot config | Portal 配置，默认开启 |
+| `positioner` | slot config | Positioner 配置，默认开启 |
+| `popup` | slot config | Popup 配置，默认开启 |
+| `list` | slot config | List 配置，默认开启 |
+| `item` | slot config | 自动生成的每个 Item 的公共配置，默认开启 |
+| `itemText` / `itemIndicator` | slot config | ItemText / ItemIndicator 配置，默认开启 |
+| `scrollUpArrow` / `scrollDownArrow` | slot config | 上下滚动箭头配置，默认开启 |
 | `indicator` | `ReactNode` | 自定义选中图标 |
-| `onChange` | `(value: T) => void` | 简化选中项变化回调，不包含 `null` |
+| `onChange` | `(value: T) => void`；多选为 `(value: T[]) => void` | 简化选中项变化回调，不包含 `null` |
 | `onValueChange` | Base UI callback | 完整值变化回调，包含 event details |
 | `onOpenChange` | Base UI callback | 弹层打开状态变化回调 |
+
+## Deprecated 兼容属性
+
+旧的 props 与 className 属性仍可使用，但已标记为 deprecated；新代码应改用对应 slot config。
+
+| Deprecated Prop | 替代项 |
+| --- | --- |
+| `className` / `triggerClassName` / `triggerProps` | `trigger` |
+| `valueClassName` / `valueProps` | `valueSlot` |
+| `iconClassName` | `icon` |
+| `portalProps` | `portal` |
+| `positionerClassName` / `positionerProps` | `positioner` |
+| `popupClassName` / `popupProps` | `popup` |
+| `listClassName` / `listProps` | `list` |
+| `itemClassName` / `itemProps` | `item` |
+| `itemTextClassName` | `itemText` |
+| `itemIndicatorClassName` | `itemIndicator` |
+| `scrollArrowClassName` / `scrollUpArrowProps` / `scrollDownArrowProps` | `scrollUpArrow` / `scrollDownArrow` |
