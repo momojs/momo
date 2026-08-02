@@ -4,7 +4,7 @@ import { mergeProps } from '@base-ui/react/merge-props';
 import { useRender } from '@base-ui/react/use-render';
 import type { VariantProps } from 'cva';
 
-import { cva } from '../tailwind';
+import { cva } from '../tailwind/index.js';
 
 const variants = cva({
   base: 'group/badge inline-flex w-fit shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-momo-pill border border-transparent font-momo-body font-medium outline-none transition-[background-color,border-color,color,box-shadow] focus-visible:border-momo-ring-focus focus-visible:ring-[3px] focus-visible:ring-momo-ring-focus/35 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-invalid:border-momo-border-danger aria-invalid:ring-[3px] aria-invalid:ring-momo-fg-danger/20 [&>svg]:pointer-events-none [&>svg]:shrink-0',

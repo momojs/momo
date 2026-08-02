@@ -14,10 +14,10 @@ import type {
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import type { VariantProps } from 'cva';
 
-import type { SlotBaseConfig } from '../shared';
-import { asClass, asData, render } from '../shared';
-import { cva, cx } from '../tailwind';
-import { Button } from './button';
+import type { SlotBaseConfig } from '../shared/index.js';
+import { asClass, asData, render } from '../shared/index.js';
+import { cva, cx } from '../tailwind/index.js';
+import { Button } from './button.js';
 
 // DialogPortalProps,
 // DialogBackdropProps,

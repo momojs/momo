@@ -24,8 +24,8 @@ import {
   useReducedMotion,
 } from 'motion/react';
 
-import { useControllableValue, usePresenceGate } from '../hooks';
-import { cva } from '../tailwind';
+import { useControllableValue, usePresenceGate } from '../hooks/index.js';
+import { cva } from '../tailwind/index.js';
 
 const variants = {
   backdrop: cva({

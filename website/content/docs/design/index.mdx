@@ -9,23 +9,21 @@ icon: Rocket
 ## 安装
 
 ```bash
-bun add @momots/design @momots/core @momots/host @base-ui/react motion react react-dom remeda type-fest
-bun add @hugeicons/react @hugeicons/core-free-icons
+bun add @momots/design@alpha @momots/core@beta @momots/host@alpha
+bun add @base-ui/react @hugeicons/react @hugeicons/core-free-icons
+bun add cva date-fns motion react react-dom remeda tailwind-merge tailwindcss type-fest
 ```
 
-`@momots/core`、`@momots/host`、`@base-ui/react`、`motion`、`react`、`remeda`、`type-fest` 与 Hugeicons 应作为 peer dependencies 由应用侧提供，避免组件库把 React、基础工具、图标或动画运行时重复打进产物。
+`@momots/core`、`@momots/host`、`@base-ui/react`、`motion`、`react`、`remeda`、`type-fest`、`cva`、`date-fns`、`tailwind-merge` 与 Hugeicons 应作为 peer dependencies 由应用侧提供，避免组件库把 React、基础工具、图标或动画运行时重复打进产物。
 
-Picker 可以手动接入 `@ncdai/wheel-picker`：
-
-```bash
-bun add @ncdai/wheel-picker
-```
-
-> 当前公开 npm registry 查询不到 `@ncdai/wheel-picker`。如果它来自内部 registry，请在应用侧配置 registry 后安装；组件源码里已经保留 `adapter` 接口用于接入。
+`@ncdai/react-wheel-picker` 与 `motion-plus` 会作为普通 dependencies 随
+`@momots/design` 安装；其余运行时依赖保持为 peer dependencies，由应用统一版本。
 
 ## 调试优先
 
 当前网站的 design 文档会直接加载 `packages/design/src` 中的源码组件。这样在开发组件时，改动源码即可通过 Vite 热更新反映到文档页面。
+
+## 组件
 
 <Cards>
   <Card title="Accordion" href="/docs/design/accordion">
@@ -42,6 +40,9 @@ bun add @ncdai/wheel-picker
   </Card>
   <Card title="Dialog" href="/docs/design/dialog">
     带焦点管理、退出动画与模态语义的居中弹层。
+  </Card>
+  <Card title="Drawer" href="/docs/design/drawer">
+    支持拖拽、方向与吸附点的手势抽屉。
   </Card>
   <Card title="Input" href="/docs/design/input">
     支持 Base UI 表单状态与三档尺寸的原子输入框。
@@ -70,11 +71,39 @@ bun add @ncdai/wheel-picker
   <Card title="Tabs" href="/docs/design/tabs">
     带动效指示器的标签页。
   </Card>
+  <Card title="PickerCore" href="/docs/design/picker-core">
+    用于构建自定义多列滚轮选择器的底层组件。
+  </Card>
   <Card title="PickerDate" href="/docs/design/picker-date">
     年、月、日三列选择器。
   </Card>
   <Card title="PickerTime" href="/docs/design/picker-time">
-    小时、分钟、秒选择器。
+    小时、分钟与上下午选择器。
+  </Card>
+</Cards>
+
+## Hooks
+
+<Cards>
+  <Card title="useControllableValue" href="/docs/design/use-controllable-value">
+    为组件统一受控、非受控状态与函数式更新语义。
+  </Card>
+  <Card title="usePresenceGate" href="/docs/design/use-presence-gate">
+    协调多层 AnimatePresence 的退出完成时机。
+  </Card>
+</Cards>
+
+## Utils
+
+<Cards>
+  <Card title="Control types" href="/docs/design/control-types">
+    组件间共享的值、尺寸、方向与选项类型。
+  </Card>
+  <Card title="Slot composition" href="/docs/design/slot-composition">
+    momo 组件封装所使用的 slot 配置与渲染工具。
+  </Card>
+  <Card title="Highlight" href="/docs/design/highlight">
+    可复用的 Motion 移动高亮层与触发器 Hooks。
   </Card>
 </Cards>
 
@@ -101,11 +130,13 @@ await Bun.build({
       "types": "./dist/components/toggle-group.d.ts",
       "import": "./dist/components/toggle-group.js"
     },
+    "./tailwind.css": "./src/styles/tailwind.css",
+    "./picker.css": "./src/styles/picker.css",
     "./themes/semantic.css": "./src/themes/semantic.css",
     "./themes/neutral.css": "./src/themes/neutral.css",
     "./themes/anthropic.css": "./src/themes/anthropic.css"
   },
-  "files": ["dist", "src/themes"]
+  "files": ["dist", "src/styles", "src/themes"]
 }
 ```
 
@@ -113,7 +144,7 @@ await Bun.build({
 
 ## Tailwind CSS
 
-本网站已经在 `app.css` 中把 Tailwind 扫描范围扩展到 design 源码目录，因此调试 `packages/design/src` 里的 className 时会即时生成样式。发布给外部应用时，建议提供明确的样式入口，或要求消费端通过 `@source` 扫描组件库源码。
+本网站已经在 `app.css` 中把 Tailwind 扫描范围扩展到 design 源码目录，因此调试 `packages/design/src` 里的 className 时会即时生成样式。外部应用应导入 `@momots/design/tailwind.css`；该入口通过 `@source` 注册包内 `dist`，让 Tailwind v4 生成组件使用的 utility。
 
 ## 主题
 
@@ -121,8 +152,15 @@ await Bun.build({
 
 ```css
 @import "tailwindcss";
+@import "@momots/design/tailwind.css";
 @import "@momots/design/themes/neutral.css";
 @import "@momots/design/themes/anthropic.css";
+```
+
+使用 `PickerCore`、`PickerDate` 或 `PickerTime` 时，再显式导入滚轮组件样式：
+
+```css
+@import "@momots/design/picker.css";
 ```
 
 然后在根元素或局部容器上切换主题类：

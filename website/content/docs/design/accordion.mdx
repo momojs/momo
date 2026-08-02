@@ -35,9 +35,9 @@ import { Accordion } from "@momots/design/components/accordion";
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
-| `value` | `T[]` | 当前展开项 |
-| `defaultValue` | `T[]` | 非受控默认展开项 |
-| `options` | `AccordionOption<T>[]` | 面板列表，支持 `label`、`content`、`disabled`、`className`、`style` |
+| `value` | `T \| T[]` | 当前展开项；`multiple` 为 `true` 时使用数组 |
+| `defaultValue` | `T \| T[]` | 非受控默认展开项；`multiple` 为 `true` 时使用数组 |
+| `options` | `AccordionOption<T>[]` | 面板列表；当前简化渲染消费 `value`、`label` 与 `content` |
 | `multiple` | `boolean` | 是否允许同时展开多项 |
 | `className` | `string` | 根节点追加 Tailwind class |
-| `onValueChange` | `(value: T[]) => void` | 展开项变化回调 |
+| `onValueChange` | Base UI callback | 展开项变化回调，值形状随 `multiple` 改变 |

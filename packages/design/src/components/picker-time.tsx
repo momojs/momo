@@ -1,9 +1,9 @@
 import { getHours, getMinutes, set } from 'date-fns';
 import { range } from 'remeda';
 
-import { useControllableValue } from '../hooks';
-import type { ControlOption } from '../shared';
-import { PickerCore } from './picker-core';
+import { useControllableValue } from '../hooks/index.js';
+import type { ControlOption } from '../shared/index.js';
+import { PickerCore } from './picker-core.js';
 
 const today = new Date();
 

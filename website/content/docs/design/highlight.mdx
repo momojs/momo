@@ -1,0 +1,158 @@
+---
+title: Highlight
+description: 用 Motion 在多个目标之间移动、切换和退出高亮层。
+icon: Sparkles
+---
+
+Highlight effects 将 DOM 测量、目标注册、交互事件和 Motion 渲染拆成四个可组合 API。它适合 tabs、segmented control、菜单 hover 与可移动选中背景。
+
+<HighlightPlayground />
+
+## 导入
+
+Effects 当前从包根入口导出：
+
+```tsx
+import {
+  Highlight,
+  useHighlightLayer,
+  useHighlightRegistrar,
+  useHighlightTrigger,
+} from "@momots/design";
+```
+
+## 工作方式
+
+1. `useHighlightLayer` 相对容器测量目标元素，并产生 Motion style。
+2. `useHighlightTrigger` 把 hover、click 或 focus 事件连接到 layer。
+3. `useHighlightRegistrar` 用稳定 value 注册元素，适合受控的选中态。
+4. `Highlight` 根据 layer style 渲染并动画化绝对定位的高亮层。
+
+容器必须建立定位上下文，通常使用 `position: relative`。交互内容还需要位于高亮之上；`Highlight` 自带 `pointer-events: none`，不会拦截点击。
+
+## 移动高亮
+
+下面同时使用一个 hover layer 和一个 selected layer：
+
+```tsx
+function Navigation() {
+  const [value, setValue] = useState("overview");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const hoverLayer = useHighlightLayer<HTMLButtonElement, HTMLDivElement>(
+    containerRef,
+  );
+  const selectedLayer = useHighlightLayer<HTMLButtonElement, HTMLDivElement>(
+    containerRef,
+  );
+  const hover = useHighlightTrigger(hoverLayer, { trigger: "hover" });
+  const selected = useHighlightRegistrar(selectedLayer);
+
+  useLayoutEffect(() => {
+    selected.activate(value);
+  }, [selected.activate, value]);
+
+  return (
+    <div ref={containerRef} className="relative flex gap-1">
+      <Highlight
+        className="bg-momo-bg-surface-muted"
+        highlightStyle={hoverLayer.style}
+      />
+      <Highlight
+        className="bg-momo-bg-brand"
+        highlightStyle={
+          selectedLayer.style
+            ? { ...selectedLayer.style, zIndex: 1 }
+            : null
+        }
+      />
+
+      {items.map((item) => (
+        <button
+          key={item.value}
+          ref={selected.register(item.value)}
+          className="relative z-9"
+          {...hover.getReferenceProps({
+            onClick: () => setValue(item.value),
+          })}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+把多个 layer 放在同一容器时，可以在 `highlightStyle` 中覆盖 `zIndex`，明确 hover 与 selected 背景的层级。
+
+## useHighlightLayer
+
+```ts
+const layer = useHighlightLayer(targetContainerRef, { enabled: true });
+```
+
+返回值：
+
+| 字段 | 说明 |
+| --- | --- |
+| `style` | 目标相对容器的 `x`、`y`、`width`、`height` 与 `zIndex`；没有目标时为 `null` |
+| `setTarget(element)` | 测量并激活目标，返回仅清理该目标的函数 |
+| `clear(target?)` | 清空 layer；传入非当前目标时不会误清理新目标 |
+| `flush()` | 对当前目标重新测量；布局在目标不变时发生变化后可手动调用 |
+
+测量会考虑容器边框与滚动偏移，但 Hook 不会自动安装 ResizeObserver。目标尺寸或容器布局在激活后改变时，应在合适的 layout effect 中调用 `flush()`。
+
+将 `enabled` 设为 `false` 会清除 style；重新启用时，如果目标仍然存在，会再次测量。
+
+## useHighlightRegistrar
+
+Registrar 用 `ControlValue` 把稳定的业务值映射到 DOM 元素：
+
+```tsx
+const registrar = useHighlightRegistrar(layer);
+
+<button ref={registrar.register("account")} />
+registrar.activate("account");
+registrar.clear();
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `register(value)` | 返回缓存过的 callback ref，负责挂载、卸载与目标清理 |
+| `activate(value)` | 激活已注册的元素；元素稍后挂载时也会继续匹配该 value |
+| `clear()` | 清除当前 value 与 layer |
+
+value 必须在同一 registrar 内唯一，否则后注册的元素会覆盖同一个映射。
+
+## useHighlightTrigger
+
+```ts
+const trigger = useHighlightTrigger(layer, {
+  enabled: true,
+  trigger: "hover", // "hover" | "click" | "focus"
+});
+```
+
+`getReferenceProps(existingProps?)` 返回应展开到目标元素上的事件 props，并会先调用传入的原事件处理器：
+
+| 模式 | 行为 |
+| --- | --- |
+| `hover` | pointer enter 激活，pointer leave 清除；移动端会自动停用 |
+| `click` | 点击时激活，不会自动清除 |
+| `focus` | focus 激活，blur 清除 |
+
+禁用 trigger 时，`getReferenceProps` 会原样返回已有 props。切换模式并不会替调用方清理旧模式留下的目标；动态切换时可以同步调用 `layer.clear()`。
+
+## Highlight
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `highlightStyle` | `StyleKeyframesDefinition \| null` | 通常传入 `layer.style`，控制位置与尺寸 |
+| `active` | `boolean` | 即使没有 measured style 也保持可见，适合铺满容器的高亮 |
+| `exitDelay` | `number` | 退出延迟，单位为毫秒 |
+| `transition` | Motion `Transition` | 当前实现只把它合并到退出状态的 transition |
+| `className` | `string` | 高亮颜色、圆角、阴影等视觉样式 |
+| `...props` | `ComponentProps<typeof motion.div>` | 其余 Motion div 属性 |
+
+当 `active` 为假且 `highlightStyle` 为 `null` 时，组件通过 `AnimatePresence` 执行退出。组件使用 scale 与 opacity 表达出现和消失，位置和尺寸由 Motion 在目标之间插值。`exitDelay` 与 `transition.delay` 只影响退出；当前组件不会把 `transition` prop 传给进入或移动状态。

@@ -4,7 +4,7 @@ description: 表单友好的开关控件。
 icon: ToggleRight
 ---
 
-`Switch` 使用 Base UI Switch 提供隐藏 input、受控/非受控状态和表单提交语义。组件只渲染开关本体，标签与说明文字由调用方组合；thumb 内容可通过 `thumbChecked` / `thumbUnchecked` 自定义。轨道、thumb 内容与 focus ring 消费 momo semantic token。
+`Switch` 使用 Base UI Switch 提供隐藏 input、受控/非受控状态和表单提交语义。组件只渲染开关本体，标签与说明文字由调用方组合；thumb 内容可通过 `checkedIcon` / `uncheckedIcon` 自定义。轨道、thumb 内容与 focus ring 消费 momo semantic token。
 
 <SwitchPlayground />
 
@@ -45,8 +45,8 @@ import { Switch } from "@momots/design/components/switch";
 | `form` | `string` | 关联的 form id |
 | `nativeButton` | `boolean` | 是否使用原生 button 行为 |
 | `inputRef` | `Ref<HTMLInputElement>` | 访问隐藏 input |
-| `thumbChecked` | `ReactNode` | checked 状态下的 thumb 内容 |
-| `thumbUnchecked` | `ReactNode` | unchecked 状态下的 thumb 内容 |
+| `checkedIcon` | `ReactNode` | checked 状态下的 thumb 内容 |
+| `uncheckedIcon` | `ReactNode` | unchecked 状态下的 thumb 内容 |
 | `className` | `string` | 根节点追加 Tailwind class |
 | `onCheckedChange` | `(checked: boolean) => void` | 状态变化回调 |
 | `...props` | `HTMLMotionProps<"span">` | 传给 thumb motion span 的其余属性 |

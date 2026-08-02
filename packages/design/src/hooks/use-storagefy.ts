@@ -2,7 +2,7 @@ import { useEffectEvent, useLayoutEffect, useState } from 'react';
 
 import type { Realizable, Updater } from '@momots/core';
 import { realize } from '@momots/core';
-import type { Storagefy } from '@momots/host';
+import type { Storagefy } from '@momots/host/storage';
 
 export const useStoragefy = <T, const D = null>(
   storage: Storagefy<T | D>,

@@ -10,9 +10,9 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { asArray } from '@momots/core';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
-import { useControllableValue, usePresenceGate } from '../hooks';
-import type { ControlOption, ControlValue } from '../shared';
-import { cx } from '../tailwind';
+import { useControllableValue, usePresenceGate } from '../hooks/index.js';
+import type { ControlOption, ControlValue } from '../shared/index.js';
+import { cx } from '../tailwind/index.js';
 
 type ItemProps = {
   value: ControlValue;

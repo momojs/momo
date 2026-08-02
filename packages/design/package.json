@@ -1,6 +1,15 @@
 {
   "name": "@momots/design",
   "version": "0.1.0-alpha.0",
+  "description": "React 19 interface primitives combining Base UI, Motion, and Tailwind CSS v4.",
+  "keywords": [
+    "momots",
+    "react",
+    "components",
+    "design-system",
+    "tailwindcss",
+    "motion"
+  ],
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -14,27 +23,123 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
     },
-    "./components/*": {
-      "types": "./dist/components/*.d.ts",
-      "import": "./dist/components/*.js"
+    "./components/accordion": {
+      "types": "./dist/components/accordion.d.ts",
+      "import": "./dist/components/accordion.js"
+    },
+    "./components/badge": {
+      "types": "./dist/components/badge.d.ts",
+      "import": "./dist/components/badge.js"
+    },
+    "./components/button": {
+      "types": "./dist/components/button.d.ts",
+      "import": "./dist/components/button.js"
+    },
+    "./components/checkbox": {
+      "types": "./dist/components/checkbox.d.ts",
+      "import": "./dist/components/checkbox.js"
+    },
+    "./components/dialog": {
+      "types": "./dist/components/dialog.d.ts",
+      "import": "./dist/components/dialog.js"
+    },
+    "./components/drawer": {
+      "types": "./dist/components/drawer.d.ts",
+      "import": "./dist/components/drawer.js"
+    },
+    "./components/input": {
+      "types": "./dist/components/input.d.ts",
+      "import": "./dist/components/input.js"
+    },
+    "./components/numeric": {
+      "types": "./dist/components/numeric.d.ts",
+      "import": "./dist/components/numeric.js"
+    },
+    "./components/picker-core": {
+      "types": "./dist/components/picker-core.d.ts",
+      "import": "./dist/components/picker-core.js"
+    },
+    "./components/picker-date": {
+      "types": "./dist/components/picker-date.d.ts",
+      "import": "./dist/components/picker-date.js"
+    },
+    "./components/picker-time": {
+      "types": "./dist/components/picker-time.d.ts",
+      "import": "./dist/components/picker-time.js"
+    },
+    "./components/radio": {
+      "types": "./dist/components/radio.d.ts",
+      "import": "./dist/components/radio.js"
+    },
+    "./components/rating": {
+      "types": "./dist/components/rating.d.ts",
+      "import": "./dist/components/rating.js"
+    },
+    "./components/select": {
+      "types": "./dist/components/select.d.ts",
+      "import": "./dist/components/select.js"
+    },
+    "./components/slider": {
+      "types": "./dist/components/slider.d.ts",
+      "import": "./dist/components/slider.js"
+    },
+    "./components/spinner": {
+      "types": "./dist/components/spinner.d.ts",
+      "import": "./dist/components/spinner.js"
+    },
+    "./components/switch": {
+      "types": "./dist/components/switch.d.ts",
+      "import": "./dist/components/switch.js"
+    },
+    "./components/tabs": {
+      "types": "./dist/components/tabs.d.ts",
+      "import": "./dist/components/tabs.js"
+    },
+    "./components/toggle-group": {
+      "types": "./dist/components/toggle-group.d.ts",
+      "import": "./dist/components/toggle-group.js"
+    },
+    "./components/tween-number": {
+      "types": "./dist/components/tween-number.d.ts",
+      "import": "./dist/components/tween-number.js"
     },
     "./hooks": {
       "types": "./dist/hooks/index.d.ts",
       "import": "./dist/hooks/index.js"
     },
+    "./effects": {
+      "types": "./dist/effects/index.d.ts",
+      "import": "./dist/effects/index.js"
+    },
     "./shared": {
       "types": "./dist/shared/index.d.ts",
       "import": "./dist/shared/index.js"
     },
+    "./tailwind": {
+      "types": "./dist/tailwind/index.d.ts",
+      "import": "./dist/tailwind/index.js"
+    },
+    "./tailwind.css": "./src/styles/tailwind.css",
+    "./picker.css": "./src/styles/picker.css",
     "./themes/semantic.css": "./src/themes/semantic.css",
     "./themes/neutral.css": "./src/themes/neutral.css",
     "./themes/anthropic.css": "./src/themes/anthropic.css"
   },
   "files": [
     "dist",
+    "src/styles",
     "src/themes",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/momojs/momo.git",
+    "directory": "packages/design"
+  },
+  "homepage": "https://github.com/momojs/momo/tree/main/packages/design#readme",
+  "bugs": {
+    "url": "https://github.com/momojs/momo/issues"
+  },
   "publishConfig": {
     "access": "public",
     "tag": "alpha"
@@ -42,27 +147,31 @@
   "scripts": {
     "build": "momo build",
     "test": "bun test src",
+    "test:tarball": "bun run scripts/tarball-clean-check.ts",
     "format": "biome format --write .",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
-    "types": "tsc --project tsconfig.build.json"
+    "types": "tsc --project tsconfig.build.json",
+    "prepack": "bun run build && bun run test && bun run typecheck:spec && bun run test:tarball"
   },
   "devDependencies": {
     "@momots/cli": "workspace:*",
+    "@tailwindcss/node": "^4.3.2",
     "@types/react": "^19.2.17"
   },
   "peerDependencies": {
     "@base-ui/react": "^1.6.0",
     "@hugeicons/core-free-icons": "^4.2.2",
     "@hugeicons/react": "^1.1.9",
-    "@momots/core": "workspace:*",
-    "@momots/host": "workspace:*",
-    "@ncdai/react-wheel-picker": "^1.2.2",
+    "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
+    "@momots/host": ">=0.1.0-alpha.0 <0.2.0",
     "cva": "^1.0.0-beta.8",
     "date-fns": "^4.4.0",
     "motion": "^12.42.2",
     "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "remeda": "^2.32.0",
+    "tailwindcss": "^4.0.0",
     "tailwind-merge": "^3.6.0",
     "type-fest": "5.4.4"
   },

@@ -3,9 +3,9 @@ import type { Realizable } from '@momots/core';
 import { realize } from '@momots/core';
 import { isString, mapKeys } from 'remeda';
 
-import { cx } from '../tailwind';
-import type { ControlAxis, ControlDirection } from './control';
-import { isReactNode } from './guard';
+import { cx } from '../tailwind/index.js';
+import type { ControlAxis, ControlDirection } from './control.js';
+import { isReactNode } from './guard.js';
 
 export type BaseRender<TProps, TState> =
   | ComponentRenderFn<TProps, TState>
@@ -31,6 +31,7 @@ type SlotBaseClass<T> = Realizable<string | undefined, [T]>;
 function asProps<TProps extends SlotBaseProps>(
   arg?: React.ReactNode | Partial<SlotBaseConfig<TProps>>,
 ) {
+  if (arg === undefined) return undefined;
   return isReactNode(arg) ? ({ children: arg } as Partial<TProps>) : arg;
 }
 

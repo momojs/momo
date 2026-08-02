@@ -26,16 +26,16 @@ import type { VariantProps } from 'cva';
 import { AnimatePresence, motion } from 'motion/react';
 import { isString } from 'remeda';
 
-import type { HighlightTrigger } from '../effects/highlight';
+import type { HighlightTrigger } from '../effects/highlight.js';
 import {
   Highlight,
   useHighlightLayer,
   useHighlightTrigger,
-} from '../effects/highlight';
-import { usePresenceGate } from '../hooks';
-import { useControllableValue } from '../hooks/use-controllable-value';
-import type { ControlOption, ControlValue } from '../shared';
-import { cva, cx } from '../tailwind';
+} from '../effects/highlight.js';
+import { usePresenceGate } from '../hooks/index.js';
+import { useControllableValue } from '../hooks/use-controllable-value.js';
+import type { ControlOption, ControlValue } from '../shared/index.js';
+import { cva, cx } from '../tailwind/index.js';
 
 const variants = {
   trigger: cva({

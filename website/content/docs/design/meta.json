@@ -4,11 +4,13 @@
   "pages": [
     "index",
     "theme",
+    "---组件---",
     "accordion",
     "badge",
     "button",
     "checkbox",
     "dialog",
+    "drawer",
     "input",
     "numeric",
     "rating",
@@ -18,8 +20,15 @@
     "select",
     "slider",
     "tabs",
-    "calendar",
+    "picker-core",
     "picker-date",
-    "picker-time"
+    "picker-time",
+    "---Hooks---",
+    "use-controllable-value",
+    "use-presence-gate",
+    "---Utils---",
+    "control-types",
+    "slot-composition",
+    "highlight"
   ]
 }

@@ -16,8 +16,8 @@ import {
   useTransform,
 } from 'motion/react';
 
-import { useControllableValue } from '../hooks';
-import { cva } from '../tailwind';
+import { useControllableValue } from '../hooks/index.js';
+import { cva } from '../tailwind/index.js';
 
 // Drag detection & rubber band
 const CLICK_THRESHOLD = 3;
@@ -222,7 +222,12 @@ export function Slider({
   className,
   ...props
 }: ElasticSliderProps) {
-  const { value, defaultValue = min, onValueChange } = props;
+  const {
+    value,
+    defaultValue = min,
+    onValueChange,
+    'aria-label': ariaLabel,
+  } = props;
 
   const [currentValue = min, setValue] = useControllableValue({
     value,
@@ -532,7 +537,7 @@ export function Slider({
         role='slider'
         tabIndex={0}
         data-slot='elastic-slider-track'
-        aria-label={label}
+        aria-label={ariaLabel ?? label}
         aria-orientation='horizontal'
         aria-valuemin={min}
         aria-valuemax={max}

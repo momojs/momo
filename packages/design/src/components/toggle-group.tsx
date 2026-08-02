@@ -14,12 +14,12 @@ import {
   useHighlightLayer,
   useHighlightRegistrar,
   useHighlightTrigger,
-} from '../effects/highlight';
-import type { RippleRef } from '../effects/ripples';
-import { Ripples } from '../effects/ripples';
-import { useControllableValue } from '../hooks/use-controllable-value';
-import type { ControlOption } from '../shared';
-import { cva, cx } from '../tailwind';
+} from '../effects/highlight.js';
+import type { RippleRef } from '../effects/ripples.js';
+import { Ripples } from '../effects/ripples.js';
+import { useControllableValue } from '../hooks/use-controllable-value.js';
+import type { ControlOption } from '../shared/index.js';
+import { cva, cx } from '../tailwind/index.js';
 
 const variants = {
   toggle: cva({

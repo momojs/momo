@@ -30,9 +30,9 @@ import type { VariantProps } from 'cva';
 import type { HTMLMotionProps } from 'motion/react';
 import { MotionConfig, motion } from 'motion/react';
 
-import type { SlotBaseConfig, SlotBaseProps } from '../shared';
-import { asClass, asData, isReactNode, render } from '../shared';
-import { cva, cx } from '../tailwind';
+import type { SlotBaseConfig, SlotBaseProps } from '../shared/index.js';
+import { asClass, asData, isReactNode, render } from '../shared/index.js';
+import { cva, cx } from '../tailwind/index.js';
 
 const { Root, Input, Group, Increment, Decrement, ScrubArea, ScrubAreaCursor } =
   BaseNumberField;

@@ -58,6 +58,10 @@ export async function build(options: BuildOptions = {}): Promise<void> {
 
   const entrypoints = await collectEntrypoints(srcRoot);
   const result = await Bun.build({
+    define: {
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    },
+    banner: options.banner,
     entrypoints,
     format: options.format ?? 'esm',
     naming: '[dir]/[name].[ext]',

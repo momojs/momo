@@ -22,9 +22,13 @@ import type {
 import { Drawer as BaseDrawer } from '@base-ui/react/drawer';
 import { cardinality } from '@momots/core';
 
-import type { BaseRender, ControlAxis, SlotBaseConfig } from '../shared';
-import { asAxis, asClass, asData, render } from '../shared';
-import { cva, cx } from '../tailwind';
+import type {
+  BaseRender,
+  ControlAxis,
+  SlotBaseConfig,
+} from '../shared/index.js';
+import { asAxis, asClass, asData, render } from '../shared/index.js';
+import { cva, cx } from '../tailwind/index.js';
 
 const {
   Root,

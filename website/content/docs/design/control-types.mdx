@@ -1,0 +1,99 @@
+---
+title: Control Types
+description: momo/design 控件共享的值、尺寸、方向与选项类型。
+icon: ListChecks
+---
+
+`@momots/design/shared` 提供一组轻量类型，用来统一控件之间常见的数据形状。它们是结构约定，不是运行时模型：组件只读取自己需要的字段，不会自动实现 `ControlOption` 中的全部能力。
+
+<ControlTypesPlayground />
+
+## 导入
+
+```tsx
+import type {
+  ControlAxis,
+  ControlDirection,
+  ControlOption,
+  ControlSize,
+  ControlValue,
+} from "@momots/design/shared";
+```
+
+## 基础类型
+
+| 类型 | 定义 | 当前用途 |
+| --- | --- | --- |
+| `ControlValue` | `string \| number \| null` | Select、Accordion、RadioGroup，以及 Highlight / AutoHeight registrar 的键 |
+| `ControlSize` | `"sm" \| "md" \| "lg"` | 共享尺寸词汇；当前组件的 `size` 多由各自 variant 推导，并没有直接引用该 alias |
+| `ControlAxis` | `"x" \| "y"` | Drawer 内部布局与测量方向 |
+| `ControlDirection` | `"up" \| "down" \| "left" \| "right"` | `asAxis` 的方向输入；Drawer 的公开方向类型目前由 Base UI 推导 |
+
+这些类型是结构兼容的。例如一个 `ControlSize` 变量可以传给同样接受 `"sm" | "md" | "lg"` 的组件，但这不表示所有组件都直接依赖该类型别名。
+
+## ControlOption
+
+```ts
+type ControlOption<TValue extends ControlValue, TMeta = unknown> = {
+  value: TValue;
+  label: React.ReactNode;
+  style?: React.CSSProperties;
+  icon?: React.ReactNode;
+  extra?: React.ReactNode;
+  textValue?: string;
+  className?: string;
+  disabled?: boolean;
+  href?: string;
+  meta?: TMeta;
+};
+```
+
+`value` 与 `label` 是必填字段。`TMeta` 可以为业务元数据提供准确类型，但 momo 组件不会读取或修改 `meta`：调用方仍需自行使用它。
+
+```tsx
+type PlanMeta = { seats: number };
+
+const plans: ControlOption<"starter" | "team", PlanMeta>[] = [
+  {
+    value: "starter",
+    label: "Starter",
+    textValue: "Starter plan",
+    meta: { seats: 1 },
+  },
+  {
+    value: "team",
+    label: "Team",
+    disabled: false,
+    meta: { seats: 5 },
+  },
+];
+```
+
+### 组件实际消费的字段
+
+| 组件 | 显式读取的标准字段 | 扩展字段 / 备注 |
+| --- | --- | --- |
+| `Select` | `value`、`label`、`style`、`icon`、`textValue`、`className`、`disabled` | `textValue` 用于非纯文本 label 的可访问名称 |
+| `ToggleGroup` | `value`、`label`、`style`、`icon`、`textValue`、`className`、`disabled` | `textValue` 会作为按钮的 `aria-label` 回退值 |
+| `Tabs` | `value`、`label`、`style`、`icon`、`className`、`disabled` | `TabOption` 额外增加 `content` |
+| `Accordion` | `value`、`label` | `AccordionOption` 额外增加 `content`；其余标准字段目前不会传给 Item |
+| `PickerCore` | `value`、`label`、`textValue`、`disabled` | `textValue` 用于滚轮 option 的可访问名称 |
+| `RadioGroup` | `value` | 当前封装不会自动渲染 `label`，调用时需要另外提供可访问名称 |
+
+目前没有组件自动消费 `extra`、`href` 或 `meta`。不要因为字段出现在共享类型中，就假设组件会渲染徽标、创建链接或执行导航。需要这些行为时，应在调用侧组合 UI，或者先为对应组件增加明确的 API。
+
+## 复用同一组选项
+
+当两个组件消费的字段交集满足需求时，可以安全复用数组：
+
+```tsx
+const options: ControlOption<"grid" | "list">[] = [
+  { value: "grid", label: "Grid", textValue: "Grid view" },
+  { value: "list", label: "List", textValue: "List view" },
+];
+
+<ToggleGroup options={options} value={view} onChange={setView} />
+<Select options={options} value={view} onChange={setView} />
+```
+
+如果某个字段只对其中一个消费者有意义，它会被另一个组件忽略；共享数组本身不会为不同组件补齐行为。

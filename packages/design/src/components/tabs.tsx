@@ -6,16 +6,16 @@ import { useLayoutEffect, useRef } from 'react';
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 import { motion } from 'motion/react';
 
-import { useAutoHeight } from '../effects/height';
+import { useAutoHeight } from '../effects/height.js';
 import {
   Highlight,
   useHighlightLayer,
   useHighlightRegistrar,
   useHighlightTrigger,
-} from '../effects/highlight';
-import { useControllableValue } from '../hooks/use-controllable-value';
-import type { ControlOption } from '../shared';
-import { cva } from '../tailwind';
+} from '../effects/highlight.js';
+import { useControllableValue } from '../hooks/use-controllable-value.js';
+import type { ControlOption } from '../shared/index.js';
+import { cva } from '../tailwind/index.js';
 
 const {
   Root,

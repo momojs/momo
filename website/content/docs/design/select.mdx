@@ -58,7 +58,7 @@ import { Select } from "@momots/design/components/select";
 
 更多 Base UI 行为通过 `Select` 的 root props 与 slot props 透传，不额外暴露底层 primitive。`Select` 不会自动改写 Portal 挂载点；应用应把 momo theme class 挂在 `html` / `:root` 上，让默认挂载到 `body` 的 popup 也能继承 `--momo-*` token。需要自定义挂载点时传入 `portalProps.container`。
 
-选项 hover 背景由 `useHighlighter` + `Highlight` 驱动，而不是 item 自身的 CSS hover 背景；`highlightItemOnHover` 默认关闭，避免 Base UI 的 pointer hover highlight 和 motion highlighter 重叠。
+选项 hover 背景由 `useHighlightLayer`、`useHighlightTrigger` 与 `Highlight` 驱动，而不是 item 自身的 CSS hover 背景；`highlightItemOnHover` 默认关闭，避免 Base UI 的 pointer hover highlight 和 motion highlight 重叠。
 
 ## Props
 

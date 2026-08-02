@@ -1,6 +1,6 @@
 ---
 title: PickerTime
-description: 小时、分钟和秒选择器。
+description: 小时、分钟与上下午选择器。
 icon: Clock
 ---
 
@@ -21,6 +21,6 @@ import { PickerTime } from "@momots/design/components/picker-time";
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
 | `value` | `Date` | 受控时间 |
-| `defaultDate` | `Date` | 非受控默认时间 |
+| `defaultValue` | `Date` | 非受控默认时间，默认使用模块初始化时的当前时间 |
 | `disabled` | `boolean` | 是否禁用 |
-| `onChange` | `(value: Date) => void` | 时间变化回调，保留当前年月日 |
+| `onChange` | `(value: Date) => void` | 时间变化回调，保留当前年月日，并把秒与毫秒归零 |

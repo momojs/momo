@@ -10,11 +10,9 @@ import type {
 import { WheelPicker, WheelPickerWrapper } from '@ncdai/react-wheel-picker';
 import { clone, isArray } from 'remeda';
 
-import '@ncdai/react-wheel-picker/style.css';
-
-import { useControllableValue } from '../hooks';
-import type { ControlOption } from '../shared';
-import { cx } from '../tailwind';
+import { useControllableValue } from '../hooks/index.js';
+import type { ControlOption } from '../shared/index.js';
+import { cx } from '../tailwind/index.js';
 
 export interface PickerCoreProps<T extends WheelPickerValue>
   extends OmitOf<React.ComponentProps<typeof WheelPickerWrapper>, 'children'> {

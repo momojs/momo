@@ -1,0 +1,85 @@
+---
+title: usePresenceGate
+description: 协调嵌套 AnimatePresence，由内向外完成退出动画。
+icon: Layers
+---
+
+`usePresenceGate` 让父级 presence tree 在关闭后继续挂载，直到所有已登记的子级 `AnimatePresence` 完成退出。它适合弹层、下拉菜单和折叠内容等需要“内部内容先退出，外层容器再退出”的结构。
+
+<UsePresenceGatePlayground />
+
+## 使用
+
+```tsx
+import { AnimatePresence, motion } from "motion/react";
+
+import { usePresenceGate } from "@momots/design/hooks";
+
+function NestedPanel({ open }: { open: boolean }) {
+  const { visible, createGate } = usePresenceGate(open);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.section key="panel" exit={{ opacity: 0 }}>
+          <AnimatePresence
+            onExitComplete={createGate("content")}
+          >
+            {open && (
+              <motion.div
+                key="content"
+                exit={{ opacity: 0, y: 8 }}
+              >
+                Panel content
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.section>
+      )}
+    </AnimatePresence>
+  );
+}
+```
+
+子级内容由原始的 `open` 控制，父级容器则由 `visible` 控制。关闭时会按以下顺序运行：
+
+1. `open` 变为 `false`，`visible` 暂时保持 `true`。
+2. 关闭帧调用 `createGate("content")`，登记该子级退出任务。
+3. 子级 `AnimatePresence` 完成退出并调用返回的 handler。
+4. 所有 gate 都完成后，`visible` 变为 `false`，父级开始自己的退出动画。
+
+如果没有登记 gate，父级会在关闭后的 effect 中立即释放。
+
+## 多个与动态 Gate
+
+每个需要延迟父级卸载的子级 presence 都应登记自己的 gate，并使用唯一且稳定的 key：
+
+```tsx
+<AnimatePresence onExitComplete={createGate("backdrop")}>
+  {open && <motion.div key="backdrop" exit={{ opacity: 0 }} />}
+</AnimatePresence>
+
+<AnimatePresence onExitComplete={createGate("popup")}>
+  {open && <motion.div key="popup" exit={{ scale: 0.96 }} />}
+</AnimatePresence>
+```
+
+`createGate()` 也可以不传 key。无 key gate 会按照调用顺序获得稳定身份，因此只能用于每次渲染中数量和顺序都固定的调用。动态或条件渲染的子级应始终使用 `createGate(key)`。
+
+`createGate` 应在渲染对应 `AnimatePresence` 时调用。关闭期间如果某个已等待的 gate 从渲染树消失，Hook 会将它移除，避免父级永久保留；若关闭途中重新打开，待完成 gate 会被清空，`visible` 继续保持 `true`。
+
+## API
+
+```ts
+function usePresenceGate(open: boolean): {
+  visible: boolean;
+  createGate: (key?: string | number | symbol) => () => void;
+};
+```
+
+| 返回值 | 说明 |
+| --- | --- |
+| `visible` | `open` 时立即为 `true`；关闭后保持为 `true`，直到所有已登记 gate 完成 |
+| `createGate(key?)` | 创建并返回子级 `AnimatePresence` 的 `onExitComplete` handler |
+
+相关导出类型包括 `PresenceGateKey`、`PresenceGateExitHandler` 与 `UsePresenceGateResult`。

@@ -1,0 +1,99 @@
+---
+title: Drawer
+description: 支持方向、滑动关闭和停靠点的抽屉。
+icon: PanelBottomOpen
+---
+
+`Drawer` 基于 Base UI Drawer 封装，提供焦点管理、滑动关闭、四个展开方向和纵向停靠点。标题、说明、触发器、内容与底部操作均可通过 slot 组合。
+
+<DrawerPlayground />
+
+## 使用
+
+```tsx
+import { Button } from "@momots/design/components/button";
+import {
+  Drawer,
+  DrawerClose,
+} from "@momots/design/components/drawer";
+
+<Drawer
+  direction="down"
+  trigger={<Button>通知设置</Button>}
+  title={<span>通知设置</span>}
+  description={<span>选择工作区接收通知的方式。</span>}
+  content={{ className: "min-h-0" }}
+  footer={
+    <div className="w-full p-4 pt-2">
+      <DrawerClose render={<Button className="w-full" />}>
+        完成
+      </DrawerClose>
+    </div>
+  }
+>
+  <div className="min-h-0 flex-1 overflow-y-auto p-4">
+    抽屉正文
+  </div>
+</Drawer>
+```
+
+`title` 应始终存在，为抽屉提供可访问名称。它和 `description` 接受 React element 或 Base UI render callback；语义属性会合并到传入的元素。`DrawerClose` 必须放在当前 Drawer 内。
+
+## 滑动与停靠点
+
+```tsx
+const points = [0.35, 0.7, 1];
+
+<Drawer
+  direction="down"
+  snapPoints={points}
+  defaultSnapPoint={0.7}
+  snapToSequentialPoints
+>
+  ...
+</Drawer>
+```
+
+停靠点仅适用于 `up` 和 `down`。不大于 `1` 的数字表示视口高度比例，大于 `1` 的数字表示像素，也可以传入 `px` 或 `rem` 字符串。需要受控时组合 `snapPoint` 与 `onSnapPointChange`。
+
+`swipe` 只控制内置拖动手柄是否显示，默认 `true`；Base UI 的滑动手势仍由 Drawer Root 管理。`direction` 同时决定展开方向与关闭手势方向。
+
+## Modal
+
+- `modal={true}` 会圈定焦点、锁定页面滚动、阻止外部指针交互并显示遮罩。
+- `modal={false}` 允许与页面其余部分交互，不显示遮罩。
+- `modal="trap-focus"` 只圈定焦点，不锁定滚动或阻止外部指针交互。
+
+模态 Drawer 应提供标题和可见的 `DrawerClose`。可通过 `disablePointerDismissal` 阻止外部点击关闭；需要检查关闭原因或取消关闭时使用 `onOpenChange` 的 details 参数。
+
+## Slots
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `trigger` | Base UI render | 组合为 `Drawer.Trigger` 的触发元素 |
+| `title` | Base UI render | 组合为 `Drawer.Title` 的可访问标题 |
+| `description` | Base UI render | 组合为 `Drawer.Description` 的说明 |
+| `content` | slot config | 内容容器配置，默认 `true` |
+| `footer` | Base UI render | 底部操作容器 |
+
+`content` 传入 props object 可为默认容器追加 class 和原生属性。直接传入 ReactNode 会替换整个内容容器，也会跳过 Drawer 自动组装的手柄、标题、正文与 footer；一般应优先使用 props object。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `open` | `boolean` | 受控打开状态 |
+| `defaultOpen` | `boolean` | 非受控初始状态，默认 `false` |
+| `onOpenChange` | Base UI callback | 状态变化回调，details 包含关闭原因并可取消 |
+| `onOpenChangeComplete` | `(open: boolean) => void` | 打开或关闭动画完成后的回调 |
+| `direction` | `"up" \| "down" \| "left" \| "right"` | 展开与滑动关闭方向，默认 `"down"` |
+| `swipe` | `boolean` | 是否显示内置拖动手柄，默认 `true` |
+| `modal` | `boolean \| "trap-focus"` | 焦点、滚动锁定与外部交互策略，默认 `true` |
+| `disablePointerDismissal` | `boolean` | 是否阻止外部点击关闭 |
+| `snapPoints` | `(number \| string)[]` | 纵向 Drawer 的停靠点 |
+| `snapPoint` / `defaultSnapPoint` | `number \| string \| null` | 受控或非受控停靠点 |
+| `onSnapPointChange` | Base UI callback | 停靠点变化回调 |
+| `snapToSequentialPoints` | `boolean` | 是否只移动到相邻停靠点 |
+| `children` | `ReactNode` | Drawer 正文 |
+
+其余 Base UI Drawer Root 属性会透传到内部 Root。

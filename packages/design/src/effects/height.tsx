@@ -4,7 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { resize } from 'motion/react';
 
-import type { ControlValue } from '../shared';
+import type { ControlValue } from '../shared/index.js';
 
 export function useAutoHeight<T extends HTMLElement = HTMLDivElement>() {
   const [ref, setRef] = useState<T | null>(null);

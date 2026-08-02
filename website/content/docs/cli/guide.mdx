@@ -34,6 +34,7 @@ export default defineConfig({
     format: 'esm',
     target: 'browser',
     packages: 'external',
+    splitting: false,
     scripts: ['typecheck', 'types'],
     executables: [],
   },
@@ -47,6 +48,8 @@ export default defineConfig({
 | `format` | `esm` | `esm`、`cjs` 或 `iife` |
 | `target` | `browser` | `browser`、`bun` 或 `node` |
 | `packages` | `external` | 外部化或打包依赖 |
+| `splitting` | `false` | 为多个 ESM 入口提取共享 chunk，保留跨入口引用身份 |
+| `banner` | — | 添加到每个 JavaScript 产物顶部的文本，例如 `'use client';` |
 | `scripts` | `['typecheck', 'types']` | 构建前执行的 package scripts |
 | `executables` | `[]` | 构建后设置为可执行文件的相对路径 |
 

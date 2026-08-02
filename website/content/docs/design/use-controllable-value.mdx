@@ -1,0 +1,121 @@
+---
+title: useControllableValue
+description: 在受控与非受控模式之间复用一致的状态更新接口。
+icon: SlidersHorizontal
+---
+
+`useControllableValue` 用于实现同时支持 `value` / `defaultValue` 的组件。它在首帧确定控制模式，返回当前值和一个稳定的 setter；setter 支持直接赋值、函数 updater，以及传给 `onChange` 的附加参数。
+
+<UseControllableValuePlayground />
+
+## 使用
+
+```tsx
+import { useControllableValue } from "@momots/design/hooks";
+
+type CounterProps = {
+  value?: number;
+  defaultValue?: number;
+  onChange?: (value: number) => void;
+};
+
+function Counter({ value, defaultValue = 0, onChange }: CounterProps) {
+  const [current, setCurrent] = useControllableValue({
+    value,
+    defaultValue,
+    onChange,
+  });
+
+  return (
+    <button onClick={() => setCurrent((previous) => (previous ?? 0) + 1)}>
+      {current}
+    </button>
+  );
+}
+```
+
+不传 `value` 时，Hook 使用 `defaultValue` 初始化内部状态；传入已定义的 `value` 时，当前值由调用方控制，setter 只解析下一值并调用 `onChange`，等待调用方接受更新。
+
+```tsx
+// 非受控：Hook 保存后续状态。
+<Counter defaultValue={1} />
+
+// 受控：父组件保存状态。
+<Counter value={count} onChange={setCount} />
+```
+
+同一个批次中的多个受控函数 updater 会依次基于前一次乐观结果计算；下一次提交渲染时，计算基准会重置为调用方实际传回的 `value`。
+
+```tsx
+setCurrent((previous) => (previous ?? 0) + 1);
+setCurrent((previous) => (previous ?? 0) + 1);
+```
+
+如果解析后的值与当前值满足 `Object.is(previous, next)`，Hook 不会更新状态或调用 `onChange`。
+
+## 受控的 undefined
+
+默认使用 `value !== undefined` 推断是否受控。因此，若 `undefined` 本身是合法的受控值，需要显式设置 `controlled: true`：
+
+```tsx
+const [current, setCurrent] = useControllableValue<number>({
+  controlled: true,
+  value,
+  defaultValue: 10,
+  onChange,
+});
+```
+
+此时即使 `value` 为 `undefined`，Hook 也保持受控；`defaultValue` 不会成为回退值。调用 `setCurrent(10)` 会把 `10` 传给 `onChange`，但渲染值仍由调用方的 `value` 决定。
+
+反过来，`controlled: false` 会强制使用内部状态，即使同时传入了已定义的 `value`。
+
+## 控制模式固定
+
+控制模式只在首次渲染时确定：
+
+```ts
+const isControlled = controlled ?? value !== undefined;
+```
+
+后续从非受控切换为受控，或从受控切换为非受控，会在控制台产生警告，但不会改变 Hook 已经选择的模式。如果一个受控值在生命周期中可能变成 `undefined`，应从首次渲染开始持续传入 `controlled: true`；若确实需要切换模式，请通过 `key` 重新挂载使用该 Hook 的组件。
+
+## 附加回调参数
+
+第二个泛型参数可以声明 setter 和 `onChange` 共享的附加参数元组。函数 updater 会先解析为最终值，再把该值与原始参数一起交给回调：
+
+```tsx
+type ChangeDetails = { source: "pointer" | "keyboard" };
+
+const [value, setValue] = useControllableValue<
+  number,
+  [details: ChangeDetails]
+>({
+  defaultValue: 0,
+  onChange(next, details) {
+    console.log(next, details.source);
+  },
+});
+
+setValue((previous) => (previous ?? 0) + 1, { source: "keyboard" });
+```
+
+## API
+
+### `ControlOptions<Value, Args>`
+
+| 选项 | 类型 | 说明 |
+| --- | --- | --- |
+| `controlled` | `boolean` | 覆盖根据 `value` 是否为 `undefined` 得出的模式；模式仍固定于首帧 |
+| `value` | `Value` | 受控值 |
+| `defaultValue` | `Value` | 非受控初始值，只在初始化内部状态时使用 |
+| `onChange` | `(value: Value, ...args: Args) => void` | 接收解析后的新值和 setter 的附加参数 |
+
+### 返回值
+
+`useControllableValue` 返回 `[value, setValue]`：
+
+- `value` 是受控值或内部状态；没有已定义的受控值或默认值时，类型包含 `undefined`。
+- `setValue(updater, ...args)` 接受一个值或函数 updater。存在已定义的受控值，或非受控模式存在已定义的 `defaultValue` 时，重载会从返回值与 setter 类型中排除 `undefined`。
+
+导出的相关类型包括 `ControlOptions`、`ChangeHandler` 与 `SetValue`。

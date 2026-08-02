@@ -14,8 +14,8 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import type { VariantProps } from 'cva';
 import { MotionConfig, motion, useReducedMotion } from 'motion/react';
 
-import { useControllableValue } from '../hooks';
-import { cva } from '../tailwind';
+import { useControllableValue } from '../hooks/index.js';
+import { cva } from '../tailwind/index.js';
 
 const RATING_DEFAULTS = {
   icon: StarIcon,

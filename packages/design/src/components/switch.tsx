@@ -8,9 +8,9 @@ import type { VariantProps } from 'cva';
 import type { HTMLMotionProps } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
 
-import { useControllableValue } from '../hooks';
-import { swap } from '../shared/motion';
-import { cva, toPixel } from '../tailwind';
+import { useControllableValue } from '../hooks/index.js';
+import { swap } from '../shared/motion.js';
+import { cva, toPixel } from '../tailwind/index.js';
 
 const variants = {
   root: cva({

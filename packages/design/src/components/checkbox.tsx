@@ -6,8 +6,8 @@ import type { VariantProps } from 'cva';
 import type { HTMLMotionProps, SVGMotionProps } from 'motion/react';
 import { motion } from 'motion/react';
 
-import { useControllableValue } from '../hooks';
-import { cva } from '../tailwind';
+import { useControllableValue } from '../hooks/index.js';
+import { cva } from '../tailwind/index.js';
 
 const variants = {
   root: cva({

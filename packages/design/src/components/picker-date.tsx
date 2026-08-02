@@ -2,19 +2,19 @@
 
 import type { OmitOf } from '@momots/core';
 
-import { useControllableValue } from '../hooks';
-import type { PickerCoreProps } from './picker-core';
-import { PickerCore } from './picker-core';
-import type { PickerDatePrecision } from './picker-date.utils';
+import { useControllableValue } from '../hooks/index.js';
+import type { PickerCoreProps } from './picker-core.js';
+import { PickerCore } from './picker-core.js';
+import type { PickerDatePrecision } from './picker-date.utils.js';
 import {
   fromPickerDateValue,
   isPickerDateControlled,
   normalizePickerDate,
   toPickerDateColumns,
   toPickerDateValue,
-} from './picker-date.utils';
+} from './picker-date.utils.js';
 
-export type { PickerDatePrecision } from './picker-date.utils';
+export type { PickerDatePrecision } from './picker-date.utils.js';
 
 const columnAriaLabels = ['Year', 'Month', 'Day'];
 

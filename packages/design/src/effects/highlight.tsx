@@ -6,9 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StyleKeyframesDefinition } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
 
-import { useIsMobile } from '../hooks/use-is-mobile';
-import type { ControlValue } from '../shared';
-import { cx } from '../tailwind';
+import { useIsMobile } from '../hooks/use-is-mobile.js';
+import type { ControlValue } from '../shared/index.js';
+import { cx } from '../tailwind/index.js';
 
 export type HighlightTriggerType = 'hover' | 'click' | 'focus';
 
@@ -298,6 +298,7 @@ export function Highlight({
             opacity: 1,
             ...highlightStyle,
           }}
+          transition={transition}
           exit={{
             scale: 0,
             opacity: 0,

@@ -10,9 +10,9 @@ import { realize } from '@momots/core';
 import type { HTMLMotionProps } from 'motion/react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
-import { useControllableValue } from '../hooks';
-import type { ControlOption, ControlValue } from '../shared';
-import { cx } from '../tailwind';
+import { useControllableValue } from '../hooks/index.js';
+import type { ControlOption, ControlValue } from '../shared/index.js';
+import { cx } from '../tailwind/index.js';
 
 interface RadioIndicatorProps
   extends Pick<React.ComponentProps<typeof BaseRadio.Indicator>, 'keepMounted'>,
