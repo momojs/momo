@@ -1,0 +1,310 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "dbdf4353-4cf2-4547-8151-c79f2c07b464",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "stamp_rally",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "photo",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cup_type",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "size",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "price",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "calories",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sugar",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "caffeine",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "rating",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "brand",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "consumed_at",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch() * 1000)",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch() * 1000)",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "revision",
+      "entityType": "columns",
+      "table": "stamp_rally"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "stamp_rally_pk",
+      "entityType": "pks",
+      "table": "stamp_rally"
+    },
+    {
+      "columns": [
+        {
+          "value": "\"consumed_at\" desc",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "stamp_rally_consumed_at_idx",
+      "entityType": "indexes",
+      "table": "stamp_rally"
+    },
+    {
+      "columns": [
+        {
+          "value": "photo",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "stamp_rally_photo_idx",
+      "entityType": "indexes",
+      "table": "stamp_rally"
+    },
+    {
+      "columns": [
+        {
+          "value": "cup_type",
+          "isExpression": false
+        },
+        {
+          "value": "\"consumed_at\" desc",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "stamp_rally_cup_type_consumed_at_idx",
+      "entityType": "indexes",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "length(\"id\") > 0",
+      "name": "stamp_rally_id_length_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "length(\"photo\") <= 255",
+      "name": "stamp_rally_photo_length_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"cup_type\" in ('espresso', 'latte', 'coffee_special', 'americano', 'cappuccino', 'mocha', 'caramel_macchiato', 'flat_white', 'fruit_tea', 'milk_tea', 'milk', 'pure_tea', 'fruit_juice', 'sparkling_water', 'lemon_tea', 'flower_tea', 'unknown')",
+      "name": "stamp_rally_cup_type_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"size\" in ('short', 'tall', 'grande', 'venti')",
+      "name": "stamp_rally_size_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"price\" between 0 and 9999",
+      "name": "stamp_rally_price_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"calories\" between 0 and 1000",
+      "name": "stamp_rally_calories_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"sugar\" between 0 and 100",
+      "name": "stamp_rally_sugar_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"caffeine\" between 0 and 500",
+      "name": "stamp_rally_caffeine_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "typeof(\"rating\") = 'integer' and \"rating\" between 0 and 5",
+      "name": "stamp_rally_rating_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"brand\" is null or length(\"brand\") <= 40",
+      "name": "stamp_rally_brand_length_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "\"note\" is null or length(\"note\") <= 240",
+      "name": "stamp_rally_note_length_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "typeof(\"consumed_at\") = 'integer'",
+      "name": "stamp_rally_consumed_at_type_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "typeof(\"created_at\") = 'integer'",
+      "name": "stamp_rally_created_at_type_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "typeof(\"updated_at\") = 'integer'",
+      "name": "stamp_rally_updated_at_type_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    },
+    {
+      "value": "typeof(\"revision\") = 'integer' and \"revision\" >= 0",
+      "name": "stamp_rally_revision_check",
+      "entityType": "checks",
+      "table": "stamp_rally"
+    }
+  ],
+  "renames": []
+}

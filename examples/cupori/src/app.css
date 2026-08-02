@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "@momots/design/themes/anthropic.css";
+
+@source "../../../packages/design/src";
+
+@layer base {
+  :root,
+  #root {
+    width: 100dvw;
+    height: 100dvh;
+  }
+
+  body {
+    @apply relative isolate m-0 min-h-screen min-w-[320px];
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+#theme-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  contain: layout paint;
+  overflow: clip;
+  background: var(--momo-bg-canvas);
+  pointer-events: none;
+}
+
+#theme-surface::view-transition-group(root) {
+  animation-duration: 400ms;
+  animation-timing-function: ease-out;
+}
+
+#theme-surface::view-transition-old(root) {
+  animation: none;
+}
+
+#theme-surface::view-transition-new(root) {
+  animation: reveal 400ms ease-out both;
+  clip-path: circle(0 at 50% 50%);
+}
+
+@keyframes reveal {
+  to {
+    /* 71% is just over the center-to-corner radius. */
+    clip-path: circle(71% at 50% 50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+  }
+
+  #theme-surface::view-transition-group(root),
+  #theme-surface::view-transition-old(root),
+  #theme-surface::view-transition-new(root) {
+    animation: none !important;
+  }
+}

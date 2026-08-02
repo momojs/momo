@@ -11,7 +11,7 @@
     "website"
   ],
   "scripts": {
-    "build": "bun run --filter './packages/cli' build && bun run --filter './packages/core' build && bun run --filter './packages/host' build && bun run --filter './packages/drive' build",
+    "build": "bun run --filter './packages/cli' build && bun run --filter './packages/core' build && bun run --filter './packages/host' build && bun run --filter './packages/design' build && bun run --filter './packages/drive' build",
     "check": "bun run lint && bun run typecheck",
     "dev": "bun run --filter './examples/*' dev",
     "format": "biome format --write .",
