@@ -1,7 +1,7 @@
 import { $ } from 'bun';
 
-import { chmod, readdir, rm } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { chmod, copyFile, mkdir, readdir, rm } from 'node:fs/promises';
+import { dirname, isAbsolute, join } from 'node:path';
 
 import type { MomoBuildConfig } from './config';
 
@@ -78,6 +78,12 @@ export async function build(options: BuildOptions = {}): Promise<void> {
     }
 
     throw new Error('Bun build failed');
+  }
+
+  for (const [source, destination] of Object.entries(options.assets ?? {})) {
+    const output = resolve(distRoot, destination);
+    await mkdir(dirname(output), { recursive: true });
+    await copyFile(resolve(root, source), output);
   }
 
   for (const file of options.executables ?? []) {

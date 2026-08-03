@@ -27,7 +27,7 @@ const setOpen = mock((_value: unknown) => undefined);
 const setSelected = mock((_value: unknown) => undefined);
 const clearHighlight = mock(() => undefined);
 const flushHighlight = mock(() => undefined);
-const setHighlightTarget = mock(() => () => undefined);
+const setHighlightTarget = mock(() => undefined);
 const unmountSelect = mock(() => undefined);
 
 mock.module('react', () => ({

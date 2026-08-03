@@ -23,7 +23,7 @@ import {
 
 ## 工作方式
 
-1. `useHighlightLayer` 相对容器测量目标元素，并产生 Motion style。
+1. `useHighlightLayer` 相对容器测量目标元素，并产生 Motion style；目标或容器尺寸变化时会自动重新测量。
 2. `useHighlightTrigger` 把 hover、click 或 focus 事件连接到 layer。
 3. `useHighlightRegistrar` 用稳定 value 注册元素，适合受控的选中态。
 4. `Highlight` 根据 layer style 渲染并动画化绝对定位的高亮层。
@@ -97,13 +97,13 @@ const layer = useHighlightLayer(targetContainerRef, { enabled: true });
 | 字段 | 说明 |
 | --- | --- |
 | `style` | 目标相对容器的 `x`、`y`、`width`、`height` 与 `zIndex`；没有目标时为 `null` |
-| `setTarget(element)` | 测量并激活目标，返回仅清理该目标的函数 |
-| `clear(target?)` | 清空 layer；传入非当前目标时不会误清理新目标 |
-| `flush()` | 对当前目标重新测量；布局在目标不变时发生变化后可手动调用 |
+| `setTarget(element)` | 测量并激活目标；`enabled` 为真时开始监听目标与容器的 resize |
+| `clear(target?)` | 清空 layer 并停止监听；传入非当前目标时不会误清理新目标 |
+| `flush()` | 对当前目标重新测量；容器仅发生滚动等 resize 无法覆盖的变化时可手动调用 |
 
-测量会考虑容器边框与滚动偏移，但 Hook 不会自动安装 ResizeObserver。目标尺寸或容器布局在激活后改变时，应在合适的 layout effect 中调用 `flush()`。
+测量会考虑容器边框与滚动偏移。激活目标后，layer 会通过 Motion `resize` 监听目标与容器的尺寸变化并自动 `flush()`。容器内部滚动目前不会自动触发重测；若高亮需要跟随滚动，请在滚动时调用 `flush()`。
 
-将 `enabled` 设为 `false` 会清除 style；重新启用时，如果目标仍然存在，会再次测量。
+将 `enabled` 设为 `false` 会清除 style 并停止监听，但保留当前目标；重新启用时会再次测量并恢复监听。卸载 layer 时会完整清理目标与订阅。
 
 ## useHighlightRegistrar
 

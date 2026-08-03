@@ -17,6 +17,8 @@ export interface MomoBuildConfig {
   scripts?: string[];
   /** 构建后需要置为可执行（0o755）的产物，相对 outdir，如 `['bin.js']`。 */
   executables?: string[];
+  /** 构建后复制的静态文件：键相对包根目录，值相对 outdir。 */
+  assets?: Record<string, string>;
 }
 
 export interface MomoConfig {

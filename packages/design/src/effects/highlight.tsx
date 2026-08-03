@@ -3,8 +3,10 @@
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { compact } from '@momots/core';
 import type { StyleKeyframesDefinition } from 'motion/react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, resize } from 'motion/react';
+import { isNullish } from 'remeda';
 
 import { useIsMobile } from '../hooks/use-is-mobile.js';
 import type { ControlValue } from '../shared/index.js';
@@ -22,7 +24,7 @@ type HighlightLayerOptions = {
 export type HighlightLayer<TReference extends Element = HTMLElement> = {
   clear: (target?: TReference | null) => void;
   flush: () => void;
-  setTarget: (target: TReference) => () => void;
+  setTarget: (target: TReference) => void;
   style: StyleKeyframesDefinition | null;
 };
 
@@ -52,11 +54,14 @@ export function useHighlightLayer<
 ): HighlightLayer<TReference> {
   const [style, setStyle] = useState<StyleKeyframesDefinition | null>(null);
 
-  const targetRef = useRef<TReference | null>(null);
+  const refs = useRef<{
+    target: TReference | null;
+    cleanup: (() => void) | null;
+  }>({ target: null, cleanup: null });
 
   const flush = useCallback(() => {
     const container = containerRef.current;
-    const target = targetRef.current;
+    const { target } = refs.current;
     if (container && target && enabled) {
       const containerRect = container.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
@@ -81,33 +86,71 @@ export function useHighlightLayer<
     }
   }, [containerRef, enabled]);
 
-  const clear = useCallback((target?: TReference | null) => {
-    if (target && targetRef.current !== target) return;
-
-    targetRef.current = null;
-    setStyle(null);
+  const unobserve = useCallback(() => {
+    refs.current.cleanup?.();
+    refs.current.cleanup = null;
   }, []);
+
+  const observe = useCallback(
+    (target: TReference) => {
+      unobserve();
+
+      const { current } = containerRef;
+      // TODO: container scroll — scrollTop/Left affect measured x/y but
+      // ResizeObserver does not fire on scroll-only changes.
+      const cleanups = compact([
+        resize(target, flush),
+        current && resize(current, flush),
+      ]);
+
+      refs.current.cleanup = () => {
+        cleanups.forEach((cleanup) => cleanup());
+      };
+    },
+    [containerRef, flush, unobserve],
+  );
+
+  const clear = useCallback(
+    (reference?: TReference | null) => {
+      const { target } = refs.current;
+      if (
+        isNullish(reference) || //
+        Object.is(reference, target)
+      ) {
+        unobserve();
+        refs.current.target = null;
+        setStyle(null);
+      }
+    },
+    [unobserve],
+  );
 
   const setTarget = useCallback(
     (target: TReference) => {
-      targetRef.current = target;
+      clear();
+      refs.current.target = target;
       flush();
-      return () => {
-        clear(target);
-      };
+      if (enabled) observe(target);
     },
-    [clear, flush],
+    [clear, enabled, flush, observe],
   );
 
   useEffect(() => {
     if (!enabled) {
+      unobserve();
       setStyle(null);
       return;
     }
-    if (targetRef.current) {
-      flush();
-    }
-  }, [enabled, flush]);
+
+    const { target } = refs.current;
+    if (!target) return;
+
+    flush();
+    observe(target);
+    return unobserve;
+  }, [enabled, flush, observe, unobserve]);
+
+  useEffect(() => () => clear(), [clear]);
 
   return {
     clear,

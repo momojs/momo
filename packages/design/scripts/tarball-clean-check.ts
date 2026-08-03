@@ -134,8 +134,17 @@ const assertPackedFiles = async (
   await Promise.all([
     access(join(installedPackageDirectory, 'README.md')),
     access(join(installedPackageDirectory, 'src/styles/picker.css')),
-    access(join(installedPackageDirectory, 'src/styles/tailwind.css')),
+    access(join(installedPackageDirectory, 'dist/tailwind.css')),
   ]);
+  if (
+    await Bun.file(
+      join(installedPackageDirectory, 'src/styles/tailwind.css'),
+    ).exists()
+  ) {
+    throw new Error(
+      'Packed package contains the obsolete source Tailwind entry',
+    );
+  }
 
   for (const [subpath, value] of Object.entries(manifest.exports ?? {})) {
     if (subpath.includes('*')) continue;
@@ -179,7 +188,7 @@ const assertPackedFiles = async (
   const compiled = await compile(
     [
       '@import "tailwindcss";',
-      `@import "${join(installedPackageDirectory, 'src/styles/tailwind.css')}";`,
+      `@import "${join(installedPackageDirectory, 'dist/tailwind.css')}";`,
       `@import "${join(installedPackageDirectory, 'src/styles/picker.css')}";`,
       `@import "${join(installedPackageDirectory, 'src/themes/neutral.css')}";`,
     ].join('\n'),
