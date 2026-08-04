@@ -119,7 +119,7 @@
       "types": "./dist/tailwind/index.d.ts",
       "import": "./dist/tailwind/index.js"
     },
-    "./tailwind.css": "./src/styles/tailwind.css",
+    "./tailwind.css": "./dist/tailwind.css",
     "./picker.css": "./src/styles/picker.css",
     "./themes/semantic.css": "./src/themes/semantic.css",
     "./themes/neutral.css": "./src/themes/neutral.css",
