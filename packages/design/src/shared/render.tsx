@@ -31,10 +31,9 @@ type SlotBaseClass<T> = Realizable<string | undefined, [T]>;
 function asProps<TProps extends SlotBaseProps>(
   arg?: React.ReactNode | Partial<TProps>,
 ): Partial<TProps> | undefined {
-  if (arg === undefined) return undefined;
-  return isReactNode(arg)
-    ? ({ children: arg } as Partial<TProps>)
-    : (arg as Partial<TProps>);
+  if (arg === undefined) return;
+  if (!isReactNode(arg)) return arg;
+  return { children: arg } as Partial<TProps>;
 }
 
 export function asAxis(direction?: ControlDirection) {
@@ -57,6 +56,12 @@ export function asClass<S>(...args: Array<SlotBaseClass<S>>) {
   return (state: S) => {
     return cx(...args.map((arg) => realize(arg, state)));
   };
+}
+
+export function asSlot<TProps extends { children?: React.ReactNode }>(
+  config: SlotBaseConfig<TProps> | undefined,
+): SlotBaseConfig<TProps> {
+  return config === undefined ? true : config;
 }
 
 export function render<TProps extends SlotBaseProps>(

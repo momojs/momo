@@ -47,6 +47,10 @@
       "types": "./dist/components/drawer.d.ts",
       "import": "./dist/components/drawer.js"
     },
+    "./components/field": {
+      "types": "./dist/components/field.d.ts",
+      "import": "./dist/components/field.js"
+    },
     "./components/input": {
       "types": "./dist/components/input.d.ts",
       "import": "./dist/components/input.js"

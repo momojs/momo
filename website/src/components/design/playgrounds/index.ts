@@ -7,6 +7,7 @@ export { CheckboxPlayground } from './checkbox';
 export { ControlTypesPlayground } from './control-types';
 export { DialogPlayground } from './dialog';
 export { DrawerPlayground } from './drawer';
+export { FieldPlayground } from './field';
 export { HighlightPlayground } from './highlight';
 export { IconPlayground } from './icon';
 export { InputPlayground } from './input';

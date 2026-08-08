@@ -4,6 +4,7 @@ export * from './button.js';
 export * from './checkbox.js';
 export * from './dialog.js';
 export * from './drawer.js';
+export * from './field.js';
 export * from './input.js';
 export * from './numeric.js';
 export * from './picker-core.js';

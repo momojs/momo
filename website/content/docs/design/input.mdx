@@ -48,19 +48,22 @@ const [email, setEmail] = useState("");
 
 ## Field 集成
 
-Base UI Input 会自动接入 Base UI Field。Field 可以关联标签、说明与错误，并把 `valid`、`invalid`、`dirty`、`touched`、`filled` 和 `focused` 状态传给 Input：
+Input 会自动接入 momo Field。Field 可以关联标签、说明与错误，并把 `valid`、`invalid`、`dirty`、`touched`、`filled` 和 `focused` 状态传给 Input：
 
 ```tsx
-import { Field } from "@base-ui/react/field";
+import { Field } from "@momots/design/components/field";
 import { Input } from "@momots/design/components/input";
 
-<Field.Root name="email" validationMode="onBlur">
-  <Field.Label>邮箱</Field.Label>
+<Field
+  name="email"
+  label="邮箱"
+  variant="stacked"
+  description="用于接收工作区通知。"
+  error="请输入有效的邮箱地址。"
+  validationMode="onBlur"
+>
   <Input type="email" required />
-  <Field.Description>用于接收工作区通知。</Field.Description>
-  <Field.Error match="valueMissing">请输入邮箱。</Field.Error>
-  <Field.Error match="typeMismatch">请输入有效的邮箱地址。</Field.Error>
-</Field.Root>
+</Field>
 ```
 
 不使用 Field 时，可以通过 `aria-invalid` 表达外部校验状态，并用 `aria-describedby` 关联错误说明。
