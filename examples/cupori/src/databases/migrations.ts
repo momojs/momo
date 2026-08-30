@@ -67,6 +67,35 @@ if (!latestMigration) {
 
 export const DATABASE_VERSION = latestMigration.toVersion;
 
+/**
+ * 数据兼容基线。V0 表示当前仍处于可丢弃数据的测试阶段：每次应用进程
+ * 初始化都重建数据库。准备开始保留测试/正式数据时，将它提升为 1。
+ *
+ * SQLite/Capacitor 的实际 schema 版本仍从 1 开始，避免把已初始化数据库
+ * 与 SQLite 默认的 PRAGMA user_version = 0 混为一谈。
+ */
+export const DATABASE_BASELINE_VERSION = 0;
+
+const PRE_BASELINE_DEVELOPMENT_DATABASE_VERSIONS = new Set([2, 3]);
+
+/**
+ * V0 没有稳定 schema 语义，统一视为需要重建的基线哨兵。旧开发阶段曾使用
+ * v2/v3，它们也只在高于当前正式版本时允许重建；其他未知高版本必须拒绝，
+ * 防止新版数据库被旧版应用误删。
+ */
+export function shouldRebuildDatabaseVersion(
+  version: number | undefined,
+  baselineVersion = DATABASE_BASELINE_VERSION,
+): boolean {
+  return (
+    baselineVersion === 0 ||
+    version === 0 ||
+    (typeof version === 'number' &&
+      version > DATABASE_VERSION &&
+      PRE_BASELINE_DEVELOPMENT_DATABASE_VERSIONS.has(version))
+  );
+}
+
 /** 供 Capacitor 在打开 iOS、Android 或 Web 数据库时执行。 */
 export const DATABASE_UPGRADES: capSQLiteVersionUpgrade[] =
   DATABASE_MIGRATIONS.map(({ statements, toVersion }) => ({

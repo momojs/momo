@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, Fragment, useContext } from 'react';
+import { createContext, Fragment, useContext, useLayoutEffect } from 'react';
 
 import {
   ChevronDownIcon,
@@ -10,7 +10,7 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { OmitOf } from '@momots/core';
 import { eliminate } from '@momots/core';
-import { cva, cx, usePrevious } from '@momots/design';
+import { cva, cx, useAutoHeight, usePrevious } from '@momots/design';
 import type { VariantProps } from 'cva';
 import { isAfter } from 'date-fns';
 import {
@@ -34,6 +34,13 @@ import { clone, entries, omit } from 'remeda';
 import { m } from '@/paraglide/messages.js';
 
 const names = getDefaultClassNames();
+
+type HeightApi = Pick<
+  ReturnType<typeof useAutoHeight>,
+  'activate' | 'register'
+>;
+
+const HeightContext = createContext<HeightApi>(null!);
 
 const variants = {
   calendar: cva({
@@ -318,9 +325,19 @@ function Month({
   calendarMonth: CalendarMonth;
   displayIndex: number;
 } & React.HTMLAttributes<HTMLDivElement>) {
+  const { activate, register } = useContext(HeightContext);
+
+  useLayoutEffect(() => {
+    activate(displayIndex);
+  }, [displayIndex, activate]);
+
   return (
     <MonthContext.Provider value={{ displayIndex, calendarMonth }}>
-      <div data-slot='CalendarMonth' {...props} />
+      <div
+        data-slot='CalendarMonth'
+        ref={register(displayIndex)}
+        {...props}
+      />
     </MonthContext.Provider>
   );
 }
@@ -433,38 +450,48 @@ export function Calendar({
   formatters,
   showWeekNumber,
   showOutsideDays = true,
-  onMonthChange,
   getDayImage,
   ...props
 }: CalendarProps) {
+  const { activate, register, rect } = useAutoHeight();
+
   return (
-    <DayImageContext.Provider value={getDayImage}>
-      <MotionConfig
-        transition={{
-          bounce: 0.1,
-          type: 'spring',
-          visualDuration: 0.3,
-        }}
-      >
-        <DayPicker
-          mode='single'
-          hideNavigation
-          locale={locale}
-          selected={today}
-          components={components}
-          captionLayout={caption?.layout}
-          showWeekNumber={showWeekNumber}
-          showOutsideDays={showOutsideDays}
-          className={variants.calendar({ className })}
-          classNames={toClsx({ caption, cell, pager })}
-          formatters={{
-            formatMonthDropdown: (date) =>
-              date.toLocaleString(locale?.code, { month: 'short' }),
-            ...formatters,
+    <HeightContext.Provider value={{ activate, register }}>
+      <DayImageContext.Provider value={getDayImage}>
+        <MotionConfig
+          transition={{
+            bounce: 0.1,
+            type: 'spring',
+            visualDuration: 0.3,
           }}
-          {...props}
-        />
-      </MotionConfig>
-    </DayImageContext.Provider>
+        >
+          <motion.div
+            data-slot='Calendar'
+            className='overflow-hidden'
+            initial={false}
+            animate={{ height: rect.height || 'auto' }}
+          >
+            <DayPicker
+              mode='single'
+              hideNavigation
+              locale={locale}
+              selected={today}
+              components={components}
+              captionLayout={caption?.layout}
+              showWeekNumber={showWeekNumber}
+              showOutsideDays={showOutsideDays}
+              className={variants.calendar({ className })}
+              classNames={toClsx({ caption, cell, pager })}
+              formatters={{
+                formatMonthDropdown: (date) =>
+                  date.toLocaleString(locale?.code, { month: 'short' }),
+                ...formatters,
+              }}
+              {...props}
+            />
+          </motion.div>
+        </MotionConfig>
+      </DayImageContext.Provider>
+    </HeightContext.Provider>
   );
 }

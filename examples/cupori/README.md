@@ -161,9 +161,10 @@ bun run db:generate
 校验 migration 历史、schema 是否存在未生成的变更，以及 manifest 是否同步；
 正式构建也会自动执行此检查。
 
-当前开发基线不兼容此前的手写 v1–v3 数据库。首次切换到新基线时，应卸载
-模拟器中的 Cupori 或清除其 App 数据；从这条 v1 baseline 开始，已经生成的
-migration 必须冻结，后续结构变更只能追加新版本。
+当前数据兼容基线 `DATABASE_BASELINE_VERSION` 设为 V0。V0 代表数据可丢弃的
+测试阶段：每次应用进程初始化都会清除 SQLite 与本地照片，并从 Drizzle 基线
+重建到运行时 schema V1。准备开始保留 TestFlight 或正式数据前，必须把兼容
+基线提升为 V1；已经生成的 migration 必须冻结，后续结构变更只能追加新版本。
 
 ### Paraglide
 

@@ -91,7 +91,7 @@ function CalendarRoute() {
   );
 
   return (
-    <Page className='p-2 flex flex-col gap-4'>
+    <Page className='p-2 grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-4'>
       <Calendar
         month={date}
         locale={getDateFnsLocale()}
@@ -103,6 +103,7 @@ function CalendarRoute() {
           setDailyOpen(true);
         }}
       />
+      <div>今日记录</div>
       <Drawer
         direction='down'
         title={<span>{m.daily_add_cup()}</span>}

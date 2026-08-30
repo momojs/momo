@@ -6,10 +6,12 @@ import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { CupSizeEnums, StoredCupTypeEnums } from './enums';
 import {
   assertMigrationPlan,
+  DATABASE_BASELINE_VERSION,
   DATABASE_MIGRATIONS,
   DATABASE_UPGRADES,
   DATABASE_VERSION,
   migrate,
+  shouldRebuildDatabaseVersion,
 } from './migrations';
 
 type MigrationConnection = Pick<
@@ -93,6 +95,23 @@ describe('database migration plan', () => {
         { name: 'blank', statements: ['  '], toVersion: 1 },
       ]),
     ).toThrow('non-empty statements');
+  });
+
+  test('rebuilds every startup while the compatibility baseline is V0', () => {
+    expect(DATABASE_BASELINE_VERSION).toBe(0);
+    expect(shouldRebuildDatabaseVersion(0)).toBe(true);
+    expect(shouldRebuildDatabaseVersion(DATABASE_VERSION)).toBe(true);
+    expect(shouldRebuildDatabaseVersion(4)).toBe(true);
+    expect(shouldRebuildDatabaseVersion(undefined)).toBe(true);
+  });
+
+  test('preserves current data and rejects unknown downgrades after freezing V1', () => {
+    expect(shouldRebuildDatabaseVersion(0, 1)).toBe(true);
+    expect(shouldRebuildDatabaseVersion(DATABASE_VERSION, 1)).toBe(false);
+    expect(shouldRebuildDatabaseVersion(2, 1)).toBe(2 > DATABASE_VERSION);
+    expect(shouldRebuildDatabaseVersion(3, 1)).toBe(3 > DATABASE_VERSION);
+    expect(shouldRebuildDatabaseVersion(4, 1)).toBe(false);
+    expect(shouldRebuildDatabaseVersion(undefined, 1)).toBe(false);
   });
 });
 

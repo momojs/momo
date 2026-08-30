@@ -8,6 +8,7 @@ import {
   CalendarCheckIn01Icon,
   DropletIcon,
   EnergyIcon,
+  FireIcon,
   Wallet01Icon,
 } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react';
@@ -37,6 +38,7 @@ export const Route = createFileRoute('/_tabbar/dashboard')({
 });
 
 interface MetricCardProps {
+  className?: string;
   detail: string;
   featured?: boolean;
   format?: TweenNumberProps['format'];
@@ -49,6 +51,7 @@ interface MetricCardProps {
 }
 
 function MetricCard({
+  className,
   detail,
   featured = false,
   format: numberFormat,
@@ -66,6 +69,7 @@ function MetricCard({
         featured
           ? 'bg-momo-bg-brand text-momo-fg-on-brand'
           : 'bg-momo-bg-surface-muted text-momo-fg-default',
+        className,
       )}
     >
       <div className='flex items-center justify-between gap-3'>
@@ -117,11 +121,14 @@ function DashboardSkeleton() {
       aria-label={m.dashboard_loading()}
     >
       <div className='h-6 w-36 animate-pulse rounded-momo-pill bg-momo-bg-surface-muted motion-reduce:animate-none' />
-      <div className='grid grid-cols-2 gap-2 lg:grid-cols-4'>
-        {[0, 1, 2, 3].map((item) => (
+      <div className='grid grid-cols-2 gap-2 lg:grid-cols-5'>
+        {[0, 1, 2, 3, 4].map((item) => (
           <div
             key={item}
-            className='h-31 animate-pulse rounded-momo-lg bg-momo-bg-surface-muted motion-reduce:animate-none'
+            className={cx(
+              'h-31 animate-pulse rounded-momo-lg bg-momo-bg-surface-muted motion-reduce:animate-none',
+              item === 0 && 'col-span-2 lg:col-span-1',
+            )}
           />
         ))}
       </div>
@@ -194,10 +201,11 @@ function DashboardRoute() {
   const total = records.reduce(
     (result, record) => ({
       price: result.price + record.price,
+      calories: result.calories + record.calories,
       caffeine: result.caffeine + record.caffeine,
       sugar: result.sugar + record.sugar,
     }),
-    { price: 0, caffeine: 0, sugar: 0 },
+    { price: 0, calories: 0, caffeine: 0, sugar: 0 },
   );
   const activeDays = new Set(
     records.map(({ consumedAt }) => format(consumedAt, 'yyyy-MM-dd')),
@@ -223,8 +231,9 @@ function DashboardRoute() {
             </Badge>
           </div>
 
-          <div className='grid grid-cols-2 gap-2 lg:grid-cols-4'>
+          <div className='grid grid-cols-2 gap-2 lg:grid-cols-5'>
             <MetricCard
+              className='col-span-2 lg:col-span-1'
               featured
               icon={CalendarCheckIn01Icon}
               label={m.dashboard_check_in_cups()}
@@ -248,6 +257,21 @@ function DashboardRoute() {
                     })
                   : m.dashboard_no_spend()
               }
+              tone='bg-momo-bg-warning/15 text-momo-fg-warning'
+            />
+            <MetricCard
+              icon={FireIcon}
+              label={m.metric_calories()}
+              value={total.calories}
+              unit='kcal'
+              format={{ maximumFractionDigits: 1 }}
+              detail={m.dashboard_daily_average({
+                value: formatNumber(total.calories / averageDays, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                }),
+                unit: 'kcal',
+              })}
               tone='bg-momo-bg-warning/15 text-momo-fg-warning'
             />
             <MetricCard

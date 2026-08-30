@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@momots/design/picker.css";
 @import "@momots/design/themes/anthropic.css";
 
 @source "../../../packages/design/src";

@@ -6,8 +6,14 @@ import { singleton } from '@momots/core';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 
 import { isWeb } from '@/helpers/guard';
+import { DeleteAllPhotos } from '@/helpers/photo';
 
-import { DATABASE_UPGRADES, DATABASE_VERSION, migrate } from './migrations';
+import {
+  DATABASE_UPGRADES,
+  DATABASE_VERSION,
+  migrate,
+  shouldRebuildDatabaseVersion,
+} from './migrations';
 import type { DatabaseWriteQueue } from './proxy';
 import { createDatabaseProxyExecutor } from './proxy';
 
@@ -98,6 +104,11 @@ async function setup() {
     await sqlite.initWebStore();
   }
 
+  // iOS 可能在原生进程仍存活时重建 WKWebView。此时原生插件还保留旧连接，
+  // 新的 JS 运行时却没有对应的连接包装器；直接 createConnection 会因重名失败。
+  // 先让插件关闭无法从 JS 侧恢复的孤立连接，再按正常流程重新创建。
+  await sqlite.checkConnectionsConsistency();
+
   // 冷启动时让原生插件先用自己的备份/恢复机制升级。应用内 migrator
   // 随后仍会复核并补齐版本，以覆盖已经打开的 HMR 连接和 Web 实现差异。
   await sqlite.addUpgradeStatement(NAME, DATABASE_UPGRADES);
@@ -126,6 +137,26 @@ async function closeRegisteredConnection() {
   if ((await sqlite.isConnection(NAME, false)).result) {
     await sqlite.closeConnection(NAME, false);
   }
+}
+
+/**
+ * 兼容基线为 V0 时，每次应用进程初始化都重建到当前 schema 版本。基线冻结
+ * 后，数据库自身的 V0 和旧开发阶段的 v2/v3 仍会按兼容规则执行一次重建。
+ */
+async function resetDisposableDatabase(connection: SQLiteDBConnection) {
+  const version = (await connection.getVersion()).version;
+  if (!shouldRebuildDatabaseVersion(version)) {
+    return connection;
+  }
+
+  await DeleteAllPhotos();
+  await connection.delete();
+  await closeRegisteredConnection();
+  console.info(
+    `[database] Rebuilt disposable database v${version} as v${DATABASE_VERSION}.`,
+  );
+
+  return open(await start());
 }
 
 async function persistConnection() {
@@ -172,7 +203,7 @@ async function initializeConnection() {
   await setup();
 
   try {
-    const connection = await open(await start());
+    const connection = await resetDisposableDatabase(await open(await start()));
     await migrate(connection);
     await persistConnection();
     return connection;

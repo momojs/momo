@@ -11,6 +11,16 @@ const PHOTO_DIR = 'photos';
 
 const MIME_TYPE = 'image/webp';
 
+function isMissingPhotoDirectoryError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+
+  return (
+    ('code' in error && error.code === 'OS-PLUG-FILE-0008') ||
+    error.message.includes('Folder does not exist') ||
+    error.message.includes('does not exist')
+  );
+}
+
 export function assertSafePhotoName(name: string) {
   if (
     !name ||
@@ -67,6 +77,19 @@ export async function DeletePhoto(name: string) {
     path: `${PHOTO_DIR}/${name}`,
     directory: Directory.Data,
   });
+}
+
+/** 清除 V0 测试基线产生的全部本地照片；目录不存在时视为已经清空。 */
+export async function DeleteAllPhotos() {
+  try {
+    await Filesystem.rmdir({
+      path: PHOTO_DIR,
+      directory: Directory.Data,
+      recursive: true,
+    });
+  } catch (error) {
+    if (!isMissingPhotoDirectoryError(error)) throw error;
+  }
 }
 
 export async function ReadPhoto(name: string) {
