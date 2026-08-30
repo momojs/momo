@@ -1,4 +1,4 @@
-import { isURLSearchParams } from '@momots/host';
+import { isURLSearchParams } from '@momots/host/guard/is-url-search-params';
 import {
   clone,
   entries,

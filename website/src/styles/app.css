@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
+
+@import "../../../packages/design/src/styles/picker.css";
 @import "../../../packages/design/src/themes/neutral.css";
 @import "../../../packages/design/src/themes/anthropic.css";
 

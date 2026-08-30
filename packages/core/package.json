@@ -1,6 +1,6 @@
 {
   "name": "@momots/core",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0-beta.1",
   "description": "Bun-first functional primitives for MomoTS packages and apps.",
   "keywords": [
     "momots",
@@ -25,9 +25,45 @@
       "types": "./dist/cardinality.d.ts",
       "import": "./dist/cardinality.js"
     },
-    "./casing/*": {
-      "types": "./dist/casing/*.d.ts",
-      "import": "./dist/casing/*.js"
+    "./casing": {
+      "types": "./dist/casing/index.d.ts",
+      "import": "./dist/casing/index.js"
+    },
+    "./casing/toCamelCasedProperties": {
+      "types": "./dist/casing/toCamelCasedProperties.d.ts",
+      "import": "./dist/casing/toCamelCasedProperties.js"
+    },
+    "./casing/toCamelCasedPropertiesDeep": {
+      "types": "./dist/casing/toCamelCasedPropertiesDeep.d.ts",
+      "import": "./dist/casing/toCamelCasedPropertiesDeep.js"
+    },
+    "./casing/toKebabCasedProperties": {
+      "types": "./dist/casing/toKebabCasedProperties.d.ts",
+      "import": "./dist/casing/toKebabCasedProperties.js"
+    },
+    "./casing/toLowerCasedProperties": {
+      "types": "./dist/casing/toLowerCasedProperties.d.ts",
+      "import": "./dist/casing/toLowerCasedProperties.js"
+    },
+    "./casing/toPascalCase": {
+      "types": "./dist/casing/toPascalCase.d.ts",
+      "import": "./dist/casing/toPascalCase.js"
+    },
+    "./casing/toPascalCasedProperties": {
+      "types": "./dist/casing/toPascalCasedProperties.d.ts",
+      "import": "./dist/casing/toPascalCasedProperties.js"
+    },
+    "./casing/toSnakeCasedProperties": {
+      "types": "./dist/casing/toSnakeCasedProperties.d.ts",
+      "import": "./dist/casing/toSnakeCasedProperties.js"
+    },
+    "./casing/toUpperCasedProperties": {
+      "types": "./dist/casing/toUpperCasedProperties.d.ts",
+      "import": "./dist/casing/toUpperCasedProperties.js"
+    },
+    "./casing/types": {
+      "types": "./dist/casing/types.d.ts",
+      "import": "./dist/casing/types.js"
     },
     "./cast/*": {
       "types": "./dist/cast/*.d.ts",

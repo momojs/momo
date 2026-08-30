@@ -1,6 +1,6 @@
 {
   "name": "@momots/host",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-beta.0",
   "description": "Bun-first Web Platform and host environment utilities for MomoTS packages and apps.",
   "keywords": [
     "momots",
@@ -55,10 +55,6 @@
     "./storage": {
       "types": "./dist/storage.d.ts",
       "import": "./dist/storage.js"
-    },
-    "./url": {
-      "types": "./dist/url.d.ts",
-      "import": "./dist/url.js"
     }
   },
   "files": [
@@ -67,15 +63,17 @@
   ],
   "publishConfig": {
     "access": "public",
-    "tag": "alpha"
+    "tag": "beta"
   },
   "scripts": {
     "build": "momo build",
     "test": "bun test src",
     "test:browser": "bun test browser-tests",
+    "test:tarball": "momo tarball",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
-    "types": "tsc --project tsconfig.build.json"
+    "types": "tsc --project tsconfig.build.json",
+    "prepack": "bun run build && bun run test && bun run typecheck:spec && bun run test:browser && bun run test:tarball"
   },
   "devDependencies": {
     "@momots/cli": "workspace:*",

@@ -22,6 +22,7 @@ import {
   isRawTextBody,
   parser,
   repeat,
+  toSearchParams,
 } from "@momots/drive";
 ```
 
@@ -650,6 +651,33 @@ declare function isRawTextBody(type?: string): type is RawTextBodyType;
 
 判断一个**已经解码出的类别字符串**是否属于默认 parser 可按文本读取的集合。这不是
 MIME 解析函数；传入值应是类别名，而不是完整的 `Content-Type`。
+
+## `toSearchParams()`
+
+```ts
+function toSearchParams(data: unknown): URLSearchParams | undefined;
+```
+
+将常见查询参数输入归一化为 `URLSearchParams`。Drive 的 `query` 通道仍只接受
+`URLSearchParams`；需要从对象、字符串或字符串数组构造时，使用这个辅助函数。
+
+| 输入类型 | 行为 |
+| --- | --- |
+| `URLSearchParams` | 原样返回 |
+| `string` | `new URLSearchParams(string)` |
+| `string[]` | 去空格后拼接解析；不含 `=` 的项视为布尔标记（`flag` → `flag=true`） |
+| 普通对象 | 序列化值，丢弃 `undefined` |
+| 其他 | `undefined` |
+
+普通对象中：`null` 变成 `"null"`，`Date` 使用 ISO 字符串，数组走 `toString()`，其余对象走 `JSON.stringify`。
+
+```ts
+import { toSearchParams } from "@momots/drive";
+
+toSearchParams("a=1&b=2")?.get("a");                          // => "1"
+toSearchParams(["a=1", "flag", " b=2 "])?.get("flag");        // => "true"
+toSearchParams({ a: 1, b: undefined, c: false })?.toString(); // => "a=1&c=false"
+```
 
 ## 类型索引
 

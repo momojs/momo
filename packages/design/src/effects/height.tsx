@@ -3,8 +3,12 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { resize } from 'motion/react';
+import { isStrictEqual } from 'remeda';
 
+import { useCacheCallback } from '../hooks/use-cache-callback.js';
 import type { ControlValue } from '../shared/index.js';
+
+const getControlValueKey = (value: ControlValue) => value;
 
 export function useAutoHeight<T extends HTMLElement = HTMLDivElement>() {
   const [ref, setRef] = useState<T | null>(null);
@@ -14,63 +18,55 @@ export function useAutoHeight<T extends HTMLElement = HTMLDivElement>() {
     height: 0,
   });
 
-  const activeValue = useRef<ControlValue | undefined>(undefined);
-  const registerRef = useRef(new Map<ControlValue, React.RefCallback<T>>());
   const registry = useRef(new Map<ControlValue, T>());
+  const active = useRef<ControlValue | undefined>(undefined);
 
-  const register = useCallback((value: ControlValue): React.RefCallback<T> => {
-    const { current: caches } = registerRef;
-    const cached = caches.get(value);
-    if (cached) return cached;
+  const register = useCacheCallback(
+    useCallback(
+      (value: ControlValue): React.RefCallback<T> =>
+        (instance) => {
+          const { current } = registry;
 
-    const callback: React.RefCallback<T> = (instance) => {
-      const { current } = registry;
+          if (!instance) {
+            const prev = current.get(value);
+            current.delete(value);
+            if (prev) {
+              setRef((curr) => (curr === prev ? null : curr));
+            }
+            return;
+          }
 
-      if (!instance) {
-        const prev = current.get(value);
-        current.delete(value);
-        if (prev) {
-          setRef((active) => (active === prev ? null : active));
-        }
-        return;
-      }
+          current.set(value, instance);
 
-      current.set(value, instance);
+          if (active.current === value) {
+            setRef(instance);
+          }
 
-      if (activeValue.current === value) {
-        setRef(instance);
-      }
-
-      return () => {
-        current.delete(value);
-        setRef((active) => (active === instance ? null : active));
-      };
-    };
-
-    caches.set(value, callback);
-    return callback;
-  }, []);
+          return () => {
+            current.delete(value);
+            setRef((active) => (active === instance ? null : active));
+          };
+        },
+      [],
+    ),
+    getControlValueKey,
+  );
 
   const activate = useCallback((value: ControlValue) => {
-    activeValue.current = value;
+    active.current = value;
     const instance = registry.current.get(value);
-    if (instance) {
-      setRef(instance);
-    }
+    if (instance) setRef(instance);
   }, []);
 
   useLayoutEffect(() => {
     if (!ref) return;
 
-    const { width, height } = ref.getBoundingClientRect();
-    setRect((prev) =>
-      prev.width === width && prev.height === height ? prev : { width, height },
-    );
+    const rect = ref.getBoundingClientRect();
+
+    setRect((prev) => (isStrictEqual(prev, rect) ? prev : rect));
 
     return resize(ref, (_, info) => {
-      setRect((prev) =>
-        prev.width === info.width && prev.height === info.height ? prev : info,
-      );
+      setRect((prev) => (isStrictEqual(prev, info) ? prev : info));
     });
   }, [ref]);
 

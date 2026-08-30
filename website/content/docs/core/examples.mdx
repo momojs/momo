@@ -78,15 +78,15 @@ compact(tags); // => ['react', 'bun', 'momo']
 ## 适配后端 snake_case 响应
 
 ```ts
-import { toCamelCaseKeys } from '@momots/core/casing/toCamelCaseKeys';
-import { toSnakeCaseKeys } from '@momots/core/casing/toSnakeCaseKeys';
+import { toCamelCasedProperties } from '@momots/core/casing/toCamelCasedProperties';
+import { toSnakeCasedProperties } from '@momots/core/casing/toSnakeCasedProperties';
 
 // 入站：snake_case -> camelCase
-const user = toCamelCaseKeys({ user_name: 'Momo', is_admin: true });
+const user = toCamelCasedProperties({ user_name: 'Momo', is_admin: true });
 // => { userName: 'Momo', isAdmin: true }
 
 // 出站：camelCase -> snake_case
-const payload = toSnakeCaseKeys({ userName: 'Momo', isAdmin: true });
+const payload = toSnakeCasedProperties({ userName: 'Momo', isAdmin: true });
 // => { user_name: 'Momo', is_admin: true }
 ```
 

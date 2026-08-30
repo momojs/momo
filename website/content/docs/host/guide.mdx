@@ -6,9 +6,10 @@ icon: BookOpen
 
 欢迎查阅 `@momots/host` 的 API 参考。下文按 [能力地图](/docs/host#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。除特别说明外，所有 API 均可从根入口或对应子路径导入。
 
+在 Bun 服务中，模块可以安全导入，但部分 API 会降级或采用服务端宿主语义。请先查看[运行时兼容性矩阵](/docs/host#运行时兼容性)，并优先使用子路径导入。这里的“安全导入”不等于 DOM、Canvas 或浏览器访客信息可用。
+
 ```ts
 import { isMobile, measureText, Storagefy } from '@momots/host';
-import { toSearchParams } from '@momots/host/url';
 ```
 
 需要可复制的实战片段，请前往 [示例](/docs/host/examples)。
@@ -19,7 +20,7 @@ import { toSearchParams } from '@momots/host/url';
 
 守卫统一放在 `guard/is-*` 子路径下，覆盖环境探测、DOM/元素类型、Body/二进制类型、字符串格式等场景。
 
-UA 类守卫默认读取 `navigator.userAgent`（或 `location.hostname`），也可传入字符串以便在 SSR 或单元测试中注入。
+UA 类守卫默认读取 `navigator.userAgent`（或 `location.hostname`），也可传入字符串以便在 SSR 或单元测试中注入。在 Bun 服务中判断请求方设备时，应显式传入请求头中的 UA；默认值描述的是 Bun 服务自身。DOM 类守卫在没有 DOM 的环境中安全返回 `false`，Web API 类守卫仍可正常判断 Bun 提供的对象。
 
 ### isAndroid
 
@@ -467,6 +468,8 @@ isHexString('rgb(1, 2, 3)'); // => false
 
 基于 `@momots/core` 的 `singleton` 创建的全局 `MemoryStorage` 单例。`Storagefy` 在 `localStorage` 不可用时自动降级到此实例。
 
+在 Bun 中，该单例只属于当前进程：不会跨进程或重启保留，也不会产生浏览器的跨标签页 `StorageEvent`。需要持久化时请显式注入实现了 `Storage` 接口的外部存储。
+
 ### MemoryStorage
 
 实现了 `Storage` 接口的内存版（基于 `Map`），常用于测试或降级。
@@ -588,6 +591,8 @@ await cell.get();
 
 轻量的持久化 FIFO 缓冲。构造时从 storage 恢复，每次变更后同步写入。默认 storage 为 `memory` 单例；实际键名为 `${namespace}:${key}`，默认 namespace 为 `PersistentBuffer`。
 
+“持久”指相对于所注入 storage 的持久性。Bun 中采用默认 `memory` 时仍是进程内缓冲，不跨重启或多进程共享。
+
 ```ts
 interface PersistentBufferOptions {
   key: string;
@@ -625,41 +630,6 @@ const buf = new PersistentBuffer<number>({ key: 'events', storage: new MemorySto
 buf.push(1, 2, 3);
 buf.peekAll(); // => [1, 2, 3]
 buf.drain(2);  // 丢弃最早的 2 个，剩 [3]
-```
-
-## URL
-
-子路径：`url`
-
-### toSearchParams
-
-将多种输入归一化为 `URLSearchParams`。在缺少 `URLSearchParams` 的宿主环境中，需要调用方自行提供 polyfill。
-
-```ts
-function toSearchParams(init: unknown): URLSearchParams | undefined;
-```
-
-| 参数 | 类型 | 说明 |
-| --- | --- | --- |
-| `init` | `unknown` | 查询参数初始化值 |
-
-| 返回 | 说明 |
-| --- | --- |
-| `URLSearchParams \| undefined` | 可构造时返回实例，否则 `undefined` |
-
-| 输入类型 | 行为 |
-| --- | --- |
-| `URLSearchParams` | 原样返回 |
-| `string` | `new URLSearchParams(string)` |
-| `string[]` | 过滤含 `=` 的项、去空格后拼接解析 |
-| 普通对象 | 值 `toString()`，丢弃 nullish 键 |
-| 其他 | `undefined` |
-
-```ts
-import { toSearchParams } from '@momots/host/url';
-
-toSearchParams('a=1&b=2')?.get('a');                          // => '1'
-toSearchParams({ a: 1, b: undefined, c: false })?.toString(); // => 'a=1&c=false'
 ```
 
 ## 二进制编解码
@@ -768,7 +738,7 @@ toRGB('color-mix(in srgb, #000000, #ffffff)')?.toHex(); // => '#808080'
 
 ### toCSSVariable
 
-从计算样式读取 CSS 自定义属性值。
+从计算样式读取 CSS 自定义属性值。Bun、Node 或 SSR 没有 DOM 时返回 `initial`；未提供 `initial` 则返回 `undefined`。
 
 ```ts
 function toCSSVariable<T extends string>(
@@ -942,6 +912,8 @@ nearestScrollable(el)?.scrollTo({ top: 0 });
 ### projection
 
 综合 UA、语言、canvas/WebGL/audio、屏幕、字体、时区、导航计时等信息生成 SHA-1 指纹（小写 hex，40 位）。
+
+在 Bun 中该函数仍可执行，但生成的是服务端宿主/进程特征，不代表发起请求的浏览器访客。访客指纹应在浏览器端生成后再提交给服务端。
 
 ```ts
 function projection(): Promise<string>;

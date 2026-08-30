@@ -1,4 +1,5 @@
 export * from './accordion.js';
+export * from './alert.js';
 export * from './badge.js';
 export * from './button.js';
 export * from './checkbox.js';
@@ -17,5 +18,6 @@ export * from './slider.js';
 export * from './spinner.js';
 export * from './switch.js';
 export * from './tabs.js';
+export * from './toast.js';
 export * from './toggle-group.js';
 export * from './tween-number.js';

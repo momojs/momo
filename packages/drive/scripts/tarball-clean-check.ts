@@ -1,55 +1,26 @@
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  realpath,
-  rm,
-  writeFile,
-} from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+
+import type { MomoTarballCheckContext } from '@momots/cli';
 
 type PackageManifest = {
   name: string;
+  version?: string;
   exports?: Record<string, unknown>;
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  publishConfig?: { tag?: string };
 };
 
 type PackedPackage = {
   filename: string;
 };
 
-const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const packageDirectory = resolve(scriptDirectory, '..');
-const workspaceDirectory = resolve(packageDirectory, '../..');
-const keepTemporaryDirectory =
-  process.env.MOMOTS_DRIVE_KEEP_TARBALL_TMP === '1';
-
-const run = async (
-  command: string,
-  args: string[],
-  cwd: string,
-): Promise<string> => {
-  const child = Bun.spawn([command, ...args], {
-    cwd,
-    env: process.env,
-    stderr: 'inherit',
-    stdout: 'pipe',
-  });
-  const output = await new Response(child.stdout).text();
-  const exitCode = await child.exited;
-
-  if (exitCode !== 0) {
-    throw new Error(`${command} ${args.join(' ')} exited with ${exitCode}`);
-  }
-
-  return output;
-};
-
 const pack = async (
   sourceDirectory: string,
   destinationDirectory: string,
   cacheDirectory: string,
+  run: MomoTarballCheckContext['run'],
 ): Promise<string> => {
   const output = await run(
     'npm',
@@ -62,7 +33,7 @@ const pack = async (
       '--cache',
       cacheDirectory,
     ],
-    sourceDirectory,
+    { cwd: sourceDirectory },
   );
   const result = JSON.parse(output) as PackedPackage[];
   const filename = result.at(0)?.filename;
@@ -93,18 +64,25 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const projectDirectory = dirname(fileURLToPath(import.meta.url));
-const packageDirectory = resolve(
-  projectDirectory,
-  'node_modules/@momots/drive',
-);
+const packageDirectory = resolve(projectDirectory, 'node_modules/@momots/drive');
 const manifest = JSON.parse(
   await readFile(resolve(packageDirectory, 'package.json'), 'utf8'),
 );
 
+if (manifest.version !== '0.1.0-beta.0') {
+  throw new Error('Unexpected packed version: ' + manifest.version);
+}
+if (manifest.publishConfig?.tag !== 'beta') {
+  throw new Error('Packed package does not use the beta dist-tag');
+}
+if (manifest.dependencies?.['@momots/host']) {
+  throw new Error('@momots/host must be bundled, not a runtime dependency');
+}
+
 const importTarget = (value) => {
   if (typeof value === 'string') return value;
   if (!value || typeof value !== 'object') return undefined;
-  return importTarget(value.import);
+  return importTarget(value.import ?? value.default);
 };
 
 const entries = Object.entries(manifest.exports ?? {}).filter(
@@ -142,15 +120,37 @@ for (const [name, subpath] of identities) {
     throw new Error(name + ' identity differs between root and ' + subpath);
   }
 }
+
+if (root?.toSearchParams({ page: 1 })?.get('page') !== '1') {
+  throw new Error('toSearchParams is not available from the root export');
+}
 `;
 
-const temporaryDirectory = await mkdtemp(
-  join(tmpdir(), 'momots-drive-tarball-'),
-);
+const consumerSource = String.raw`
+import {
+  Drive,
+  type DriveFetchedContext,
+  toSearchParams,
+} from '@momots/drive';
 
-try {
-  const tarballDirectory = join(temporaryDirectory, 'tarballs');
-  const projectDirectory = join(temporaryDirectory, 'consumer');
+const drive = new Drive();
+const params: URLSearchParams | undefined = toSearchParams({ page: 1 });
+
+export const request: Promise<DriveFetchedContext<unknown>> = drive.request({
+  api: 'https://example.com',
+  query: params,
+});
+`;
+
+export async function checkDriveTarball({
+  root: packageDirectory,
+  run,
+  tarball: driveTarball,
+  temporaryDirectory,
+}: MomoTarballCheckContext): Promise<void> {
+  const workspaceDirectory = resolve(packageDirectory, '../..');
+  const tarballDirectory = join(temporaryDirectory, 'dependency-tarballs');
+  const projectDirectory = join(temporaryDirectory, 'npm-consumer');
   const npmCacheDirectory = join(temporaryDirectory, 'npm-cache');
   await Promise.all([
     mkdir(tarballDirectory),
@@ -158,24 +158,16 @@ try {
     mkdir(npmCacheDirectory),
   ]);
 
-  const [coreTarball, hostTarball, driveTarball] = await Promise.all([
-    pack(
-      resolve(workspaceDirectory, 'packages/core'),
-      tarballDirectory,
-      npmCacheDirectory,
-    ),
-    pack(
-      resolve(workspaceDirectory, 'packages/host'),
-      tarballDirectory,
-      npmCacheDirectory,
-    ),
-    pack(packageDirectory, tarballDirectory, npmCacheDirectory),
-  ]);
+  const coreTarball = await pack(
+    resolve(workspaceDirectory, 'packages/core'),
+    tarballDirectory,
+    npmCacheDirectory,
+    run,
+  );
 
   const dependencies = {
     '@momots/core': `file:${coreTarball}`,
     '@momots/drive': `file:${driveTarball}`,
-    '@momots/host': `file:${hostTarball}`,
     mime: await localPackage(resolve(packageDirectory, 'node_modules/mime')),
     nanoid: await localPackage(
       resolve(packageDirectory, 'node_modules/nanoid'),
@@ -206,6 +198,7 @@ try {
       )}\n`,
     ),
     writeFile(join(projectDirectory, 'check.mjs'), runnerSource),
+    writeFile(join(projectDirectory, 'check.ts'), consumerSource),
   ]);
 
   await run(
@@ -220,20 +213,31 @@ try {
       '--cache',
       npmCacheDirectory,
     ],
-    projectDirectory,
+    { cwd: projectDirectory },
   );
 
-  const imported = await run(
+  const [bunImported, nodeImported] = await Promise.all([
+    run('bun', ['--no-install', 'check.mjs'], { cwd: projectDirectory }),
+    run('node', ['check.mjs'], { cwd: projectDirectory }),
+  ]);
+  await run(
     'bun',
-    ['--no-install', 'check.mjs'],
-    projectDirectory,
+    [
+      resolve(workspaceDirectory, 'node_modules/typescript/bin/tsc'),
+      '--noEmit',
+      '--module',
+      'preserve',
+      '--moduleResolution',
+      'bundler',
+      '--target',
+      'esnext',
+      '--strict',
+      'check.ts',
+    ],
+    { cwd: projectDirectory },
   );
-  process.stdout.write(imported);
-  console.log(`Verified npm tarball: ${driveTarball}`);
-} finally {
-  if (keepTemporaryDirectory) {
-    console.log(`Kept temporary project: ${temporaryDirectory}`);
-  } else {
-    await rm(temporaryDirectory, { force: true, recursive: true });
-  }
+
+  process.stdout.write(bunImported);
+  process.stdout.write(nodeImported);
+  console.log('Verified npm-installed Drive consumer');
 }

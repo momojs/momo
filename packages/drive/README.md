@@ -4,16 +4,19 @@
 letting related requests share authentication, logging, error handling, and
 other transport policy through middleware.
 
+Current release: `0.1.0-beta.0` (`beta` tag).
+
 Use Drive when a service has several endpoints that should follow the same
 rules. For a few unrelated requests, native `fetch` is usually clearer.
 
 ## Install
 
 ```sh
-bun add @momots/drive@alpha @momots/core@alpha @momots/host@alpha remeda
+bun add @momots/drive@beta @momots/core@beta remeda
 ```
 
-`@momots/core`, `@momots/host`, and `remeda` are peer dependencies.
+`@momots/core` and `remeda` are peer dependencies. Drive bundles the small set
+of `@momots/host` helpers it uses internally.
 
 ## Quick start
 

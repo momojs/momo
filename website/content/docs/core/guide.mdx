@@ -94,16 +94,18 @@ cardinality(null);                 // => 0
 
 ## 键名大小写
 
-子路径：`casing/*`
+根入口：`@momots/core`；聚合子路径：`@momots/core/casing`；单函数子路径：`casing/*`
 
-以下函数均只转换**顶层键**（非递归），值按引用保留。
+除 `toCamelCasedPropertiesDeep` 外，以下属性转换函数均只处理普通对象的
+**顶层自有键**，值按引用保留。symbol 键不转换；数组和函数按照 TypeFest
+的类型语义原样返回。
 
-### toCamelCaseKeys
+### toCamelCasedProperties
 
-将对象**顶层**可枚举键转换为 camelCase。不递归处理嵌套对象；值按原引用保留。底层基于 Remeda 的 `mapKeys` 与 `toCamelCase`。
+将普通对象的**顶层自有字符串键**转换为 camelCase。不递归处理嵌套对象；值按原引用保留。连续大写字符默认会规范化，与 TypeFest 的 `CamelCasedProperties` 一致。
 
 ```ts
-const toCamelCaseKeys = <T extends object>(data: T): CamelCasedProperties<T>;
+const toCamelCasedProperties = <T extends object>(data: T): CamelCasedProperties<T>;
 ```
 
 | 参数 | 类型 | 说明 |
@@ -115,18 +117,43 @@ const toCamelCaseKeys = <T extends object>(data: T): CamelCasedProperties<T>;
 | `CamelCasedProperties<T>` | 键名转为 camelCase 的新对象 |
 
 ```ts
-import { toCamelCaseKeys } from '@momots/core/casing/toCamelCaseKeys';
+import { toCamelCasedProperties } from '@momots/core/casing/toCamelCasedProperties';
 
-toCamelCaseKeys({ user_name: 'John', user_age: 30 });
+toCamelCasedProperties({ user_name: 'John', user_age: 30 });
 // => { userName: 'John', userAge: 30 }
 ```
 
-### toPascalCaseKeys
+### toCamelCasedPropertiesDeep
 
-将对象**顶层**可枚举键转换为 PascalCase。不递归；值按原引用保留。
+递归转换普通对象、数组元素和 `Set` 成员中的字符串键。支持循环引用；
+symbol 键以及 TypeFest 定义的非递归值（如函数、`Date`、`RegExp`、
+`Promise`）保持不变。
 
 ```ts
-const toPascalCaseKeys = <T extends object>(data: T): PascalCasedProperties<T>;
+const toCamelCasedPropertiesDeep = <T>(
+  data: T,
+): CamelCasedPropertiesDeep<T>;
+```
+
+```ts
+import { toCamelCasedPropertiesDeep } from '@momots/core/casing/toCamelCasedPropertiesDeep';
+
+toCamelCasedPropertiesDeep({
+  user_profile: { first_name: 'John' },
+  friend_list: [{ user_id: 1 }],
+});
+// => {
+//   userProfile: { firstName: 'John' },
+//   friendList: [{ userId: 1 }],
+// }
+```
+
+### toPascalCasedProperties
+
+将普通对象的**顶层自有字符串键**转换为 PascalCase。不递归；值按原引用保留。
+
+```ts
+const toPascalCasedProperties = <T extends object>(data: T): PascalCasedProperties<T>;
 ```
 
 | 参数 | 类型 | 说明 |
@@ -138,18 +165,18 @@ const toPascalCaseKeys = <T extends object>(data: T): PascalCasedProperties<T>;
 | `PascalCasedProperties<T>` | 键名转为 PascalCase 的新对象 |
 
 ```ts
-import { toPascalCaseKeys } from '@momots/core/casing/toPascalCaseKeys';
+import { toPascalCasedProperties } from '@momots/core/casing/toPascalCasedProperties';
 
-toPascalCaseKeys({ user_name: 'John' });
+toPascalCasedProperties({ user_name: 'John' });
 // => { UserName: 'John' }
 ```
 
-### toSnakeCaseKeys
+### toSnakeCasedProperties
 
-将对象**顶层**可枚举键转换为 snake_case。不递归；值按原引用保留。数字分段遵循 `splitOnNumbers: true`。
+将普通对象的**顶层自有字符串键**转换为 snake_case。不递归；值按原引用保留。数字分段遵循 `splitOnNumbers: true`。
 
 ```ts
-const toSnakeCaseKeys = <T extends object>(data: T): SnakeCasedProperties<T, { splitOnNumbers: true }>;
+const toSnakeCasedProperties = <T extends object>(data: T): SnakeCasedProperties<T, { splitOnNumbers: true }>;
 ```
 
 | 参数 | 类型 | 说明 |
@@ -161,18 +188,18 @@ const toSnakeCaseKeys = <T extends object>(data: T): SnakeCasedProperties<T, { s
 | `SnakeCasedProperties<T>` | 键名转为 snake_case 的新对象 |
 
 ```ts
-import { toSnakeCaseKeys } from '@momots/core/casing/toSnakeCaseKeys';
+import { toSnakeCasedProperties } from '@momots/core/casing/toSnakeCasedProperties';
 
-toSnakeCaseKeys({ userName: 'John' });
+toSnakeCasedProperties({ userName: 'John' });
 // => { user_name: 'John' }
 ```
 
-### toKebabCaseKeys
+### toKebabCasedProperties
 
-将对象**顶层**可枚举键转换为 kebab-case。不递归；值按原引用保留。
+将普通对象的**顶层自有字符串键**转换为 kebab-case。不递归；值按原引用保留。数字分段遵循 `splitOnNumbers: true`。
 
 ```ts
-const toKebabCaseKeys = <T extends object>(data: T): KebabCasedProperties<T, { splitOnNumbers: true }>;
+const toKebabCasedProperties = <T extends object>(data: T): KebabCasedProperties<T, { splitOnNumbers: true }>;
 ```
 
 | 参数 | 类型 | 说明 |
@@ -184,18 +211,18 @@ const toKebabCaseKeys = <T extends object>(data: T): KebabCasedProperties<T, { s
 | `KebabCasedProperties<T>` | 键名转为 kebab-case 的新对象 |
 
 ```ts
-import { toKebabCaseKeys } from '@momots/core/casing/toKebabCaseKeys';
+import { toKebabCasedProperties } from '@momots/core/casing/toKebabCasedProperties';
 
-toKebabCaseKeys({ USER_NAME: 'John' });
+toKebabCasedProperties({ USER_NAME: 'John' });
 // => { 'user-name': 'John' }
 ```
 
-### toUpperCaseKeys
+### toUpperCasedProperties
 
-将对象**顶层**可枚举键转换为大写。不递归；值按原引用保留。
+将普通对象的**顶层自有字符串键**转换为大写。不递归；值按原引用保留。
 
 ```ts
-const toUpperCaseKeys = <T extends object>(data: T): UpperCasedProperties<T>;
+const toUpperCasedProperties = <T extends object>(data: T): UpperCasedProperties<T>;
 ```
 
 | 参数 | 类型 | 说明 |
@@ -207,18 +234,18 @@ const toUpperCaseKeys = <T extends object>(data: T): UpperCasedProperties<T>;
 | `UpperCasedProperties<T>` | 键名转为大写的新对象 |
 
 ```ts
-import { toUpperCaseKeys } from '@momots/core/casing/toUpperCaseKeys';
+import { toUpperCasedProperties } from '@momots/core/casing/toUpperCasedProperties';
 
-toUpperCaseKeys({ userName: 'John' });
-// => { USER_NAME: 'John' }
+toUpperCasedProperties({ userName: 'John' });
+// => { USERNAME: 'John' }
 ```
 
-### toLowerCaseKeys
+### toLowerCasedProperties
 
-将对象**顶层**可枚举键转换为小写。不递归；值按原引用保留。
+将普通对象的**顶层自有字符串键**转换为小写。不递归；值按原引用保留。
 
 ```ts
-const toLowerCaseKeys = <T extends object>(data: T): LowerCasedProperties<T>;
+const toLowerCasedProperties = <T extends object>(data: T): LowerCasedProperties<T>;
 ```
 
 | 参数 | 类型 | 说明 |
@@ -230,9 +257,9 @@ const toLowerCaseKeys = <T extends object>(data: T): LowerCasedProperties<T>;
 | `LowerCasedProperties<T>` | 键名转为小写的新对象 |
 
 ```ts
-import { toLowerCaseKeys } from '@momots/core/casing/toLowerCaseKeys';
+import { toLowerCasedProperties } from '@momots/core/casing/toLowerCasedProperties';
 
-toLowerCaseKeys({ AppID: 'wx7f3f0032b6e6f0cc' });
+toLowerCasedProperties({ AppID: 'wx7f3f0032b6e6f0cc' });
 // => { appid: 'wx7f3f0032b6e6f0cc' }
 ```
 
@@ -241,26 +268,31 @@ toLowerCaseKeys({ AppID: 'wx7f3f0032b6e6f0cc' });
 将**字符串本身**转换为 PascalCase。先按 Remeda 的 `toCamelCase` 转换，再将首字母大写。
 
 ```ts
-const toPascalCase = <T extends string>(
+const toPascalCase = <
+  T extends string,
+  const Options extends PascalCaseOptions = PascalCaseOptions,
+>(
   str: T,
-  options?: CamelCaseOptions,
-): PascalCase<T>;
+  options?: Options,
+): PascalCase<T, Options>;
 ```
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
 | `str` | `T extends string` | 待转换的字符串 |
-| `options` | `CamelCaseOptions` | 传给 `toCamelCase` 的选项（可选） |
+| `options` | `PascalCaseOptions` | 是否保留连续大写字符（可选，默认 `false`） |
 
 | 返回 | 说明 |
 | --- | --- |
-| `PascalCase<T>` | PascalCase 字符串 |
+| `PascalCase<T, Options>` | 与 TypeFest 选项推断一致的 PascalCase 字符串 |
 
 ```ts
 import { toPascalCase } from '@momots/core/casing/toPascalCase';
 
 toPascalCase('hello world'); // => 'HelloWorld'
 toPascalCase('momo-kit');    // => 'MomoKit'
+toPascalCase('fooBAR');      // => 'FooBar'
+toPascalCase('fooBAR', { preserveConsecutiveUppercase: true }); // => 'FooBAR'
 ```
 
 ## 值替换

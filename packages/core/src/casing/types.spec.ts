@@ -1,12 +1,33 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expectTypeOf, test } from 'bun:test';
 
 import type { LowerCasedProperties, UpperCasedProperties } from './types';
 
 describe('casing types', () => {
   test('exports key casing utility types', () => {
-    type _Upper = UpperCasedProperties<{ name: string }>;
-    type _Lower = LowerCasedProperties<{ NAME: string }>;
+    type Upper = UpperCasedProperties<{
+      readonly name: string;
+      readonly user_id: number;
+    }>;
+    type Lower = LowerCasedProperties<{
+      readonly NAME: string;
+      readonly USER_ID: number;
+    }>;
 
-    expect(true).toBe(true);
+    expectTypeOf<Upper>().toEqualTypeOf<{
+      readonly NAME: string;
+      readonly USER_ID: number;
+    }>();
+    expectTypeOf<Lower>().toEqualTypeOf<{
+      readonly name: string;
+      readonly user_id: number;
+    }>();
+    expectTypeOf<UpperCasedProperties<readonly ['name']>>().toEqualTypeOf<
+      readonly ['name']
+    >();
+
+    class Example {}
+    expectTypeOf<UpperCasedProperties<typeof Example>>().toEqualTypeOf<
+      typeof Example
+    >();
   });
 });

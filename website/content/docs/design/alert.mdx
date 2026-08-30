@@ -1,0 +1,136 @@
+---
+title: Alert
+description: 用于传达重要状态、反馈与下一步操作的内联提示。
+icon: TriangleAlert
+---
+
+`Alert` 是页面内的消息容器，用于呈现状态、重要反馈和可选的下一步操作。它提供明确的语义变体、可组合 slots 与 momo semantic token，但不会管理关闭状态或替代需要用户决策的模态框。
+
+<AlertPlayground />
+
+## 使用
+
+```tsx
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+
+import { Alert } from "@momots/design/components/alert";
+
+<Alert
+  variant="info"
+  icon={<HugeiconsIcon icon={InformationCircleIcon} />}
+  title="新的同步策略"
+  description="下次启动时会自动同步本地设置。"
+/>
+```
+
+内建 `AlertIcon` 会把图标视为装饰内容并设置 `aria-hidden`。标题与说明应直接表达消息含义，不能只依赖颜色或图标。
+
+## 语义变体
+
+| Variant | 适用场景 |
+| --- | --- |
+| `default` | 中性说明、一般提醒 |
+| `info` | 新信息、功能提示、非阻塞更新 |
+| `success` | 操作完成、保存成功、状态恢复 |
+| `warning` | 需要关注、可能产生影响的情况 |
+| `danger` | 操作失败、数据风险或阻塞性问题 |
+
+```tsx
+<Alert
+  variant="success"
+  title="导入完成"
+  description="已添加 24 条记录。"
+/>
+```
+
+## 操作
+
+`action` 可以包含按钮或链接。操作文字应说明结果，避免使用含义模糊的“确定”：
+
+```tsx
+<Alert
+  variant="warning"
+  title="连接即将过期"
+  description="重新授权后才能继续同步。"
+  action={<Button size="sm">重新授权</Button>}
+/>
+```
+
+Alert 本身不会消失，也不会渲染关闭按钮。需要可关闭提示时由业务状态控制挂载；需要阻止流程并要求用户决策时使用 Dialog，而不是把 Alert 当作 AlertDialog。
+
+## Live region
+
+组件默认使用 `role="alert"`，适合挂载后需要立即播报的重要动态消息。一般的异步进度或非紧急结果使用 `role="status"`；页面初始就存在的静态说明通常不需要 live region，可传 `role={null}`：
+
+```tsx
+<Alert role="status" title="正在同步" />
+
+<Alert role={null} title="此设置仅影响当前工作区" />
+```
+
+不要在同一消息上额外添加冲突的 `aria-live`。频繁变化的内容也不应使用 assertive alert，以免打断辅助技术用户。
+
+## Slots
+
+`iconSlot`、`contentSlot`、`titleSlot`、`descriptionSlot` 与 `actionSlot` 遵循 momo 的 slot 约定：
+
+- `undefined` 根据对应内容自动渲染默认 slot。
+- props object 配置默认元素。
+- ReactNode 完整替换 slot。
+- `false` 移除 slot。
+
+```tsx
+<Alert
+  variant="danger"
+  title="上传失败"
+  description="请检查网络后重试。"
+  titleSlot={{ className: "uppercase" }}
+  descriptionSlot={{ id: "upload-error" }}
+  actionSlot={<button type="button">重试上传</button>}
+/>
+```
+
+同一入口也导出 `AlertRoot`、`AlertIcon`、`AlertContent`、`AlertTitle`、`AlertDescription` 与 `AlertAction`，用于完全手动组合：
+
+```tsx
+<AlertRoot variant="info" role={null}>
+  <AlertIcon>{icon}</AlertIcon>
+  <AlertContent>
+    <AlertTitle>提示</AlertTitle>
+    <AlertDescription>这是静态说明。</AlertDescription>
+  </AlertContent>
+</AlertRoot>
+```
+
+## 可访问性
+
+- `role="alert"` 只用于重要且需要立即播报的动态消息；礼貌更新使用 `status`，静态内容移除 role。
+- 标题和说明必须用文字表达状态，颜色与图标只作辅助。
+- 默认图标 wrapper 是装饰性的；若图标承载独立信息，请自行组合并提供可访问名称。
+- action 中使用真正的 `button` 或 `a` 元素，并提供脱离上下文仍清晰的文字。
+- Alert 是内联反馈，不提供焦点捕获、确认流程或模态语义。
+
+## Props
+
+### Alert
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `variant` | `"default" \| "info" \| "success" \| "warning" \| "danger"` | 语义与视觉变体，默认 `"default"` |
+| `icon` | `ReactNode` | 可选装饰图标 |
+| `title` | `ReactNode` | 简短标题 |
+| `description` | `ReactNode` | 补充说明或处理建议 |
+| `action` | `ReactNode` | 可选按钮或链接 |
+| `role` | `AriaRole \| null` | 默认 `"alert"`；`null` 移除 live-region role |
+| `iconSlot` | slot config | 配置、替换或移除 Icon |
+| `contentSlot` | slot config | 配置、替换或移除 Content |
+| `titleSlot` | slot config | 配置、替换或移除 Title |
+| `descriptionSlot` | slot config | 配置、替换或移除 Description |
+| `actionSlot` | slot config | 配置、替换或移除 Action |
+| `className` | `string` | 追加根容器样式 |
+| `...props` | `React.ComponentProps<"div">` | 其余原生 div 属性 |
+
+### Primitives
+
+所有 primitives 都接受对应原生元素的 props 与 `className`。`AlertRoot` 额外接受 `variant` 和可为空的 `role`；其余部件负责稳定的布局、排版和 `data-slot` 元数据。

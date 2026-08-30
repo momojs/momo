@@ -54,6 +54,32 @@ const users = await drive.get<User[]>(
 Drive 在合并 query 时保留 fragment，但 fragment 遵循 URL/Fetch 语义，不会进入 HTTP
 请求。
 
+## 把对象拼成查询串
+
+`query` 只接受 `URLSearchParams`。从普通对象构造时，使用 `toSearchParams`：
+
+```ts
+import { toSearchParams } from "@momots/drive";
+
+function buildListUrl(params: { page?: number; size?: number; q?: string }) {
+  const qs = toSearchParams(params)?.toString();
+  return qs ? `/api/list?${qs}` : "/api/list";
+}
+
+buildListUrl({ page: 2, size: 20, q: undefined }); // => "/api/list?page=2&size=20"
+```
+
+也可以直接交给 Drive 的 `query` 通道：
+
+```ts
+import { toSearchParams } from "@momots/drive";
+
+const users = await drive.get<User[]>({
+  api: "/api/users",
+  query: toSearchParams({ page: 2, active: true }),
+});
+```
+
 ## 统一 HTTP 状态错误
 
 当一个服务明确把所有 `4xx` / `5xx` 视为异常时，在服务边界集中定义这项策略：

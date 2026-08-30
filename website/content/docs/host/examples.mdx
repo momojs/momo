@@ -83,19 +83,6 @@ async function flush() {
 }
 ```
 
-## 把对象拼成查询串
-
-```ts
-import { toSearchParams } from '@momots/host/url';
-
-function buildListUrl(params: { page?: number; size?: number; q?: string }) {
-  const qs = toSearchParams(params)?.toString();
-  return qs ? `/api/list?${qs}` : '/api/list';
-}
-
-buildListUrl({ page: 2, size: 20, q: undefined }); // => '/api/list?page=2&size=20'
-```
-
 ## 主题色 → rgba 半透明遮罩
 
 ```ts

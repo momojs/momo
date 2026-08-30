@@ -14,7 +14,7 @@ icon: Rocket
 bun add @momots/core@beta remeda type-fest
 ```
 
-当前发布通道为 `beta`（`0.1.0-beta.0`）。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+当前发布通道为 `beta`（`0.1.0-beta.1`）。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
 
 ## 两种导入方式
 
@@ -22,12 +22,12 @@ bun add @momots/core@beta remeda type-fest
 
 ```ts
 // 从根入口导入
-import { eliminate, unflat, toCamelCaseKeys } from "@momots/core";
+import { eliminate, unflat, toCamelCasedProperties } from "@momots/core";
 
 // 按子路径导入（仅打包用到的部分）
 import { eliminate } from "@momots/core/eliminate";
 import { unflat } from "@momots/core/tree/unflat";
-import { toCamelCaseKeys } from "@momots/core/casing/toCamelCaseKeys";
+import { toCamelCasedProperties } from "@momots/core/casing";
 ```
 
 ## 能力地图
@@ -36,7 +36,7 @@ import { toCamelCaseKeys } from "@momots/core/casing/toCamelCaseKeys";
 | ---------- | --------------------- | ------------------------------------------- |
 | 数组       | `as/array`、`compact` | `asArray`、`compact`                        |
 | 集合基数   | `cardinality`         | `cardinality`                               |
-| 键名大小写 | `casing/*`            | `toCamelCaseKeys`、`toSnakeCaseKeys` …      |
+| 键名大小写 | `casing/*`            | `toCamelCasedProperties`、`toSnakeCasedProperties` …      |
 | 值替换     | `eliminate`           | `eliminate`                                 |
 | 惰性求值   | `realize`             | `realize`                                   |
 | 类型守卫   | `guard/*`             | `isUndefined`、`isStringArray` …            |

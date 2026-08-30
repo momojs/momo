@@ -1,6 +1,7 @@
 'use client';
 
 export { AccordionPlayground } from './accordion';
+export { AlertPlayground } from './alert';
 export { BadgePlayground } from './badge';
 export { ButtonPlayground } from './button';
 export { CheckboxPlayground } from './checkbox';
@@ -21,6 +22,7 @@ export { SliderPlayground } from './slider';
 export { SlotCompositionPlayground } from './slot-composition';
 export { SwitchPlayground } from './switch';
 export { TabsPlayground } from './tabs';
+export { ToastPlayground } from './toast';
 export { ToggleGroupPlayground } from './toggle-group';
 export { TweenNumberPlayground } from './tween-number';
 export { UseControllableValuePlayground } from './use-controllable-value';

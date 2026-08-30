@@ -8,7 +8,7 @@ prereleases.
 ## Install
 
 ```sh
-bun add @momots/design@alpha @momots/core@beta @momots/host@alpha
+bun add @momots/design@alpha @momots/core@beta @momots/host@beta
 bun add @base-ui/react @hugeicons/core-free-icons @hugeicons/react
 bun add cva date-fns motion react react-dom remeda tailwind-merge tailwindcss type-fest
 ```

@@ -2,7 +2,7 @@
 
 Bun-first functional primitives for MomoTS packages and apps.
 
-Current release: `0.1.0-beta.0` (`beta` tag).
+Current release: `0.1.0-beta.1` (`beta` tag).
 
 ## Install
 

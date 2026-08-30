@@ -88,10 +88,10 @@ Drive 不默认把 `4xx` 或 `5xx` 判为异常，也不默认缓存或重复发
 当前版本为 alpha：
 
 ```bash
-bun add @momots/drive@alpha @momots/core@alpha @momots/host@alpha remeda
+bun add @momots/drive@alpha @momots/core@alpha remeda
 ```
 
-`@momots/core`、`@momots/host` 与 `remeda` 是 peer dependencies，需要由应用一并安装。
+`@momots/core` 与 `remeda` 是 peer dependencies，需要由应用一并安装。
 
 Drive 面向提供现代 Fetch 与 Stream API 的运行时，主要包括 Bun、现代浏览器和现代
 Node.js。若运行时缺少相应 Web API，应由应用提供兼容层。

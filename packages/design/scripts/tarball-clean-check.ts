@@ -1,18 +1,7 @@
-import {
-  access,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  realpath,
-  rm,
-  symlink,
-  writeFile,
-} from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { access, readFile, realpath, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import type { MomoTarballCheckContext } from '@momots/cli';
 import { compile } from '@tailwindcss/node';
 
 type PackageManifest = {
@@ -20,90 +9,6 @@ type PackageManifest = {
   exports?: Record<string, unknown>;
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
-};
-
-const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const packageDirectory = resolve(scriptDirectory, '..');
-const workspaceDirectory = resolve(packageDirectory, '../..');
-const keepTemporaryDirectory =
-  process.env.MOMOTS_DESIGN_KEEP_TARBALL_TMP === '1';
-
-const run = async (
-  command: string,
-  args: string[],
-  cwd: string,
-  env: Record<string, string | undefined> = process.env,
-): Promise<string> => {
-  const child = Bun.spawn([command, ...args], {
-    cwd,
-    env,
-    stderr: 'pipe',
-    stdout: 'pipe',
-  });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-
-  if (exitCode !== 0) {
-    throw new Error(
-      `${command} ${args.join(' ')} exited with ${exitCode}\n${stderr}${stdout}`,
-    );
-  }
-
-  return stdout;
-};
-
-const pack = async (destinationDirectory: string): Promise<string> => {
-  const output = await run(
-    'bun',
-    [
-      'pm',
-      'pack',
-      '--ignore-scripts',
-      '--destination',
-      destinationDirectory,
-      '--quiet',
-    ],
-    packageDirectory,
-  );
-  const filename = output.trim().split('\n').at(-1);
-
-  if (!filename) {
-    throw new Error(`Unexpected bun pm pack output: ${output}`);
-  }
-
-  await access(filename);
-  return filename;
-};
-
-const linkPackageDependencies = async (
-  sourceDirectory: string,
-  destinationDirectory: string,
-): Promise<void> => {
-  await mkdir(destinationDirectory, { recursive: true });
-
-  for (const entry of await readdir(sourceDirectory, { withFileTypes: true })) {
-    if (entry.name === '.bin') continue;
-
-    const source = join(sourceDirectory, entry.name);
-    const destination = join(destinationDirectory, entry.name);
-
-    if (!entry.name.startsWith('@')) {
-      await symlink(await realpath(source), destination, 'dir');
-      continue;
-    }
-
-    await mkdir(destination, { recursive: true });
-    for (const scopedEntry of await readdir(source, { withFileTypes: true })) {
-      if (entry.name === '@momots' && scopedEntry.name === 'design') continue;
-
-      const scopedSource = join(source, scopedEntry.name);
-      const scopedDestination = join(destination, scopedEntry.name);
-      await symlink(await realpath(scopedSource), scopedDestination, 'dir');
-    }
-  }
 };
 
 const importTarget = (value: unknown): string | undefined => {
@@ -227,17 +132,25 @@ const assertPackedFiles = async (
 };
 
 const runnerSource = String.raw`
-const [root, button, effects, hooks, shared, tailwind] = await Promise.all([
+const [root, alert, button, toast, effects, hooks, shared, tailwind] = await Promise.all([
   import('@momots/design'),
+  import('@momots/design/components/alert'),
   import('@momots/design/components/button'),
+  import('@momots/design/components/toast'),
   import('@momots/design/effects'),
   import('@momots/design/hooks'),
   import('@momots/design/shared'),
   import('@momots/design/tailwind'),
 ]);
+const { createElement } = await import('react');
 
 const identities = [
+  ['Alert', root.Alert, alert.Alert],
   ['Button', root.Button, button.Button],
+  ['ToastRoot', root.ToastRoot, toast.ToastRoot],
+  ['ToastProvider', root.ToastProvider, toast.ToastProvider],
+  ['createToastManager', root.createToastManager, toast.createToastManager],
+  ['useToast', root.useToast, toast.useToast],
   ['Highlight', root.Highlight, effects.Highlight],
   ['useControllableValue', root.useControllableValue, hooks.useControllableValue],
   ['render', root.render, shared.render],
@@ -252,21 +165,75 @@ for (const [name, rootValue, focusedValue] of identities) {
 
 const element = button.Button({ children: 'alpha' });
 if (!element?.type) throw new Error('Button did not return a React element');
+const alertElement = alert.Alert({ title: 'alpha' });
+if (!alertElement?.type) throw new Error('Alert did not return a React element');
+const toastProvider = createElement(toast.ToastProvider, { timeout: 0 });
+if (!toastProvider?.type) throw new Error('ToastProvider did not return a React element');
+const toastManager = toast.createToastManager();
+const toastId = toastManager.add({ title: 'alpha' });
+if (typeof toastId !== 'string') throw new Error('Toast manager did not return an id');
+toastManager.close(toastId);
 
 console.log('production imports and render passed');
 `;
 
 const consumerSource = String.raw`
-import { Button, type ButtonProps } from '@momots/design';
+import {
+  Alert,
+  type AlertProps,
+  Button,
+  type ButtonProps,
+  ToastProvider,
+  type ToastProviderProps,
+  createToastManager,
+} from '@momots/design';
+import { AlertRoot } from '@momots/design/components/alert';
+import {
+  type ToastManager,
+  type ToastObject,
+  ToastRoot,
+  useToast,
+} from '@momots/design/components/toast';
 import { Drawer } from '@momots/design/components/drawer';
 import { Highlight } from '@momots/design/effects';
 import { cx } from '@momots/design/tailwind';
 
 const props: ButtonProps = { children: 'alpha' };
+const alertProps: AlertProps = { title: 'notice', variant: 'info' };
+const toastProviderProps: ToastProviderProps = { timeout: 0, limit: 4 };
+type ToastData = { source: string };
+const toastManager: ToastManager<ToastData> = createToastManager<ToastData>();
+const toastObject: ToastObject<ToastData> = {
+  id: 'alpha',
+  data: { source: 'consumer' },
+};
+
+function ToastConsumer() {
+  const toast = useToast<ToastData>();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        toast.add({
+          title: 'alpha',
+          data: { source: 'component' },
+        });
+      }}
+    >
+      toast
+    </button>
+  );
+}
 
 export const className = cx('block');
+export const notice = <Alert {...alertProps} />;
+export const notifications = <ToastProvider {...toastProviderProps} />;
+export const externalToast = toastManager.add({
+  title: 'external',
+  data: { source: toastObject.data?.source ?? 'fallback' },
+});
 export const view = <Button {...props} />;
-export { Drawer, Highlight };
+export { AlertRoot, Drawer, Highlight, ToastConsumer, ToastRoot };
 `;
 
 const tsconfig = (module: 'ESNext' | 'NodeNext') => ({
@@ -282,32 +249,13 @@ const tsconfig = (module: 'ESNext' | 'NodeNext') => ({
   include: ['index.tsx'],
 });
 
-const temporaryDirectory = await mkdtemp(
-  join(tmpdir(), 'momots-design-tarball-'),
-);
-
-try {
-  const tarballDirectory = join(temporaryDirectory, 'tarballs');
-  const projectDirectory = join(temporaryDirectory, 'consumer');
-  const installedPackageDirectory = join(
-    projectDirectory,
-    'node_modules/@momots/design',
-  );
-  await Promise.all([
-    mkdir(tarballDirectory),
-    mkdir(installedPackageDirectory, { recursive: true }),
-  ]);
-
-  const tarball = await pack(tarballDirectory);
-  await run(
-    'tar',
-    ['-xzf', tarball, '-C', installedPackageDirectory, '--strip-components=1'],
-    temporaryDirectory,
-  );
-  await linkPackageDependencies(
-    join(packageDirectory, 'node_modules'),
-    join(projectDirectory, 'node_modules'),
-  );
+export async function checkDesignTarball({
+  consumerDirectory: projectDirectory,
+  packageDirectory: installedPackageDirectory,
+  root: packageDirectory,
+  run,
+}: MomoTarballCheckContext): Promise<void> {
+  const workspaceDirectory = resolve(packageDirectory, '../..');
   const manifest = await assertPackedFiles(installedPackageDirectory);
   if (manifest.name !== '@momots/design') {
     throw new Error(`Unexpected packed package name: ${manifest.name}`);
@@ -335,24 +283,19 @@ try {
 
   const productionEnvironment = { ...process.env };
   productionEnvironment['NODE_ENV'] = 'production';
-  const runtimeOutput = await run(
-    'bun',
-    ['--no-install', 'check.mjs'],
-    projectDirectory,
-    productionEnvironment,
-  );
+  const runtimeOutput = await run('bun', ['--no-install', 'check.mjs'], {
+    cwd: projectDirectory,
+    env: productionEnvironment,
+  });
   process.stdout.write(runtimeOutput);
 
   const tsc = join(workspaceDirectory, 'node_modules/.bin/tsc');
-  await run(tsc, ['--project', 'tsconfig.bundler.json'], projectDirectory);
+  await run(tsc, ['--project', 'tsconfig.bundler.json'], {
+    cwd: projectDirectory,
+  });
   console.log('TypeScript Bundler consumer passed');
-  await run(tsc, ['--project', 'tsconfig.nodenext.json'], projectDirectory);
+  await run(tsc, ['--project', 'tsconfig.nodenext.json'], {
+    cwd: projectDirectory,
+  });
   console.log('TypeScript NodeNext consumer passed');
-  console.log(`Verified package tarball: ${tarball}`);
-} finally {
-  if (keepTemporaryDirectory) {
-    console.log(`Kept temporary project: ${temporaryDirectory}`);
-  } else {
-    await rm(temporaryDirectory, { force: true, recursive: true });
-  }
 }

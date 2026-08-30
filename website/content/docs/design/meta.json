@@ -5,6 +5,8 @@
     "index",
     "theme",
     "---组件---",
+    "alert",
+    "toast",
     "accordion",
     "badge",
     "button",

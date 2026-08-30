@@ -1,13 +1,11 @@
 import { cardinality } from '@momots/core';
-import {
-  isNonRawBodyInit,
-  isURLSearchParams,
-  toSearchParams,
-} from '@momots/host';
+import { isNonRawBodyInit } from '@momots/host/guard/is-non-raw-body-init';
+import { isURLSearchParams } from '@momots/host/guard/is-url-search-params';
 import mime from 'mime';
 import { isArray, isPlainObject, isString } from 'remeda';
 
 import type { DriveDataStringify } from '../types';
+import { toSearchParams } from './search-params';
 
 function isJsonMime(type: string): boolean {
   const essence = type.split(';', 1)[0]?.trim().toLowerCase();

@@ -1,9 +1,51 @@
 import { $ } from 'bun';
 
-import { chmod, copyFile, mkdir, readdir, rm } from 'node:fs/promises';
+import {
+  chmod,
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+} from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
 
 import type { MomoBuildConfig } from './config';
+
+type PackageManifest = {
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+};
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function resolvePackageHandling(
+  manifest: PackageManifest,
+  options: MomoBuildConfig,
+): { packages: 'bundle' | 'external'; external?: string[] } {
+  const bundle = options.bundle ?? [];
+  if (bundle.length === 0) {
+    return {
+      packages: options.packages ?? 'external',
+      ...(options.external ? { external: options.external } : {}),
+    };
+  }
+
+  const bundled = new Set(bundle);
+  const declared = [
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+    ...Object.keys(manifest.optionalDependencies ?? {}),
+  ].filter((name) => !bundled.has(name));
+
+  return {
+    packages: 'bundle',
+    external: unique([...(options.external ?? []), ...declared]),
+  };
+}
 
 export interface BuildOptions extends MomoBuildConfig {
   /** 包根目录，默认 process.cwd()。 */
@@ -56,6 +98,12 @@ export async function build(options: BuildOptions = {}): Promise<void> {
     await $`bun run ${script}`.cwd(root);
   }
 
+  const manifest: PackageManifest = options.bundle?.length
+    ? (JSON.parse(
+        await readFile(join(root, 'package.json'), 'utf8'),
+      ) as PackageManifest)
+    : {};
+  const { packages, external } = resolvePackageHandling(manifest, options);
   const entrypoints = await collectEntrypoints(srcRoot);
   const result = await Bun.build({
     define: {
@@ -63,10 +111,11 @@ export async function build(options: BuildOptions = {}): Promise<void> {
     },
     banner: options.banner,
     entrypoints,
+    external,
     format: options.format ?? 'esm',
     naming: '[dir]/[name].[ext]',
     outdir: distRoot,
-    packages: options.packages ?? 'external',
+    packages,
     root: srcRoot,
     splitting: options.splitting ?? false,
     target: options.target ?? 'browser',

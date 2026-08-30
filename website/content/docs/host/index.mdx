@@ -4,7 +4,7 @@ description: "@momots/host —— JS 宿主环境工具集。"
 icon: Rocket
 ---
 
-`@momots/host` 提供无副作用，子路径导入，SSR 支持的 **宿主环境**（浏览器 / JS 运行时）相关能力。如环境嗅探、类型化存储、URL 查询处理、二进制编解码、CSS 颜色解析、Canvas 文本测量、浏览器指纹等。
+`@momots/host` 提供无副作用、支持子路径导入且可在 SSR 安全加载的 **宿主环境**（浏览器 / JS 运行时）相关能力。如环境嗅探、类型化存储、二进制编解码、CSS 颜色解析、Canvas 文本测量、浏览器指纹等。
 
 ## 安装
 
@@ -20,7 +20,7 @@ bun add @momots/host @momots/core remeda type-fest
 
 ```ts
 // 从根入口导入
-import { isMobile, measureText, projection, toSearchParams, Storagefy } from "@momots/host";
+import { isMobile, measureText, projection, Storagefy } from "@momots/host";
 
 // 按子路径导入（仅打包用到的部分）
 import { isMobile } from "@momots/host/guard/is-mobile";
@@ -30,6 +30,31 @@ import { Storagefy } from "@momots/host/storage";
 import { projection } from "@momots/host/fingerprint";
 ```
 
+## 运行时兼容性
+
+兼容性按模块判断，并拆成两个相互独立的维度：
+
+- **导入安全**：加载模块时不要求浏览器全局对象存在。
+- **行为等级**：调用 API 后，当前运行时提供的是**完整**、**降级**、**不可用**还是**宿主语义**。
+
+所有公开入口都可以在浏览器与 Bun 中安全导入，但“可导入”不代表 DOM 能力在 Bun 中存在。Bun 服务建议使用子路径导入，让每个模块的运行时依赖保持明确。
+
+| 模块 | 浏览器 | Bun 服务 | Bun 中的具体语义 |
+| --- | --- | --- | --- |
+| `buffer` | 完整 | 完整 | 使用 Web Platform 的 `Blob`、Base64 与 typed array |
+| `fetch` | 完整 | 完整 | 使用 Bun 原生 Fetch API |
+| `storage` | 完整 | 降级 | 默认使用进程内 `MemoryStorage`，不派发 `StorageEvent` |
+| `persistent` | 完整 | 降级 | 默认仅在当前进程内保留，不跨重启或进程共享 |
+| `css/to-rgb` | 完整 | 完整 | 纯字符串解析，不依赖 DOM |
+| `css/to-css-variable` | 完整 | 不可用 | 无 DOM 时返回 `initial` 或 `undefined` |
+| `canvas` | 完整 | 不可用 | 无 Canvas 时 `measureText` 返回 `undefined` |
+| `fingerprint` | 浏览器语义 | 宿主语义 | 标识 Bun 宿主/进程，不是请求方访客指纹 |
+| Web API 守卫 | 完整 | 完整 | 可判断 `Blob`、Stream、`FormData`、buffer 等对象 |
+| DOM 守卫与 `nearest` | 完整 | 不可用 | 无 DOM 时返回 `false` 或 `undefined` |
+| UA 守卫 | 完整 | 显式输入时完整 | 应传入请求 UA；默认 UA 描述的是 Bun 服务自身 |
+
+因此，Bun 服务可以直接使用 `buffer`、`fetch`、`css/to-rgb` 和 Web API 守卫；存储模块需要接受进程内降级或显式注入外部 `Storage`；DOM、Canvas 与访客指纹能力应留在浏览器端。
+
 ## 能力地图
 
 | 主题        | 子路径        | 代表 API                                       |
@@ -37,7 +62,6 @@ import { projection } from "@momots/host/fingerprint";
 | 守卫        | `guard/is-*`  | `isMobile`、`isElement`、`isCSSStyleRule`、`isBlob`、`isSSR` … |
 | 存储        | `storage`     | `Storagefy`、`StoragefyAsync`、`MemoryStorage` |
 | 缓冲区      | `persistent`  | `PersistentBuffer`                             |
-| URL         | `url`         | `toSearchParams`                               |
 | 二进制      | `buffer`      | `bytesToHex`、`hexToBytes`、`blobToBytes`      |
 | CSS         | `css/*`       | `toRGB`、`toCSSVariable`、`toCSSRGBVariable`   |
 | Canvas      | `canvas`      | `measureText`                                  |
