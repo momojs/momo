@@ -1,6 +1,6 @@
 ---
 title: 向导
-description: momo build 与 momo tarball 命令及配置说明。
+description: momo build、momo doctor 与 momo tarball 命令及配置说明。
 icon: BookOpen
 ---
 
@@ -9,15 +9,18 @@ icon: BookOpen
 | 命令 | 说明 | 退出码 |
 | --- | --- | --- |
 | `momo build` | 读取最近的 `momo.config.*` 并构建当前包 | 成功 `0` / 出错 `1` |
+| `momo doctor` | 只读检查构建配置、依赖规则与本地产物 | 无错误 `0` / 有错误 `1` |
 | `momo tarball` | 打包当前包，并在干净消费项目中验证发布产物 | 成功 `0` / 出错 `1` |
 | `momo help` / `-h` / `--help` | 显示帮助 | `0` |
 | *(无命令)* | 显示帮助 | `1` |
 
-`momo build` 和 `momo tarball` 都接受 `-c, --config <path>` 显式指定配置文件；未指定时会从当前目录向上查找 `momo.config.ts`、`momo.config.mts`、`momo.config.js` 或 `momo.config.mjs`。
+三个命令都接受 `-c, --config <path>` 显式指定配置文件；相对配置路径以当前工作目录为基准。未指定时会从当前目录向上查找 `momo.config.ts`、`momo.config.mts`、`momo.config.js` 或 `momo.config.mjs`。构建配置中的路径以配置文件所在目录为基准。
 
 ```bash
 momo build
 momo build -c packages/host/momo.config.ts
+momo doctor
+momo doctor --json -c packages/host/momo.config.ts
 momo tarball
 momo tarball --keep
 momo tarball --destination ./artifacts
@@ -71,6 +74,46 @@ export default defineConfig({
 | `executables` | `[]` | 构建后设置为可执行文件的相对路径 |
 
 构建器递归收集 `src` 中的 `.ts` 与 `.tsx` 文件，忽略声明文件和 spec，并保持目录结构输出。
+
+## 本地诊断
+
+`momo doctor` 检查当前包能否按配置构建，以及已有产物是否与配置一致。它不调用 build、package scripts 或 `tarball.check`，不安装依赖，也不创建、清理或修复文件。与其他命令一样，它会执行配置模块的顶层代码，因此应使用可信且没有顶层副作用的配置；使用 `--json` 时也应避免配置向标准输出打印内容。
+
+检查范围包括：
+
+- `build` 字段的运行时类型和值；未知顶层字段和构建字段给出警告；
+- 构建脚本是否在 `package.json#scripts` 中声明；未配置时检查 `typecheck` 与 `types`；
+- `bundle` 和 `external` 是否冲突，包括 external 通配符与包子路径；未声明的 bundle 包给出警告，`devDependencies` 中声明的包也被认可；
+- 源码目录及构建入口是否存在；
+- outdir 是否与包根或源码重叠，资源目标与可执行文件是否越出 outdir；路径检查会解析现有符号链接；
+- 资源来源是否为文件、是否会在构建清理时被删除；
+- 已有产物中的可执行文件及其权限；
+- package exports 中的文件目标是否存在，包括嵌套条件和数组内声明的目标；通配符目标至少应匹配一个文件。
+
+尚不存在 outdir 时只给出一次警告，并暂缓检查该目录内的 exports 和可执行产物。运行 `momo build` 后再次诊断即可检查这些文件。outdir 已存在时，缺失的导出或可执行文件视为错误；包外 outdir 则给出清理范围警告。`scripts: []` 且未设置非空 `bundle` 的构建允许没有 `package.json`。
+
+有错误时退出码为 `1`；没有错误（即使有警告）时退出码为 `0`。`momo doctor --help` 显示命令帮助，`--json` 在标准输出提供结构化报告：
+
+```json
+{
+  "root": "/workspace/packages/example",
+  "config": "/workspace/packages/example/momo.config.ts",
+  "ok": true,
+  "summary": { "errors": 0, "warnings": 1 },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "output.missing",
+      "message": "尚无输出目录；请运行 momo build 后再检查产物。",
+      "path": "/workspace/packages/example/dist"
+    }
+  ]
+}
+```
+
+每条诊断包含 `severity`、`code`、`message`，以及可选的 `path`（相关文件或配置字段）。`ok` 表示没有错误；未找到配置时 `config` 为 `null`。配置加载失败、无效命令参数等错误也使用同一报告结构。CI 可以根据退出码判断成功与否，或按 `code` 处理特定问题。
+
+doctor 只检查本地配置与文件，不验证发布文件清单、依赖安装或运行时导入。发布前继续使用 `momo tarball` 检查实际打包后的消费行为。
 
 ## Tarball 校验
 

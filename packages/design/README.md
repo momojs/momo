@@ -69,3 +69,16 @@ validated with TypeScript's `Bundler` and `NodeNext` module resolution modes.
 
 Full component and theme documentation lives in the
 [Momo documentation](https://github.com/momojs/momo/tree/main/website/content/docs/design).
+
+## Development checks
+
+```sh
+bun run --filter './packages/design' test
+bun run --filter './packages/design' typecheck:spec
+bun run --filter './packages/design' test:browser
+```
+
+Browser tests use real React commits, including transitions, layout effects,
+Suspense, and StrictMode. They run in an ephemeral WebKit session on macOS and
+require an installed Chrome on other platforms. `bunwright` is a development
+dependency only; the browser tests do not use the unit tests' mocked hooks.

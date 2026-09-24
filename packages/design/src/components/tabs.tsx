@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useLayoutEffect, useRef } from 'react';
 
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { useAutoHeight } from '../effects/height.js';
 import {
@@ -97,7 +97,8 @@ export function Tabs<T extends string>(props: TabsProps<T>) {
     ...rootProps
   } = props;
 
-  const { activate, register, rect } = useAutoHeight();
+  const { activate, register, clear, height } = useAutoHeight();
+  const reduced = useReducedMotion();
 
   const listRef = useRef<HTMLDivElement>(null);
   const hoverLayer = useHighlightLayer<HTMLElement, HTMLDivElement>(listRef);
@@ -105,30 +106,45 @@ export function Tabs<T extends string>(props: TabsProps<T>) {
   const hoverTrigger = useHighlightTrigger(hoverLayer, { trigger: 'hover' });
   const selectRegistrar = useHighlightRegistrar(selectLayer);
 
+  const firstAvailable = options.find((option) => !option.disabled)?.value;
   const [current, setCurrent] = useControllableValue({
     value,
-    defaultValue,
+    defaultValue: defaultValue ?? firstAvailable,
     onChange,
   });
   const activateSelect = selectRegistrar.activate;
+  const clearSelect = selectRegistrar.clear;
+  const activeValue = options.some((option) => option.value === current)
+    ? current
+    : undefined;
 
   useLayoutEffect(() => {
-    if (current === undefined) return;
-    activate(current);
-    activateSelect(current);
-  }, [current, activate, activateSelect]);
+    // Options may arrive after mount; keep Base UI controlled from the start.
+    if (current === undefined && firstAvailable !== undefined) {
+      setCurrent(firstAvailable);
+    }
+  }, [current, firstAvailable, setCurrent]);
+
+  useLayoutEffect(() => {
+    if (activeValue === undefined) {
+      clear();
+      clearSelect();
+    } else {
+      activate(activeValue);
+      activateSelect(activeValue);
+    }
+  }, [activeValue, activate, activateSelect, clear, clearSelect]);
 
   return (
     <Root
-      value={current}
+      value={current ?? null}
       orientation={orientation}
       className={variants.root({
         className,
         orientation,
       })}
       onValueChange={(value) => {
-        activate(value);
-        activateSelect(value);
+        // A controlled caller may reject the request. Measure committed selection only.
         setCurrent(value);
       }}
       {...rootProps}
@@ -174,23 +190,28 @@ export function Tabs<T extends string>(props: TabsProps<T>) {
           ),
         )}
       </List>
-      <motion.div
-        className={variants.panels({})}
-        animate={{ height: rect.height }}
-      >
-        {options.map(({ value, content }) => (
-          <Panel
-            ref={register(value)}
-            key={value}
-            value={value}
-            className={variants.panel({
-              className: panelClassName,
-            })}
-          >
-            {content}
-          </Panel>
-        ))}
-      </motion.div>
+      <div data-slot='tabs-panels' className={variants.panels({})}>
+        <motion.div
+          data-slot='tabs-height'
+          className='overflow-hidden'
+          initial={false}
+          animate={{ height }}
+          transition={reduced ? { type: 'tween', duration: 0 } : undefined}
+        >
+          {options.map(({ value, content }) => (
+            <Panel
+              ref={register(value)}
+              key={value}
+              value={value}
+              className={variants.panel({
+                className: panelClassName,
+              })}
+            >
+              {content}
+            </Panel>
+          ))}
+        </motion.div>
+      </div>
     </Root>
   );
 }

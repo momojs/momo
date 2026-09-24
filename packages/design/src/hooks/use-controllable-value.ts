@@ -1,32 +1,33 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
+  useInsertionEffect,
   useReducer,
   useRef,
   useState,
 } from 'react';
 
-import type { Updater } from '@momots/core';
 import { realize } from '@momots/core';
 
-/** Receives a resolved value after it changes. */
+/** Synchronously receives a changed request, not a commit confirmation. */
 export type ChangeHandler<Value, Args extends unknown[] = unknown[]> = (
   value: Value,
   ...args: Args
 ) => void;
 
-/** Sets a value directly or derives it from the current value. */
-export type SetValue<Value, Args extends unknown[] = unknown[]> = (
-  updater: Updater<Value>,
-  ...args: Args
-) => void;
+/** Requests a value directly or derives it from the latest request result. */
+export type SetValue<
+  Value,
+  Args extends unknown[] = unknown[],
+  Previous = Value,
+> = (updater: Value | ((previous: Previous) => Value), ...args: Args) => void;
 
 /** Options for a value that may be controlled by its caller. */
 export interface ControlOptions<Value, Args extends unknown[] = unknown[]> {
   /** Overrides the inferred mode when `undefined` is a controlled value. */
   readonly controlled?: boolean;
   readonly value?: Value;
+  /** Initial value; also the fallback if an implicitly controlled value vanishes. */
   readonly defaultValue?: Value;
   readonly onChange?: ChangeHandler<Value, Args>;
 }
@@ -38,10 +39,19 @@ type Defined<Value> = Exclude<Value, undefined>;
  *
  * By default, `undefined` means the value is uncontrolled. The `controlled`
  * option can override that inference. The returned setter accepts a value or a
- * function updater, while `onChange` always receives the resolved value and
- * the original trailing arguments. The control mode is fixed on the first
- * render. A statically defined controlled value or uncontrolled fallback
- * narrows both the returned value and setter to exclude `undefined`.
+ * function updater. Requests compose until a controlled commit realigns them
+ * with the caller's value; uncontrolled requests survive unrelated commits.
+ * `onChange` synchronously receives each changed request and its trailing args.
+ * The setter is stable and the control mode is fixed on the first render.
+ *
+ * A defined controlled value narrows the result, but preserves the declared
+ * writable type and updater's previous type. The defined-default overload
+ * excludes `undefined` from all three. Explicitly controlled `undefined` is
+ * preserved, even with a default.
+ *
+ * @example
+ * const [date, setDate] = useControllableValue({ defaultValue: new Date() });
+ * setDate(previous => new Date(previous.getTime() + 1_000));
  */
 export function useControllableValue<
   Value,
@@ -51,7 +61,7 @@ export function useControllableValue<
     readonly controlled?: true;
     readonly value: Defined<Value>;
   },
-): [Defined<Value>, SetValue<Defined<Value>, Args>];
+): [Defined<Value>, SetValue<Value, Args>];
 export function useControllableValue<
   Value,
   const Args extends unknown[] = unknown[],
@@ -66,7 +76,7 @@ export function useControllableValue<
   const Args extends unknown[] = unknown[],
 >(
   options: ControlOptions<Value, Args>,
-): [Value | undefined, SetValue<Value, Args>];
+): [Value | undefined, SetValue<Value, Args, Value | undefined>];
 export function useControllableValue<
   Value,
   const Args extends unknown[] = unknown[],
@@ -75,17 +85,27 @@ export function useControllableValue<
   value: controlledValue,
   defaultValue,
   onChange,
-}: ControlOptions<Value, Args>): [Value | undefined, SetValue<Value, Args>] {
+}: ControlOptions<Value, Args>): [
+  Value | undefined,
+  SetValue<Value, Args, Value | undefined>,
+] {
   const controlledMode = controlled ?? controlledValue !== undefined;
-  const controlledRef = useRef(controlledMode);
+  const initial = useRef({
+    isControlled: controlledMode,
+    explicitlyControlled: controlled === true,
+    defaultValue,
+  }).current;
   const previousControlledRef = useRef(controlledMode);
-  const isControlled = controlledRef.current;
   const [uncontrolledValue, setUncontrolledValue] = useState<Value | undefined>(
-    () => defaultValue,
+    () => initial.defaultValue,
   );
-  const value = isControlled ? controlledValue : uncontrolledValue;
+  const value = initial.isControlled
+    ? controlledValue !== undefined || initial.explicitlyControlled
+      ? controlledValue
+      : initial.defaultValue
+    : uncontrolledValue;
 
-  const valueRef = useRef(value);
+  const requestedValueRef = useRef(value);
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
@@ -100,34 +120,39 @@ export function useControllableValue<
     previousControlledRef.current = controlledMode;
   }, [controlledMode]);
 
-  // A controlled update is optimistic within the current batch. Committing a
-  // render resets it to the value accepted by the caller.
-  useLayoutEffect(() => {
-    valueRef.current = value;
+  // Publish only committed props, before descendant layout effects can call
+  // the setter. Never reset uncontrolled requests: their state writes may
+  // still be pending in a lower-priority render.
+  useInsertionEffect(() => {
+    if (initial.isControlled) requestedValueRef.current = value;
     onChangeRef.current = onChange;
   });
 
-  const [, forceControlledReset] = useReducer(
+  const [, realignControlledValue] = useReducer(
     (version: number) => version + 1,
     0,
   );
 
-  const setValue = useCallback<SetValue<Value, Args>>((updater, ...args) => {
-    const previous = valueRef.current;
-    const next = realize(updater, previous);
+  const setValue = useCallback<SetValue<Value, Args, Value | undefined>>(
+    (updater, ...args) => {
+      const previous = requestedValueRef.current;
+      const next = realize(updater, previous);
 
-    if (Object.is(previous, next)) return;
+      if (Object.is(previous, next)) return;
 
-    valueRef.current = next;
+      requestedValueRef.current = next;
 
-    if (controlledRef.current) {
-      forceControlledReset();
-    } else {
-      setUncontrolledValue(() => next);
-    }
+      if (initial.isControlled) {
+        // Realign even when the caller rejects the request without rerendering.
+        realignControlledValue();
+      } else {
+        setUncontrolledValue(() => next);
+      }
 
-    onChangeRef.current?.(next, ...args);
-  }, []);
+      onChangeRef.current?.(next, ...args);
+    },
+    [initial],
+  );
 
   return [value, setValue];
 }

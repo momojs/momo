@@ -1,16 +1,10 @@
 import { $ } from 'bun';
 
-import {
-  chmod,
-  copyFile,
-  mkdir,
-  readdir,
-  readFile,
-  rm,
-} from 'node:fs/promises';
+import { chmod, copyFile, mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
 
 import type { MomoBuildConfig } from './config';
+import { collectEntrypoints } from './runner/collect-entrypoints';
 
 type PackageManifest = {
   dependencies?: Record<string, string>;
@@ -50,33 +44,6 @@ function resolvePackageHandling(
 export interface BuildOptions extends MomoBuildConfig {
   /** 包根目录，默认 process.cwd()。 */
   root?: string;
-}
-
-async function collectEntrypoints(directory: string): Promise<string[]> {
-  const entries = await readdir(directory, { withFileTypes: true });
-  const entrypoints = await Promise.all(
-    entries.map(async (entry) => {
-      const path = join(directory, entry.name);
-
-      if (entry.isDirectory()) {
-        return collectEntrypoints(path);
-      }
-
-      if (
-        entry.isFile() &&
-        (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) &&
-        !entry.name.endsWith('.d.ts') &&
-        !entry.name.endsWith('.spec.ts') &&
-        !entry.name.endsWith('.spec.tsx')
-      ) {
-        return [path];
-      }
-
-      return [];
-    }),
-  );
-
-  return entrypoints.flat().sort();
 }
 
 function resolve(root: string, path: string): string {

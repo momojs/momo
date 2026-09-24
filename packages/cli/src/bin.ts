@@ -1,17 +1,20 @@
 #!/usr/bin/env bun
 import { buildCommand } from './commands/build';
+import { doctorCommand } from './commands/doctor';
 import { tarballCommand } from './commands/tarball';
 
 const HELP = `momo - momots 命令行工具
 
 用法:
   momo build [选项]     读取最近的 momo.config.* 的 build 配置并构建当前包
+  momo doctor [选项]    只读检查构建配置、依赖规则和本地产物
   momo tarball [选项]   打包当前包，并在干净消费项目中验证发布产物
 
 选项:
   -c, --config <path>   指定 momo.config.* 路径（默认向上查找）
   -d, --destination <dir> 永久保存生成的 tarball
   --keep                保留临时消费项目，方便排错
+  --json                以 JSON 输出 doctor 诊断报告
   -h, --help            显示帮助
 `;
 
@@ -46,6 +49,8 @@ async function main(argv: string[]): Promise<number> {
   }
 
   switch (command) {
+    case 'doctor':
+      return doctorCommand(rest);
     case 'build':
       return buildCommand({ config: parseFlag(rest, '--config', '-c') });
     case 'tarball':

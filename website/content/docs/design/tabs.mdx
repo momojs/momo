@@ -32,3 +32,11 @@ import { Tabs } from "@momots/design/components/tabs";
 | `options`      | `TabOption<T>[]`             | tab 与 panel 描述 |
 | `orientation`  | `"horizontal" \| "vertical"` | 排列方向          |
 | `onChange`     | `(value: T) => void`         | 切换回调          |
+
+## 选中状态与高度
+
+非受控模式使用 `defaultValue` 初始化；未指定时选择第一个未禁用的选项，也支持初始为空、之后异步提供 `options`。已选项被移除时面板区域收起，同一选中值重新出现时恢复。
+
+受控模式的 `onChange` 表达切换请求；父组件传回新的 `value` 后，面板和高度才跟随切换。当前面板的异步内容变化会持续触发高度测量，外层边框不计入动画高度，减少动态效果偏好下直接更新高度。
+
+高度策略与测量约束见 [useAutoHeight](/docs/design/use-auto-height)。

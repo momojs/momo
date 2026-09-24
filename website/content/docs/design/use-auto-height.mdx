@@ -1,0 +1,407 @@
+---
+title: useAutoHeight
+description: 用内容增减、面板切换和延迟挂载等场景，理解自然高度如何成为稳定、可中断的动画目标。
+icon: MoveVertical
+---
+
+`useAutoHeight` 把内容的自然高度交给动画容器：内容决定需要多高，Hook 持续测量，Motion 负责从当前显示高度移动到新目标。它适用于 Tabs、动态详情、分步表单，以及单月或多月日历。
+
+## 为什么需要它
+
+假设一个详情面板最初只有两行摘要，接口返回后增加了图片和说明；用户缩窄窗口，文字又多换了几行。如果只在“展开”时读一次高度，后续内容可能被裁掉。如果为不同内容写死高度，又容易留下大块空白。
+
+切换面板还会带来另一个问题：旧面板已经卸载，新面板尚未挂载，此时“没有测量结果”并不表示内容真的变成了零高。直接把高度归零，会让容器先收起再展开。
+
+| 遇到的问题 | Hook 提供的行为 |
+| --- | --- |
+| 内容加载后变高，原来的高度不够用 | 持续观察当前目标的自然尺寸，并更新数值高度 |
+| 宽度变化导致换行，依赖项却没有改变 | 尺寸变化由 `ResizeObserver` 捕获，无需手动维护内容依赖列表 |
+| 不同面板高度不同，切换时页面突然跳动 | 按 key 注册并激活面板，把目标高度交给同一个 Motion 容器 |
+| 新面板尚未挂载，容器不应突然塌下去 | 进入 `pending`，保留上一次动画目标高度 |
+| 空内容确实为零高，或者业务上需要收起 | 有效的零高直接返回 `0`；主动收起使用 `clear()` |
+| 动画没结束，用户就再次操作 | 更新同一个容器的目标，由 Motion 从当前显示高度继续运动 |
+
+如果只是固定内容的一次展开、收起，可以直接使用 Motion 的 `height: 0` 与 `height: "auto"`。当需要持续响应尺寸变化，或管理多个测量目标时，再使用这个 Hook。它负责测量和目标选择，动画参数由调用方决定。
+
+## 先观察：测量状态与动画目标
+
+选择场景后操作按钮，观察“当前测量高度”“动画目标高度”和容器下方分界线。切换场景或点击“重新开始”会重建演示；系统开启减少动态效果时，高度立即更新。
+
+<UseAutoHeightPlayground />
+
+以下操作都从对应场景的初始状态开始。具体像素取决于字体和可用宽度，重点看变化关系：
+
+| 场景与操作 | 测量与目标如何变化 | 界面行为 |
+| --- | --- | --- |
+| 内容增减 → 添加补充内容 → 移除补充内容 | `ready`，高度先增大再减小 | 容器跟随内容展开、收回 |
+| 内容增减 → 缩窄内容 | 换行增多时，测得高度随之增大 | 无需再次调用 `activate` |
+| 面板切换 → 显示详情 → 立即显示摘要 | 目标从详情高度改为摘要高度 | 同一容器在动画中途改向 |
+| 面板切换 → 拒绝切换请求 → 显示详情 | 最近请求为 `details`，激活目标仍为 `summary` | 内容和高度都保持在摘要 |
+| 等待挂载 → 等待新内容 → 挂载新内容 | `ready → pending → ready` | 等待时保留旧高度，挂载后移向新高度 |
+| 等待挂载 → 真实零高 | `ready`，有效测量高度与动画目标均为 `0` | 收至零高，外层边框仍在 |
+| 等待挂载 → `clear()` → 重新激活 | `idle → ready`，动画目标先为 `0` 再恢复 | 注册的内容仍可被重新激活 |
+| 多月布局 → 纵向排列 | 测得整个区域的新高度 | 月份、间距、标题和底部说明一起计入 |
+
+## 场景一：详情内容增加或减少
+
+Hook 从包根入口或 `@momots/design/effects` 导出。动画容器和测量目标必须是两个独立元素：
+
+```tsx
+import type { ReactNode } from "react";
+import { useLayoutEffect } from "react";
+import { useAutoHeight } from "@momots/design/effects";
+import { motion, useReducedMotion } from "motion/react";
+
+function HeightRegion({ children }: { children: ReactNode }) {
+  const { register, activate, height } = useAutoHeight();
+  const reduced = useReducedMotion();
+
+  useLayoutEffect(() => {
+    activate("content");
+  }, [activate]);
+
+  return (
+    <div className="rounded-lg border p-3">
+      <motion.div
+        initial={false}
+        animate={{ height }}
+        transition={reduced ? { type: "tween", duration: 0 } : undefined}
+        className="overflow-hidden"
+      >
+        <div ref={register("content")} className="flow-root">
+          {children}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+```
+
+这三层各有职责：最外层负责边框、背景和额外留白；中间层只负责高度动画与裁剪；内层保持自然布局，作为测量来源。首屏和 SSR 尚未测量时，`height` 为 `"auto"`，不会先把内容压成零高。
+
+后续示例中的 `HeightRegion` 都复用上面的实现。只要让新增内容参与内层的正常布局，就能持续跟随高度：
+
+```tsx
+import { useState } from "react";
+
+function ProductDetails() {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setExpanded((previous) => !previous)}>
+        {expanded ? "收起说明" : "展开说明"}
+      </button>
+      <HeightRegion>
+        <p>商品摘要。</p>
+        {expanded && (
+          <div className="grid gap-3">
+            <p>补充的使用方式。</p>
+            <p>更多规格和配送说明。</p>
+          </div>
+        )}
+      </HeightRegion>
+    </>
+  );
+}
+```
+
+点击展开时，内层先按内容自然变高，Hook 发布新高度，Motion 驱动外层跟随；收起时流程相同。接口返回后插入内容、图片加载后撑开布局，也会沿着相同路径更新，不需要额外调用测量函数。
+
+如果图片已通过宽高或 `aspect-ratio` 预留空间，加载完成后布局尺寸没有变化，Hook 就不会产生新的尺寸更新。
+
+## 场景二：容器变窄，文字重新换行
+
+内容字符串不变，不代表高度不变。侧栏展开、窗口变窄或字体变化，都可能让文本多占几行。测量的是浏览器实际布局，因此不需要把这些因素逐个写进 Hook 的依赖数组：
+
+```tsx
+function ResponsiveDetails() {
+  const [narrow, setNarrow] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setNarrow((previous) => !previous)}>
+        切换可用宽度
+      </button>
+      <div style={{ width: narrow ? 220 : 360, maxWidth: "100%" }}>
+        <HeightRegion>
+          <p>同一段说明在不同宽度下自然换行，高度目标随实际布局更新。</p>
+        </HeightRegion>
+      </div>
+    </>
+  );
+}
+```
+
+只变宽度、没有改变高度时，`state.rect.width` 仍会更新，`height` 则保持不变。宽高数值都相同时，不会发布重复测量。
+
+## 场景三：切换摘要与详情，允许中途改向
+
+多个逻辑目标使用不同 key 注册，通过 `activate` 选择当前目标。注册只表示“这个节点存在”，不会自动选中它。
+
+下面的组件由父组件决定显示哪个面板。按钮只提出切换请求，effect 根据已经提交的 `value` 激活测量：
+
+```tsx
+type Panel = "summary" | "details";
+
+function PanelRegion({
+  value,
+  onChange,
+}: {
+  value: Panel;
+  onChange: (next: Panel) => void;
+}) {
+  const { register, activate, height } = useAutoHeight();
+  const reduced = useReducedMotion();
+
+  useLayoutEffect(() => {
+    activate(value);
+  }, [value, activate]);
+
+  return (
+    <>
+      <button onClick={() => onChange("summary")}>显示摘要</button>
+      <button onClick={() => onChange("details")}>显示详情</button>
+      <motion.div
+        initial={false}
+        animate={{ height }}
+        transition={reduced ? { type: "tween", duration: 0 } : undefined}
+        className="overflow-hidden"
+      >
+        <div key={value} ref={register(value)} className="flow-root">
+          {value === "summary" ? (
+            <p>一段摘要。</p>
+          ) : (
+            <div className="grid gap-3">
+              <p>第一段详情。</p>
+              <p>第二段详情。</p>
+              <p>第三段详情。</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </>
+  );
+}
+```
+
+从矮面板切向高面板，再在动画结束前切回来，Hook 只提供新的目标高度；Motion 在同一个容器上接续当前显示高度。`height` 是终点，不是每一帧正在显示的高度。
+
+这里 `key={value}` 只放在内容节点上。不要把它放到 `motion.div` 上，否则每次切换都会重建动画容器，无法接续上一次动画。
+
+### 父组件拒绝切换时
+
+```tsx
+<PanelRegion
+  value={panel}
+  onChange={(requested) => {
+    if (locked) return;
+    setPanel(requested);
+  }}
+/>
+```
+
+如果父组件拒绝 `details`，`value` 仍是 `summary`，测量应继续跟随摘要。不要在 `onChange` 请求处理函数中提前执行 `activate(requested)`，否则界面显示旧内容，却在等待或测量新面板。这个约定与 [useControllableValue 的受控请求](/docs/design/use-controllable-value)一致。
+
+已有的 [Tabs](/docs/design/tabs) 组件已经接入这套高度策略，使用 Tabs 时无需再包一层同样的测量逻辑。
+
+## 场景四：新面板尚未挂载
+
+异步加载、条件渲染或分步流程中，可以先表达“接下来需要这个目标”，再等待它挂载。下面的 `ready` 由数据加载状态决定：
+
+```tsx
+function DeferredPanel({
+  selected,
+  ready,
+}: {
+  selected: "summary" | "details";
+  ready: boolean;
+}) {
+  const { register, activate, height } = useAutoHeight();
+  const reduced = useReducedMotion();
+
+  useLayoutEffect(() => {
+    activate(selected);
+  }, [selected, activate]);
+
+  return (
+    <motion.div
+      initial={false}
+      animate={{ height }}
+      transition={reduced ? { type: "tween", duration: 0 } : undefined}
+      className="overflow-hidden"
+    >
+      {selected === "summary" && (
+        <div ref={register("summary")} className="flow-root">
+          <p>已加载的摘要。</p>
+        </div>
+      )}
+      {selected === "details" && ready && (
+        <div ref={register("details")} className="flow-root">
+          <p>异步返回的详情。</p>
+          <p>更多内容。</p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+```
+
+假设摘要已测得 `80px`，详情挂载后实际为 `240px`：
+
+| 时刻 | 当前目标 | `state.status` | `state.rect` | `height` |
+| --- | --- | --- | --- | --- |
+| 显示摘要 | `summary` | `ready` | 摘要尺寸 | `80` |
+| 已选择详情，但 `ready` 为 `false` | `details` | `pending` | `null` | 保留 `80` |
+| `ready` 变为 `true`，详情挂载并完成测量 | `details` | `ready` | 详情尺寸 | `240` |
+| 详情随后暂时卸载 | `details` | `pending` | `null` | 保留 `240` |
+
+等待期间保留的是上一次**目标高度**，不是暂停在某一帧；如果动画尚未结束，它仍可继续向保留的目标运动。没有任何历史测量时，`pending` 的高度仍为 `"auto"`。
+
+Hook 保留空间，不保留已卸载的内容，也不自动显示加载状态。需要 skeleton、旧内容留屏或过渡时的占位时，由调用方安排；如果 skeleton 注册为当前目标，就会测量 skeleton 自己的高度。
+
+切换目标时旧目标停止被观察，迟到的旧通知不会覆盖新目标。同一 key 重新挂载时会接入新节点，旧挂载的清理也不会删除替代节点。
+
+## 场景五：真实零高与主动收起
+
+“等着新内容出现”“内容确实为空”“已经没有选中项”是三种不同状态：
+
+| 意图 | 如何表达 | 状态与结果 |
+| --- | --- | --- |
+| 新内容还没挂载 | `activate("details")`，稍后注册目标 | `pending`，保留上次目标高度 |
+| 当前内容实际高度为零 | 激活已挂载、没有内容和留白的节点 | `ready`，`state.rect.height` 与 `height` 都是 `0` |
+| 业务上取消选择，容器应收起 | `clear()` | `idle`，`state.rect` 为 `null`，`height` 为 `0` |
+
+例如，受控的步骤选择允许“没有选中项”，就明确区分选中与清空：
+
+```tsx
+// selected 的类型为 string | undefined。
+useLayoutEffect(() => {
+  if (selected === undefined) clear();
+  else activate(selected);
+}, [selected, activate, clear]);
+```
+
+`clear()` 撤销激活意图，但不会删除仍挂载的注册项。之后调用 `activate` 可以重新测量它们；如果目标已经卸载，则会重新进入 `pending`。刚清空后再等待目标挂载，保留的高度是 `0`。
+
+key 支持 `string`、`number` 和 `null`，其中 `0`、`"0"`、`null` 是三个不同目标。`activate(null)` 会选择 key 为 `null` 的目标，不能代替 `clear()`。
+
+高度为 `0` 只描述动画容器，不会移除外层边框与 padding，也不会自动卸载内容或管理键盘焦点。收起包含交互控件的区域时，调用方还应同步处理内容的可见性和可访问性。
+
+## 场景六：一个月变成多个月，测量整体布局
+
+日历或卡片组经常既能横排，也能纵排。把每个子项的高度相加，只对部分纵排结构有效；横排时应该看整行高度，还需要计入标题、间距和底部内容。
+
+最直接的做法是把整个区域作为一个自然布局目标。下面的 `months` 可以传入现有日历生成的月份节点：
+
+```tsx
+function MonthLayout({
+  months,
+  stacked,
+}: {
+  months: { id: string; content: ReactNode }[];
+  stacked: boolean;
+}) {
+  return (
+    <HeightRegion>
+      <div className="grid gap-4">
+        <header>选择日期</header>
+        <div
+          className="grid gap-4"
+          style={{
+            gridTemplateColumns: stacked
+              ? "1fr"
+              : `repeat(${Math.max(months.length, 1)}, minmax(0, 1fr))`,
+          }}
+        >
+          {months.map((month) => (
+            <div key={month.id}>{month.content}</div>
+          ))}
+        </div>
+        <footer>可在不同月份之间选择日期。</footer>
+      </div>
+    </HeightRegion>
+  );
+}
+```
+
+横排时，两个月份共同撑起整行；纵排时，月份和间距依次占据高度。切换布局、月份数或每月周数后，Hook 都读取整个包装区域的实际尺寸。接入 DayPicker 等现有日历时，也应测量包住整个日历的自然布局区域，避免逐月求和或只取其中一个月份。
+
+## 场景七：减少动态效果，仍然跟随内容
+
+测量与动画分开之后，可以保留同一套尺寸逻辑，只调整过渡策略：
+
+```tsx
+const reduced = useReducedMotion();
+
+<motion.div
+  initial={false}
+  animate={{ height }}
+  transition={
+    reduced
+      ? { type: "tween", duration: 0 }
+      : { type: "spring", bounce: 0, duration: 0.45 }
+  }
+>
+  {/* 独立的自然内容测量节点 */}
+</motion.div>
+```
+
+开启减少动态效果后，内容增减、目标切换和等待挂载的规则保持一致，只是高度直接更新。演示中的“立即更新高度”也使用这条路径。
+
+## 当前测量与动画目标
+
+`state` 描述当前目标是否具有有效测量，`height` 则描述动画应前往的高度。两者不是同一份状态：
+
+| 场景 | `state.status` | `state.rect` | `height` |
+| --- | --- | --- | --- |
+| 初次渲染，尚未激活 | `idle` | `null` | `"auto"` |
+| 已激活，但目标尚未挂载或暂时卸载 | `pending` | `null` | 保留上一次目标高度；没有历史值则为 `"auto"` |
+| 已获得当前目标的尺寸 | `ready` | `{ width, height }` | 当前测得高度，包括真实的 `0` |
+| 显式调用 `clear()` | `idle` | `null` | `0` |
+
+`pending` 和 `ready` 还包含激活的 `value`。兼容字段 `rect` 在没有当前测量时返回 `{ width: 0, height: 0 }`；需要判断测量是否有效时，应读取 `state`。
+
+不要使用 `rect.height || "auto"`：真实零高不是未测量，目标切换期间也不应退回自然高度。直接把 `height` 交给同一个 Motion 容器；切换途中更新目标时，由 Motion 接续当前显示值。
+
+## API
+
+```ts
+function useAutoHeight<T extends HTMLElement = HTMLDivElement>(): AutoHeightApi<T>;
+```
+
+Hook 无需传入内容依赖或动画参数。返回值如下：
+
+| 返回值 | 类型 | 用途 |
+| --- | --- | --- |
+| `register` | `(value: ControlValue) => React.RefCallback<T>` | 注册自然布局节点，同一 key 返回稳定的 callback ref |
+| `activate` | `(value: ControlValue) => void` | 选择测量目标，允许先激活后挂载 |
+| `clear` | `() => void` | 取消激活并把目标高度设为 `0` |
+| `height` | `number \| "auto"` | 直接传给 Motion 的动画目标 |
+| `state` | `AutoHeightState` | 区分 `idle`、`pending` 和有效测量的 `ready` |
+| `rect` | `{ width: number; height: number }` | 兼容尺寸快照，无有效测量时为零值；有效性以 `state` 为准 |
+
+相关导出类型包括 `AutoHeightApi<T>` 与 `AutoHeightState`。`ControlValue` 为 `string | number | null`。
+
+### 注册与激活约定
+
+- `register(value)` 返回稳定的 React callback ref，只登记 DOM，不代表选中。
+- `activate(value)` 表达需要测量哪个目标。可以先激活再挂载；等待期间旧目标停止被观察，旧通知不会覆盖新目标。
+- `clear()` 撤销激活意图并将动画目标设为零，但不丢弃仍挂载的注册项。之后可直接重新激活。
+- key 支持 `string`、`number` 和 `null`；`0`、`"0"`、`null` 是不同目标。不要用 `activate(null)` 表达清空。
+- 同一 key 的新注册替换旧注册；旧挂载的清理不会删除替代节点。不同的并存逻辑目标应使用不同 key。
+
+受控组件应根据**已提交的值**激活目标，不能在变更请求回调里提前激活：父组件可能拒绝请求。如果业务上已经没有选中项，应调用 `clear()`；只有等待目标挂载时才保留 `pending`。
+
+## 测量边界与多月布局
+
+尺寸统一使用未受 CSS transform 缩放影响的布局 **border box**，包含目标自身的 padding 和 border，不包含它自身的 margin。`ResizeObserver` 持续响应内容、padding、border 和宽度引起的尺寸变化；宽高数值都不变时不会发布新测量。
+
+Tabs 测量当前选中面板；Calendar 测量包住整个 DayPicker 的自然布局区域。多月日历不逐月相加，也不选某一个月份代替整体：纵排的月份、间距、横排的整体高度，以及导航、footer 和根节点留白，均以浏览器实际布局为准。
+
+需要遵守以下布局约束：
+
+- 不要把 ref 挂到正在设置 `height` 的动画容器上，也不要让目标通过 `height: 100%` 依赖该容器；否则会形成测量反馈循环。
+- 动画容器本身不放 padding 或 border；装饰放在外层，内容自身的留白放在测量区域内。
+- 需要计入的内容必须参与目标的自然布局。绝对定位内容、阴影和 transform 后的视觉溢出不属于该测量；子元素外边距可由 `flow-root` 包装层收纳。
+- 多个面板在退出和进入时同时存在，应由调用方组织它们的流内布局；Hook 不接管 Presence 或业务选择状态。

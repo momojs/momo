@@ -5,8 +5,4 @@ export default defineConfig({
     target: 'bun',
     executables: ['bin.js'],
   },
-  test: {
-    include: ['example/**/*.spec.ts'],
-    html: '<main id="app"></main>',
-  },
 });

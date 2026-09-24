@@ -27,6 +27,7 @@
     "picker-date",
     "picker-time",
     "---Hooks---",
+    "use-auto-height",
     "use-controllable-value",
     "use-presence-gate",
     "---Utils---",

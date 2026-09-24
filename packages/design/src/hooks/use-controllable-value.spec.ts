@@ -117,6 +117,7 @@ function useReducer<State>(
 mock.module('react', () => ({
   useCallback,
   useEffect,
+  useInsertionEffect: useEffect,
   useLayoutEffect: useEffect,
   useReducer,
   useRef,
@@ -164,6 +165,97 @@ describe('useControllableValue', () => {
     expectTypeOf(controlledDate).toEqualTypeOf<Date | undefined>();
     expectTypeOf(definedControlledDate).toEqualTypeOf<Date>();
     expectTypeOf(ignoredControlledDate).toEqualTypeOf<Date | undefined>();
+
+    setDate((previous) => {
+      expectTypeOf(previous).toEqualTypeOf<Date>();
+      return new Date(previous.getTime() + 1_000);
+    });
+  });
+
+  test('separates readable previous values from writable values', () => {
+    const [value, setValue] = useControllableValue<number>({});
+    const [, setOptional] = useControllableValue<number | undefined>({
+      controlled: true,
+    });
+    const [, setControlled] = useControllableValue({
+      controlled: true,
+      value: undefined as Date | undefined,
+      defaultValue: new Date(),
+      onChange: (_value: Date, _source: string) => undefined,
+    });
+    const [forcedDate, setForcedDate] = useControllableValue({
+      controlled: false,
+      value: undefined as Date | undefined,
+      defaultValue: new Date(),
+    });
+
+    expectTypeOf(value).toEqualTypeOf<number | undefined>();
+    expectTypeOf(setValue).toEqualTypeOf<
+      SetValue<number, unknown[], number | undefined>
+    >();
+    expectTypeOf(setOptional).toEqualTypeOf<SetValue<number | undefined>>();
+    expectTypeOf(setControlled).toEqualTypeOf<
+      SetValue<Date, [string], Date | undefined>
+    >();
+    expectTypeOf(forcedDate).toEqualTypeOf<Date>();
+    expectTypeOf(setForcedDate).toEqualTypeOf<SetValue<Date>>();
+  });
+
+  test('preserves optional controlled writes and their previous request type', () => {
+    const initial = new Date(0);
+    const restored = new Date(1_000);
+    const changes: Array<[Date | undefined, string]> = [];
+    const [date, setDate] = useControllableValue<Date | undefined, [string]>({
+      controlled: true,
+      value: initial,
+      defaultValue: new Date(2_000),
+      onChange: (next, source) => changes.push([next, source]),
+    });
+
+    expectTypeOf(date).toEqualTypeOf<Date>();
+    expectTypeOf(setDate).toEqualTypeOf<SetValue<Date | undefined, [string]>>();
+
+    setDate(undefined, 'clear');
+    setDate((previous) => {
+      expectTypeOf(previous).toEqualTypeOf<Date | undefined>();
+      expect(previous).toBeUndefined();
+      return restored;
+    }, 'restore');
+
+    expect(date).toBe(initial);
+    expect(changes).toEqual([
+      [undefined, 'clear'],
+      [restored, 'restore'],
+    ]);
+  });
+
+  test('preserves declared writable types when inferring controlled mode', () => {
+    const [date, setDate] = useControllableValue<Date | undefined>({
+      value: new Date(),
+    });
+    const [, setRequiredDate] = useControllableValue<Date>({
+      value: new Date(),
+    });
+
+    expectTypeOf(date).toEqualTypeOf<Date>();
+    expectTypeOf(setDate).toEqualTypeOf<SetValue<Date | undefined>>();
+    expectTypeOf(setRequiredDate).toEqualTypeOf<SetValue<Date>>();
+  });
+
+  test('keeps defined defaults nonempty even with an optional value type', () => {
+    const [date, setDate] = useControllableValue<Date | undefined>({
+      defaultValue: new Date(),
+    });
+    const [forcedDate, setForcedDate] = useControllableValue<Date | undefined>({
+      controlled: false,
+      value: new Date(),
+      defaultValue: new Date(),
+    });
+
+    expectTypeOf(date).toEqualTypeOf<Date>();
+    expectTypeOf(setDate).toEqualTypeOf<SetValue<Date>>();
+    expectTypeOf(forcedDate).toEqualTypeOf<Date>();
+    expectTypeOf(setForcedDate).toEqualTypeOf<SetValue<Date>>();
   });
 
   test('updates an uncontrolled value and forwards resolved values and args', () => {
@@ -212,6 +304,66 @@ describe('useControllableValue', () => {
     expect(changes).toEqual([5]);
   });
 
+  test('uses only the initial default and ignores forced-uncontrolled props', () => {
+    const [, setValue] = render({
+      controlled: false,
+      value: 10,
+      defaultValue: 1,
+    });
+    setValue(2);
+
+    expect(render({ controlled: false, value: 20, defaultValue: 3 })[0]).toBe(
+      2,
+    );
+  });
+
+  test('falls back to the initial default when an implicit value disappears', () => {
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (message) => warnings.push(String(message));
+
+    try {
+      const initialDefault = new Date(0);
+      const changes: Date[] = [];
+      const [, setValue] = render({
+        value: new Date(1_000),
+        defaultValue: initialDefault,
+      });
+      const [value] = render<Date>({
+        value: undefined,
+        defaultValue: new Date(2_000),
+        onChange: (next) => changes.push(next),
+      });
+
+      expect(value).toBe(initialDefault);
+      setValue((previous) => new Date((previous?.getTime() ?? -1) + 1));
+      expect(changes[0]?.getTime()).toBe(1);
+      expect(warnings).toHaveLength(1);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  test('preserves an explicit controlled clear despite a defined default', () => {
+    render({ controlled: true, value: 1, defaultValue: 4 });
+
+    expect(
+      render<number>({
+        controlled: true,
+        value: undefined,
+        defaultValue: 4,
+      })[0],
+    ).toBeUndefined();
+  });
+
+  test('does not treat null as a missing controlled value', () => {
+    render<number | null>({ value: 1, defaultValue: 4 });
+
+    expect(
+      render<number | null>({ value: null, defaultValue: 4 })[0],
+    ).toBeNull();
+  });
+
   test('resolves controlled updates without changing the controlled value', () => {
     const changes: Array<[number, { source: string }]> = [];
     const details = { source: 'pointer' };
@@ -257,6 +409,63 @@ describe('useControllableValue', () => {
     setValue(2);
 
     expect(changes).toEqual([2]);
+  });
+
+  test('notifies a request that returns to the rendered value', () => {
+    const changes: number[] = [];
+    const [, setValue] = render({
+      value: 0,
+      onChange: (value) => changes.push(value),
+    });
+
+    setValue(1);
+    setValue(0);
+
+    expect(changes).toEqual([1, 0]);
+  });
+
+  test('records requests before a reentrant onChange call', () => {
+    const changes: number[] = [];
+    const options: ControlOptions<number> = {
+      defaultValue: 0,
+      onChange(value) {
+        changes.push(value);
+        if (value === 1) setValue((previous) => (previous ?? 0) + 1);
+      },
+    };
+    const [, setValue] = render(options);
+
+    setValue((previous) => (previous ?? 0) + 1);
+
+    expect(changes).toEqual([1, 2]);
+    expect(render(options)[0]).toBe(2);
+  });
+
+  test('deduplicates using Object.is and keeps the first request arguments', () => {
+    const changes: Array<[number, string]> = [];
+    const [, setValue] = render<number, [string]>({
+      defaultValue: Number.NaN,
+      onChange: (value, source) => changes.push([value, source]),
+    });
+
+    setValue(Number.NaN, 'unchanged');
+    setValue(0, 'first');
+    setValue(0, 'duplicate');
+    setValue(-0, 'negative');
+
+    expect(changes).toEqual([
+      [0, 'first'],
+      [-0, 'negative'],
+    ]);
+  });
+
+  test('does not notify when props or defaults change', () => {
+    const changes: number[] = [];
+    const onChange = (value: number) => changes.push(value);
+    render({ value: 1, defaultValue: 0, onChange });
+    render({ value: 2, defaultValue: 3, onChange });
+
+    expect(changes).toEqual([]);
   });
 
   test('skips unchanged values', () => {

@@ -1,14 +1,47 @@
 ---
 title: useControllableValue
-description: 在受控与非受控模式之间复用一致的状态更新接口。
+description: 用具体场景理解状态由谁保存、更新请求如何计算，以及父组件如何接受、修正或拒绝请求。
 icon: SlidersHorizontal
 ---
 
-`useControllableValue` 用于实现同时支持 `value` / `defaultValue` 的组件。它在首帧确定控制模式，返回当前值和一个稳定的 setter；setter 支持直接赋值、函数 updater，以及传给 `onChange` 的附加参数。
+`useControllableValue` 用于实现同时支持 `value` / `defaultValue` 的组件：组件内部用同一个 setter 表达“希望变成什么值”，调用方选择由谁保存状态。
+
+## 为什么需要它
+
+一个数量选择器，放在商品预览里可能只需要自己记住数量；放进购物车后，父组件又需要根据库存限制数量，并与订单中的其他字段一起重置。日期选择器、开关、弹层的开关状态也会遇到同样的问题。
+
+如果每个组件都手写一遍 `useState`、`value` 判断和 `onChange`，很快就会遇到这些细节：
+
+| 遇到的问题 | Hook 提供的约定 |
+| --- | --- |
+| 同一个组件既要独立使用，也要交给表单管理 | 非受控时保存内部状态，受控时读取父组件的值，交互代码共用一个 setter |
+| 父组件要校验、修正或拒绝用户输入 | setter 发出请求，受控界面始终以父组件传回的值为准 |
+| 一次交互连续修改多个字段，后一次覆盖了前一次 | 函数 updater 按调用顺序读取前一次请求结果 |
+| 空值 `undefined` 被误判成“没有传 value” | 用 `controlled: true` 明确表示状态仍由父组件管理 |
+| 改了默认值、异步传入 value，状态却不符合预期 | 默认值只用于初始化，控制模式固定于首次渲染 |
+
+如果状态完全属于一个组件，直接使用 `useState` 即可。需要把同一份组件交给不同调用方管理状态时，再使用这个 Hook。
+
+## 先观察：请求了什么，界面显示什么
+
+选择一个场景，再点击按钮。每次切换场景或点击“重新开始”都会重新挂载示例，清空请求记录。
 
 <UseControllableValuePlayground />
 
-## 使用
+可以按下面的顺序尝试，每行都从该场景的初始状态开始：
+
+| 场景与操作 | `onChange` 收到的值 | 提交后界面显示 |
+| --- | --- | --- |
+| 非受控 → 连续 +1 两次 | `2 → 3` | `3`，由 Hook 保存 |
+| 受控：接受 → 连续 +1 两次 | `2 → 3` | `3`，由父组件传回 |
+| 受控：限制为 3 → 请求 20 → 再点击 +1 | `20 → 4` | 始终为 `3`；第二次从修正后的 `3` 计算 |
+| 受控：拒绝 → 连续 +1 两次 → 再点击 +1 | `2 → 3 → 2` | 始终为 `1`；下一次交互从 `1` 重新计算 |
+| 受控：手动确认 → 请求 20 → 确认最新请求 | `20` | 确认前为 `1`，确认后为 `20`；确认不额外通知 |
+| 受控：保持空值 → 点击 +1 | `1` | `undefined`，不会回退到默认值 |
+
+## 场景一：一个组件，两种状态所有者
+
+组件作者只需要把 props 交给 Hook，并通过返回的 setter 处理交互：
 
 ```tsx
 import { useControllableValue } from "@momots/design/hooks";
@@ -27,50 +60,248 @@ function Counter({ value, defaultValue = 0, onChange }: CounterProps) {
   });
 
   return (
-    <button onClick={() => setCurrent((previous) => (previous ?? 0) + 1)}>
-      {current}
+    <button onClick={() => setCurrent((previous) => previous + 1)}>
+      数量：{current}，点击 +1
     </button>
   );
 }
 ```
 
-不传 `value` 时，Hook 使用 `defaultValue` 初始化内部状态；传入已定义的 `value` 时，当前值由调用方控制，setter 只解析下一值并调用 `onChange`，等待调用方接受更新。
+独立使用时，只传初始值。点击后 Hook 保存新数量；即使传入 `onChange`，也不会因此变成受控组件：
 
 ```tsx
-// 非受控：Hook 保存后续状态。
-<Counter defaultValue={1} />
-
-// 受控：父组件保存状态。
-<Counter value={count} onChange={setCount} />
+<Counter
+  defaultValue={1}
+  onChange={(next) => console.log("数量变更请求", next)}
+/>
 ```
 
-同一个批次中的多个受控函数 updater 会依次基于前一次乐观结果计算；下一次提交渲染时，计算基准会重置为调用方实际传回的 `value`。
+需要表单统一管理时，由父组件保存状态。下面的两个计数器共享同一个数量，操作任意一个都会更新另一个：
 
 ```tsx
-setCurrent((previous) => (previous ?? 0) + 1);
-setCurrent((previous) => (previous ?? 0) + 1);
+import { useState } from "react";
+
+function Order() {
+  const [count, setCount] = useState(1);
+
+  return (
+    <>
+      <Counter value={count} onChange={setCount} />
+      <Counter value={count} onChange={setCount} />
+      <button onClick={() => setCount(1)}>重置订单数量</button>
+    </>
+  );
+}
 ```
 
-如果解析后的值与当前值满足 `Object.is(previous, next)`，Hook 不会更新状态或调用 `onChange`。
+不传 `value` 时，Hook 使用 `defaultValue` 初始化内部状态；传入已定义的 `value` 时，当前值由调用方控制。仅传 `value` 而不处理 `onChange`，交互不会改变受控界面。父组件主动重置 `count` 也不会反向触发两个计数器的 `onChange`。
 
-## 受控的 undefined
+## 场景二：父组件接受、修正或拒绝请求
 
-默认使用 `value !== undefined` 推断是否受控。因此，若 `undefined` 本身是合法的受控值，需要显式设置 `controlled: true`：
+购物车中的数量不能超过库存。这条业务规则应放在保存状态的父组件中：
 
 ```tsx
-const [current, setCurrent] = useControllableValue<number>({
-  controlled: true,
+function CartQuantity() {
+  const [quantity, setQuantity] = useState(1);
+  const stock = 3;
+
+  return (
+    <Counter
+      value={quantity}
+      onChange={(requested) => {
+        setQuantity(Math.min(requested, stock));
+      }}
+    />
+  );
+}
+```
+
+数量已经是 `3` 时，再点击一次，`onChange` 收到 `4`，父组件仍然传回 `3`，界面就保持 `3`。下一次点击仍然请求 `4`，不会偷偷累计为 `5`。
+
+父组件也可以拒绝请求，例如在表单锁定时不写回状态：
+
+```tsx
+<Counter
+  value={quantity}
+  onChange={(requested) => {
+    if (locked) return;
+    setQuantity(requested);
+  }}
+/>
+```
+
+这也解释了为什么 **`onChange` 表示“请求了新值”，不表示“新值已经生效”**。请求通知同步发生，React 提交和父组件是否接受更新是另外两件事。
+
+### 为什么连续请求还能累加
+
+Hook 区分两个概念：
+
+- **当前值**：返回给组件、用于渲染的值。受控时由调用方决定，非受控时由 Hook 内部状态决定。
+- **请求计算基准**：最近一次请求的结果；没有新请求时与当前值一致。它用于解析后续 updater 和判断重复请求，不会自行覆盖受控的渲染值。
+
+setter 支持直接赋值和函数 updater。在同一个事件处理函数里，下面两次调用之间没有提交，第二次 updater 会读取第一次请求的结果：
+
+```tsx
+// 假设当前值为 1，依次请求 2、3。
+setCurrent((previous) => previous + 1);
+setCurrent((previous) => previous + 1);
+```
+
+之后如何继续计算，取决于谁保存状态：
+
+- **受控**：下一次提交时，以调用方传回的值重新对齐计算基准。调用方可以接受、修正或拒绝请求；即使调用方不更新，Hook 也会安排一次提交以完成对齐。例如当前值仍为 `1`，下一轮 `+1` 就重新请求 `2`。
+- **非受控**：请求结果会写入内部状态。无关渲染或较早更新的提交，不会覆盖尚未提交的请求计算基准。
+
+### 等待确认或异步校验
+
+需要确认后才生效时，把待确认请求与已确认值分开保存：
+
+```tsx
+function ConfirmedQuantity() {
+  const [quantity, setQuantity] = useState(1);
+  const [pending, setPending] = useState<number>();
+
+  return (
+    <>
+      <Counter value={quantity} onChange={setPending} />
+      <p>待确认：{pending ?? "暂无请求"}</p>
+      <button
+        disabled={pending === undefined}
+        onClick={() => {
+          if (pending === undefined) return;
+          setQuantity(pending);
+          setPending(undefined);
+        }}
+      >
+        确认数量
+      </button>
+    </>
+  );
+}
+```
+
+初始值为 `1` 时，分两次点击计数器，每次提交后都仍以 `1` 为准，所以待确认值是 `2`，不会跨提交累加为 `3`。同一次事件内连续调用两次 updater，才会依次请求 `2`、`3`。
+
+异步校验也遵循这个规则：等待期间显示旧的 `value`，校验通过后由父组件写回新值。Hook 不负责保存异步草稿或处理响应乱序；如果需要输入立即显示，父组件应先更新用于展示的 draft，再单独保存校验结果，并在异步请求层处理过期响应。
+
+## 场景三：日期的多个字段连续更新
+
+年月选择器可能在一次操作中先改年份，再改月份。如果两次都展开当前渲染的 `date`，第二次会把旧年份带回来：
+
+```tsx
+// 假设 date 为 { year: 2026, month: 7 }。
+setDate({ ...date, year: 2030 });
+setDate({ ...date, month: 8 });
+// 第二次请求是 { year: 2026, month: 8 }，覆盖了刚请求的年份。
+```
+
+通过 updater 从前一次请求结果派生，就能保留两次修改。在受控与非受控模式下，连续请求都遵循这个规则：
+
+```tsx
+type YearMonth = { year: number; month: number };
+
+function MonthShortcut() {
+  const [date, setDate] = useControllableValue<YearMonth>({
+    defaultValue: { year: 2026, month: 7 },
+    onChange: (next) => console.log(next),
+  });
+
+  function jump() {
+    setDate((previous) => ({ ...previous, year: 2030 }));
+    setDate((previous) => ({ ...previous, month: 8 }));
+  }
+
+  return <button onClick={jump}>{date.year} 年 {date.month} 月</button>;
+}
+```
+
+点击一次，`onChange` 依次收到 `{ year: 2030, month: 7 }` 和 `{ year: 2030, month: 8 }`，非受控界面最终显示 `2030 年 8 月`。如果改为受控使用，请求顺序相同，最终显示什么仍由父组件决定。
+
+当业务上只需要一次通知时，直接合并为一次 `setDate((previous) => ({ ...previous, year: 2030, month: 8 }))`。Hook 会组合计算，但不会把多个不同值的请求合并为一次回调。
+
+## 场景四：重复请求与撤回请求
+
+拖动、键盘和点击可能请求同一个值。Hook 使用 `Object.is` 比较**前一次请求结果**与本次结果，相同就跳过内部更新和 `onChange`。
+
+下面每行都独立从当前值 `1` 开始，并在同一个事件处理函数中执行：
+
+| setter 调用 | `onChange` 记录 | 原因 |
+| --- | --- | --- |
+| `setCurrent(1)` | 无 | 值未变化 |
+| `setCurrent(2); setCurrent(2)` | `2` | 第二次与上一次请求相同 |
+| `setCurrent(2); setCurrent(1)` | `2 → 1` | 回到原值也是一次有效请求，用于撤回前一次请求 |
+| 两次 `setCurrent(current + 1)` | `2` | 两次都使用渲染时的 `current`，请求的是同一个值 |
+| 两次 `setCurrent(p => p + 1)` | `2 → 3` | 第二次读取前一次请求结果 |
+
+这不是跨交互的永久去重。受控父组件拒绝 `2`，提交后当前值仍为 `1`，下一次请求 `2` 仍会通知。初始化、外部 props 变化和 React 的渲染重放不会额外触发 `onChange`。
+
+对象和数组比较的是引用，不是内容。更新对象时创建新对象；如果判断业务值没有变化，可以返回原引用跳过通知：
+
+```tsx
+setDate((previous) =>
+  previous.month === 8 ? previous : { ...previous, month: 8 },
+);
+```
+
+## 场景五：可清空的字段与异步初始值
+
+日期或评分字段常用 `undefined` 表示“尚未选择”。默认规则却使用 `value !== undefined` 推断是否受控，因此这类字段需要从首次渲染起显式设置 `controlled: true`：
+
+```tsx
+function OptionalScore({
   value,
-  defaultValue: 10,
   onChange,
-});
+}: {
+  value: number | undefined;
+  onChange: (next: number | undefined) => void;
+}) {
+  const [score, setScore] = useControllableValue<number | undefined>({
+    controlled: true,
+    value,
+    onChange,
+  });
+
+  return (
+    <div>
+      <span>评分：{score ?? "未选择"}</span>
+      <button onClick={() => setScore(5)}>选择 5 分</button>
+      <button onClick={() => setScore(undefined)}>清空</button>
+    </div>
+  );
+}
+
+function Review() {
+  const [score, setScore] = useState<number>();
+  return <OptionalScore value={score} onChange={setScore} />;
+}
 ```
 
-此时即使 `value` 为 `undefined`，Hook 也保持受控；`defaultValue` 不会成为回退值。调用 `setCurrent(10)` 会把 `10` 传给 `onChange`，但渲染值仍由调用方的 `value` 决定。
+初始显示“未选择”，选择后显示 `5`，清空后回到“未选择”，整个过程都是受控的。即使同时提供 `defaultValue: 3`，显式受控的空值也不会被替换成 `3`。将 `undefined` 写入值类型，是为了让 setter 能表达“清空”；`controlled: true` 则负责运行时的所有权，两者作用不同。
 
-反过来，`controlled: false` 会强制使用内部状态，即使同时传入了已定义的 `value`。
+接口数据最初尚未加载、之后才传入 `value` 时，也应提前决定所有权：要由父组件管理，就从首帧使用 `controlled: true`；如果只需要把接口结果作为非受控初始值，可以等数据就绪再挂载组件。
 
-## 控制模式固定
+## 场景六：切换记录与重置默认值
+
+`defaultValue` 表示首次挂载的初始值。假设 `<Counter defaultValue={1} />` 已经被点击到 `2`，父组件再把 `defaultValue` 改为 `10`，界面仍然是 `2`，不会覆盖用户已经编辑的状态。
+
+编辑不同记录时，可以根据业务需要选择重置方式：
+
+```tsx
+// 切换记录时重新挂载，使用新记录的初始数量。
+<Counter key={record.id} defaultValue={record.quantity} />
+```
+
+```tsx
+// 表单需要随时重置、回填：使用受控值。
+<>
+  <Counter value={quantity} onChange={setQuantity} />
+  <button onClick={() => setQuantity(record.quantity)}>还原记录数量</button>
+</>
+```
+
+`key` 不变时，新 `defaultValue` 不会重置状态。改变 `key` 会重建该组件及其子树的本地状态，适合切换整条记录；只重置某个字段时，受控值更直接。
+
+### 不在挂载期间切换所有者
 
 控制模式只在首次渲染时确定：
 
@@ -80,9 +311,38 @@ const isControlled = controlled ?? value !== undefined;
 
 后续从非受控切换为受控，或从受控切换为非受控，会在控制台产生警告，但不会改变 Hook 已经选择的模式。如果一个受控值在生命周期中可能变成 `undefined`，应从首次渲染开始持续传入 `controlled: true`；若确实需要切换模式，请通过 `key` 重新挂载使用该 Hook 的组件。
 
-## 附加回调参数
+首次 `value` 为 `undefined`，之后异步传入一个值，不会自动接管内部状态。`controlled` 应在一次挂载期间保持一致。
 
-第二个泛型参数可以声明 setter 和 `onChange` 共享的附加参数元组。函数 updater 会先解析为最终值，再把该值与原始参数一起交给回调：
+| 首次传入的配置 | 后续变化 | 实际行为 |
+| --- | --- | --- |
+| `defaultValue: 1`，未传 `value` | 传入 `value: 10` | 警告，继续使用内部状态 |
+| `value: 1, defaultValue: 0`，未显式设置模式 | `value` 变为 `undefined` | 警告，保持受控并回退到初始默认值 `0` |
+| `controlled: true, value: undefined` | `value` 变为 `10` 或再次清空 | 始终受控，按传入值显示 |
+| `controlled: false, defaultValue: 1` | 传入或修改 `value` | 始终使用内部状态，忽略 `value` |
+
+## 场景七：保存 setter，之后再调用
+
+计时器或订阅可能保存某次渲染返回的 setter。setter 的身份在一次挂载期间保持稳定，并使用最新**已提交**的 `onChange`；受控计算基准也会对齐到最新提交的值。
+
+```tsx
+const [current, setCurrent] = useControllableValue({ value, onChange });
+
+function incrementLater() {
+  window.setTimeout(() => {
+    setCurrent((previous) => previous + 1);
+  }, 1_000);
+}
+```
+
+这里假设 `value` 的类型是 `number`。若点击时为 `1`，计时器触发前父组件已提交 `value: 10`，延迟 updater 会请求 `11`。如果改成 `setCurrent(current + 1)`，表达式使用的是点击时闭包里的 `1`，仍然请求 `2`。setter 稳定并不会让调用方闭包里的变量自动更新。
+
+在子组件的 layout effect 中调用 setter 也遵循同样的规则。请在事件处理函数或 effect 中调用 setter，不要在渲染期间调用；updater 应保持纯函数，函数形式的业务值不能作为普通值直接传入。
+
+该 Hook 承诺请求按调用顺序计算，不承诺与原生 `useState` 完全相同的跨优先级调度和中间渲染行为。
+
+## 场景八：把交互来源一起交给父组件
+
+同一个控件可能由键盘或指针操作。通过第二个泛型参数声明附加参数元组，可以把这类信息与值一起传递，无需依赖组件外的临时变量：
 
 ```tsx
 type ChangeDetails = { source: "pointer" | "keyboard" };
@@ -97,8 +357,48 @@ const [value, setValue] = useControllableValue<
   },
 });
 
-setValue((previous) => (previous ?? 0) + 1, { source: "keyboard" });
+// 在键盘事件处理函数中调用：
+setValue((previous) => previous + 1, { source: "keyboard" });
+// 回调收到 1 和 { source: "keyboard" }，不是 updater 函数。
 ```
+
+setter 和 `onChange` 共享同一个参数元组。如果请求值未变化，即使附加参数不同也不会再次通知；需要记录每一次交互时，应在对应的事件处理函数中记录。
+
+## 默认值与类型推导
+
+在默认判定模式下，如果 `value` 的类型可能为 `undefined` 或未传入 `value`，非 `undefined` 的默认值会让返回值、可写入值和 updater 的 `previous` 都排除 `undefined`。显式 `controlled: false` 配合已定义的默认值也遵循此规则：
+
+```tsx
+const [date, setDate] = useControllableValue({
+  value, // Date | undefined
+  defaultValue: new Date(),
+  onChange,
+});
+
+date.getTime(); // date: Date
+setDate((previous) => new Date(previous.getTime() + 1_000));
+// previous: Date
+```
+
+为保证类型与运行时一致，首次隐式判定为受控、后来 `value` 消失时，Hook 会警告并使用**初始** `defaultValue` 兜底，所有权仍然保持受控。这是异常输入的保护，不是切换模式的方式，也不会采用后续传入的新默认值。`null` 不被视为缺失值。
+
+显式 `controlled: true` 则尊重 `undefined` 的业务含义，即使存在默认值，`value: Date | undefined` 的返回值和 updater 参数仍然是 `Date | undefined`。
+
+当受控 `value` 的类型不包含 `undefined` 时，只有当前返回值会被收窄；setter 的可写类型仍保留声明的 `Value`。因此，即使当前值已定义，仍然可以声明允许清空，而后续 updater 的 `previous` 也必须覆盖清空请求：
+
+```tsx
+const [date, setDate] = useControllableValue<Date | undefined>({
+  controlled: true,
+  value: new Date(),
+  onChange,
+});
+
+date.getTime(); // date: Date
+setDate(undefined); // 请求清空，不直接改变受控的渲染值
+setDate((previous) => previous ?? new Date()); // previous: Date | undefined
+```
+
+没有默认值时，初始可读取的值可能为 `undefined`，但不因此自动允许写入 `undefined`。例如 `useControllableValue<number>({})` 返回 `number | undefined`，setter 仍然只接受 `number` 或返回 `number` 的 updater。需要允许清空时，应将 `undefined` 明确包含在值类型中；默认值重载则仍禁止写入 `undefined`，以维持非空保证。
 
 ## API
 
@@ -108,14 +408,14 @@ setValue((previous) => (previous ?? 0) + 1, { source: "keyboard" });
 | --- | --- | --- |
 | `controlled` | `boolean` | 覆盖根据 `value` 是否为 `undefined` 得出的模式；模式仍固定于首帧 |
 | `value` | `Value` | 受控值 |
-| `defaultValue` | `Value` | 非受控初始值，只在初始化内部状态时使用 |
-| `onChange` | `(value: Value, ...args: Args) => void` | 接收解析后的新值和 setter 的附加参数 |
+| `defaultValue` | `Value` | 非受控初始值；也是隐式受控值异常消失时的初始兜底值 |
+| `onChange` | `(value: Value, ...args: Args) => void` | 同步接收有效更新请求的具体值和 setter 的附加参数 |
 
 ### 返回值
 
 `useControllableValue` 返回 `[value, setValue]`：
 
 - `value` 是受控值或内部状态；没有已定义的受控值或默认值时，类型包含 `undefined`。
-- `setValue(updater, ...args)` 接受一个值或函数 updater。存在已定义的受控值，或非受控模式存在已定义的 `defaultValue` 时，重载会从返回值与 setter 类型中排除 `undefined`。
+- `setValue(updater, ...args)` 接受一个值或函数 updater。已定义受控值的重载仅收窄返回值，保留声明的 `Value` 作为可写入值和 updater 的 `previous` 类型。默认值重载则从这三种类型中都排除 `undefined`；其他情况保留 `Value` 作为可写类型，并让返回值和 `previous` 包含 `undefined`。
 
-导出的相关类型包括 `ControlOptions`、`ChangeHandler` 与 `SetValue`。
+导出的相关类型包括 `ControlOptions<Value, Args>`、`ChangeHandler<Value, Args>` 与 `SetValue<Value, Args, Previous = Value>`。`SetValue` 的 `Value` 描述允许写入的值，`Previous` 描述 updater 可能读取的值，`Args` 描述附加参数元组。

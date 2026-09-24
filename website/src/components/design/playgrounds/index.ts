@@ -25,5 +25,6 @@ export { TabsPlayground } from './tabs';
 export { ToastPlayground } from './toast';
 export { ToggleGroupPlayground } from './toggle-group';
 export { TweenNumberPlayground } from './tween-number';
+export { UseAutoHeightPlayground } from './use-auto-height';
 export { UseControllableValuePlayground } from './use-controllable-value';
 export { UsePresenceGatePlayground } from './use-presence-gate';
