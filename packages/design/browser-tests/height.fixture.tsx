@@ -59,6 +59,7 @@ async function withRoot<Result>(
 }
 
 type Item = {
+  tag?: 'div' | 'span';
   value: ControlValue;
   id: string;
   height: number;
@@ -74,8 +75,8 @@ function probe() {
       latest = api;
       commits += 1;
     });
-    return items.map(({ value, id, height, style }) => (
-      <div
+    return items.map(({ tag: Tag = 'div', value, id, height, style }) => (
+      <Tag
         key={id}
         data-id={id}
         ref={api.register(value)}
@@ -91,6 +92,20 @@ function probe() {
     },
     commits: () => commits,
   };
+}
+
+async function withWarnings<Result>(
+  run: (warnings: string[]) => Promise<Result>,
+) {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) =>
+    warnings.push(args.map(String).join(' '));
+  try {
+    return await run(warnings);
+  } finally {
+    console.warn = original;
+  }
 }
 
 async function withObserver<Result>(
@@ -477,6 +492,216 @@ const tests = {
       );
       return true;
     }),
+
+  invalidBoxes: () =>
+    withWarnings((warnings) =>
+      withRoot(async (root, container) => {
+        const { Probe, read } = probe();
+        for (const display of ['inline', 'contents'] as const) {
+          await act(() =>
+            root.render(
+              <Probe
+                items={[
+                  {
+                    tag: 'span',
+                    value: 'target',
+                    id: display,
+                    height: 80,
+                    style: { display, padding: 12 },
+                  },
+                ]}
+              />,
+            ),
+          );
+          await act(() => read().activate('target'));
+          check(
+            read().state.status === 'pending' && read().state.rect === null,
+            `${display} must not publish an initial measurement`,
+          );
+          await act(frame);
+          await act(frame);
+          check(
+            read().height === 'auto' && read().state.status === 'pending',
+            `${display} must not become a valid zero after observer delivery`,
+          );
+          check(
+            getComputedStyle(container.firstElementChild!).display === display,
+            'Validation must not mutate the target CSS',
+          );
+        }
+        check(
+          warnings.length === 2,
+          'Warn once per target, not again for its observer notification',
+        );
+        check(
+          warnings[0]!.includes('<span>') &&
+            warnings[0]!.includes('display: inline'),
+          'The warning must identify the invalid target',
+        );
+        check(
+          warnings[1]!.includes('display: contents') &&
+            warnings[1]!.includes('wrapper'),
+          'The warning must explain how to fix the layout',
+        );
+        return true;
+      }),
+    ),
+
+  observableBoxes: () =>
+    withWarnings((warnings) =>
+      withRoot(async (root) => {
+        const { Probe, read } = probe();
+        for (const display of [
+          'block',
+          'inline-block',
+          'flow-root',
+          'flex',
+          'inline-flex',
+          'grid',
+          'inline-grid',
+        ] as const) {
+          await act(() =>
+            root.render(
+              <Probe
+                items={[
+                  {
+                    tag: 'span',
+                    value: 'target',
+                    id: display,
+                    height: 80,
+                    style: { display },
+                  },
+                ]}
+              />,
+            ),
+          );
+          await act(() => read().activate('target'));
+          await act(frame);
+          check(
+            read().state.status === 'ready' && read().height === 80,
+            `${display} must remain measurable`,
+          );
+        }
+        await act(() =>
+          root.render(
+            <Probe
+              items={[
+                {
+                  value: 'target',
+                  id: 'zero',
+                  height: 0,
+                },
+              ]}
+            />,
+          ),
+        );
+        check(
+          read().state.status === 'ready' && read().height === 0,
+          'A genuine zero is valid',
+        );
+        await act(() =>
+          root.render(
+            <Probe
+              items={[
+                {
+                  value: 'target',
+                  id: 'hidden',
+                  height: 80,
+                  style: { display: 'none' },
+                },
+              ]}
+            />,
+          ),
+        );
+        await act(frame);
+        check(
+          read().state.status === 'ready' && read().height === 0,
+          'An initially hidden box is valid',
+        );
+        check(
+          warnings.length === 0,
+          'Supported and hidden boxes must not warn',
+        );
+        return true;
+      }),
+    ),
+
+  layoutChanges: () =>
+    withWarnings((warnings) =>
+      withRoot(async (root, container) => {
+        const { Probe, read } = probe();
+        await act(() =>
+          root.render(<Probe items={[{ value: 'a', id: 'a', height: 120 }]} />),
+        );
+        await act(() => read().activate('a'));
+        const element = container.firstElementChild as HTMLElement;
+        for (const display of ['inline', 'contents']) {
+          element.style.display = display;
+          await waitFor(
+            () => read().state.status === 'pending',
+            `${display} must invalidate the previous measurement`,
+          );
+          check(
+            read().state.rect === null && read().height === 120,
+            'Invalid layout must retain the animation target, not report ready/0',
+          );
+          element.style.display = 'block';
+          await waitFor(
+            () => read().state.status === 'ready' && read().height === 120,
+            'Fixing the CSS must recover without reactivation or remount',
+          );
+        }
+        check(
+          warnings.length === 1,
+          'Repeated invalid notifications on one binding must not spam warnings',
+        );
+        await act(() => read().clear());
+        check(
+          read().state.status === 'idle' && read().height === 0,
+          'Explicit clearing must remain available',
+        );
+        return true;
+      }),
+    ),
+
+  inlineReplacedBox: () =>
+    withWarnings((warnings) =>
+      withRoot(async (root, container) => {
+        let latest:
+          | ReturnType<typeof useAutoHeight<HTMLImageElement>>
+          | undefined;
+        function ImageProbe() {
+          const api = useAutoHeight<HTMLImageElement>();
+          useLayoutEffect(() => {
+            api.activate('image');
+          }, [api.activate]);
+          useLayoutEffect(() => {
+            latest = api;
+          });
+          return (
+            <img
+              alt=''
+              src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="60"/%3E'
+              ref={api.register('image')}
+              style={{ display: 'inline', width: 100, height: 60 }}
+            />
+          );
+        }
+        await act(() => root.render(<ImageProbe />));
+        await waitFor(
+          () => latest?.state.status === 'ready' && latest.height === 60,
+          'An inline replaced element has an observable box',
+        );
+        const element = container.firstElementChild as HTMLImageElement;
+        element.style.height = '90px';
+        await waitFor(
+          () => latest?.height === 90,
+          'Inline replaced elements must remain observed',
+        );
+        check(warnings.length === 0, 'Do not reject inline replaced elements');
+        return true;
+      }),
+    ),
 
   tabsControlled: () =>
     withRoot(async (root, container) => {

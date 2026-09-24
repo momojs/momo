@@ -1,5 +1,8 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
+// React bundlers replace NODE_ENV; the browser package does not need Node types.
+declare const process: { env: { NODE_ENV?: string } };
+
 export type ElementSize = Readonly<{ width: number; height: number }>;
 
 export const EMPTY_SIZE: ElementSize = { width: 0, height: 0 };
@@ -12,11 +15,34 @@ type Measurement<T extends HTMLElement> = {
 
 const pixels = (value: string) => Number.parseFloat(value) || 0;
 
+const INLINE_REPLACED_ELEMENTS = new Set([
+  'audio',
+  'canvas',
+  'embed',
+  'iframe',
+  'img',
+  'object',
+  'video',
+]);
+
+function hasObservableBox(element: HTMLElement, display: string): boolean {
+  if (display === 'contents') return false;
+  // `none` is a temporarily hidden target, whose actual size is still zero.
+  if (display !== 'inline') return true;
+  return (
+    INLINE_REPLACED_ELEMENTS.has(element.localName) ||
+    (element.localName === 'input' &&
+      element.getAttribute('type')?.toLowerCase() === 'image')
+  );
+}
+
 /** Read the layout border box, not the visual box after CSS transforms. */
-function readLayoutSize(element: HTMLElement): ElementSize {
+function readLayoutSize(
+  element: HTMLElement,
+  style: CSSStyleDeclaration,
+): ElementSize {
   if (element.getClientRects().length === 0) return EMPTY_SIZE;
 
-  const style = getComputedStyle(element);
   const width = Number.parseFloat(style.width);
   const height = Number.parseFloat(style.height);
   const contentBox = style.boxSizing !== 'border-box';
@@ -43,13 +69,14 @@ function readLayoutSize(element: HTMLElement): ElementSize {
   };
 }
 
-function readObservedSize(entry: ResizeObserverEntry): ElementSize {
+function readObservedSize(
+  entry: ResizeObserverEntry,
+  style: CSSStyleDeclaration,
+): ElementSize {
   const box = entry.borderBoxSize[0];
-  if (!box) return readLayoutSize(entry.target as HTMLElement);
+  if (!box) return readLayoutSize(entry.target as HTMLElement, style);
 
-  const vertical = !getComputedStyle(entry.target).writingMode.startsWith(
-    'horizontal',
-  );
+  const vertical = !style.writingMode.startsWith('horizontal');
   return {
     width: vertical ? box.blockSize : box.inlineSize,
     height: vertical ? box.inlineSize : box.blockSize,
@@ -84,10 +111,12 @@ export function useElementSize<T extends HTMLElement>() {
     if (!target || currentTarget.current !== target) return;
 
     let disposed = false;
-    const publish = (size: ElementSize) => {
+    let warned = false;
+    const publish = (size: ElementSize | null) => {
       if (disposed || currentTarget.current !== target) return;
       setMeasurement((previous) => {
         if (disposed || currentTarget.current !== target) return previous;
+        if (size === null) return null;
         if (
           previous?.target === target &&
           previous.size.width === size.width &&
@@ -99,10 +128,30 @@ export function useElementSize<T extends HTMLElement>() {
       });
     };
 
+    const measure = (entry?: ResizeObserverEntry) => {
+      const style = getComputedStyle(target.element);
+      if (!hasObservableBox(target.element, style.display)) {
+        // Unsupported layout is unavailable, not a legitimate zero-sized box.
+        publish(null);
+        if (process.env.NODE_ENV !== 'production' && !warned) {
+          warned = true;
+          console.warn(
+            `useAutoHeight requires an observable layout box; <${target.element.localName}> has display: ${style.display}. Use a block, inline-block, flow-root, flex, or grid wrapper instead.`,
+          );
+        }
+        return;
+      }
+      publish(
+        entry
+          ? readObservedSize(entry, style)
+          : readLayoutSize(target.element, style),
+      );
+    };
+
     const observer = new ResizeObserver((entries) => {
       if (disposed || currentTarget.current !== target) return;
       for (const entry of entries) {
-        if (entry.target === target.element) publish(readObservedSize(entry));
+        if (entry.target === target.element) measure(entry);
       }
     });
     const dispose = () => {
@@ -111,8 +160,9 @@ export function useElementSize<T extends HTMLElement>() {
     };
     stop.current = dispose;
 
+    // Keep observing invalid targets so a later change to a layout box can recover.
     observer.observe(target.element, { box: 'border-box' });
-    publish(readLayoutSize(target.element));
+    measure();
 
     return () => {
       dispose();

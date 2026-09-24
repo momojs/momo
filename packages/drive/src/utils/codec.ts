@@ -5,11 +5,53 @@ import mime from 'mime';
 import { isArray, isPlainObject, isString } from 'remeda';
 
 import type { DriveDataStringify } from '../types';
-import { toSearchParams } from './search-params';
 
 function isJsonMime(type: string): boolean {
-  const essence = type.split(';', 1)[0]?.trim().toLowerCase();
-  return essence === 'application/json' || essence?.endsWith('+json') === true;
+  const essence = type.trim().toLowerCase();
+  return essence === 'application/json' || essence.endsWith('+json');
+}
+
+function splitContentType(value: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  let quoted = false;
+  let escaped = false;
+
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index];
+    if (escaped) {
+      escaped = false;
+    } else if (quoted && char === '\\') {
+      escaped = true;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === ';' && !quoted) {
+      parts.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+
+  parts.push(value.slice(start));
+  return parts;
+}
+
+function contentTypeCharset(parts: string[]): string | undefined {
+  for (const part of parts.slice(1)) {
+    const equals = part.indexOf('=');
+    if (
+      equals < 0 ||
+      part.slice(0, equals).trim().toLowerCase() !== 'charset'
+    ) {
+      continue;
+    }
+
+    const value = part.slice(equals + 1).trim();
+    if (value.startsWith('"')) {
+      if (value.length < 2 || !value.endsWith('"')) continue;
+      return value.slice(1, -1).replace(/\\(.)/g, '$1');
+    }
+    if (/^\S+$/.test(value)) return value;
+  }
 }
 
 function isJsonData(data: unknown): boolean {
@@ -115,21 +157,16 @@ export const decodeHeader = (response: Response) => {
   const { headers } = response;
   const type = headers.get('Content-Type');
   if (isString(type) && cardinality(type) > 0) {
-    if (isJsonMime(type)) {
+    const parts = splitContentType(type);
+    const essence = parts[0]?.trim() ?? '';
+    if (isJsonMime(essence)) {
       res.type = 'json';
     }
 
-    const fields = type.split(';');
-    const params = toSearchParams(fields);
-    const charset = params?.get('charset');
-    if (isString(charset)) {
-      res.charset = charset;
-    }
-    for (const iterator of fields) {
-      const extension = mime.getExtension(iterator);
-      if (isString(extension) && !isString(res.type)) {
-        res.type = extension;
-      }
+    res.charset = contentTypeCharset(parts);
+    const extension = mime.getExtension(essence);
+    if (isString(extension) && !isString(res.type)) {
+      res.type = extension;
     }
   } else {
     if (!isString(res.type)) {

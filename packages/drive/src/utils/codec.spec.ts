@@ -155,6 +155,20 @@ describe('response headers', () => {
     });
   });
 
+  test('parses case-insensitive quoted charset without reading quoted semicolons as parameters', () => {
+    const response = new Response('{}', {
+      headers: {
+        'Content-Type':
+          'application/json; note="a;charset=wrong"; CHARSET="utf-8"',
+      },
+    });
+
+    expect(decodeHeader(response)).toEqual({
+      type: 'json',
+      charset: 'utf-8',
+    });
+  });
+
   test('falls back to text when Content-Type is missing', () => {
     expect(decodeHeader(new Response('plain'))).toEqual({ type: 'txt' });
   });

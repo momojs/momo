@@ -96,6 +96,26 @@ describe('auto height in React and the browser', () => {
       await page.evaluate(() => window.momoHeightTests.boxAndResize()),
     ).toBe(true);
   });
+  test('rejects non-replaced inline and display: contents targets without publishing zero', async () => {
+    expect(
+      await page.evaluate(() => window.momoHeightTests.invalidBoxes()),
+    ).toBe(true);
+  });
+  test('accepts layout boxes, genuine zero and initially hidden targets', async () => {
+    expect(
+      await page.evaluate(() => window.momoHeightTests.observableBoxes()),
+    ).toBe(true);
+  });
+  test('invalidates unsupported CSS changes and resumes when the layout is repaired', async () => {
+    expect(
+      await page.evaluate(() => window.momoHeightTests.layoutChanges()),
+    ).toBe(true);
+  });
+  test('continues measuring inline replaced elements such as images', async () => {
+    expect(
+      await page.evaluate(() => window.momoHeightTests.inlineReplacedBox()),
+    ).toBe(true);
+  });
   test('Tabs measures committed selection, decorations and removed/reintroduced options', async () => {
     expect(
       await page.evaluate(() => window.momoHeightTests.tabsControlled()),

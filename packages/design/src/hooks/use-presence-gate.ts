@@ -36,6 +36,7 @@ export function usePresenceGate(open: boolean): UsePresenceGateResult {
 
   const openRef = useRef(open);
   const pendingGates = useRef(new Set<InternalGateKey>());
+  const completedGates = useRef(new Set<InternalGateKey>());
   const renderedGates = useRef(new Set<InternalGateKey>());
   const gateCallbacks = useRef(
     new Map<InternalGateKey, PresenceGateExitHandler>(),
@@ -77,7 +78,7 @@ export function usePresenceGate(open: boolean): UsePresenceGateResult {
 
       renderedGates.current.add(gateKey);
 
-      if (closing) {
+      if (closing && !completedGates.current.has(gateKey)) {
         pendingGates.current.add(gateKey);
       }
 
@@ -86,6 +87,8 @@ export function usePresenceGate(open: boolean): UsePresenceGateResult {
 
       const completeGate = () => {
         if (!pendingGates.current.delete(gateKey)) return;
+        // A render caused by another exit callback must not re-arm this gate.
+        completedGates.current.add(gateKey);
         maybeReleaseRoot();
       };
 
@@ -98,6 +101,7 @@ export function usePresenceGate(open: boolean): UsePresenceGateResult {
   useEffect(() => {
     if (open) {
       pendingGates.current.clear();
+      completedGates.current.clear();
       setRetained(true);
       return;
     }
@@ -109,11 +113,13 @@ export function usePresenceGate(open: boolean): UsePresenceGateResult {
     for (const gateKey of pendingGates.current) {
       if (!renderedGates.current.has(gateKey)) {
         pendingGates.current.delete(gateKey);
+        completedGates.current.add(gateKey);
       }
     }
 
     maybeReleaseRoot();
-  }, [maybeReleaseRoot, open, retained]);
+    // Reconcile on every commit: gates can disappear while open stays false.
+  });
 
   return {
     visible,

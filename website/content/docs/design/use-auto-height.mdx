@@ -357,6 +357,7 @@ const reduced = useReducedMotion();
 | --- | --- | --- | --- |
 | 初次渲染，尚未激活 | `idle` | `null` | `"auto"` |
 | 已激活，但目标尚未挂载或暂时卸载 | `pending` | `null` | 保留上一次目标高度；没有历史值则为 `"auto"` |
+| 已激活，但目标使用不支持的布局 | `pending` | `null` | 同样保留上一次目标高度，不把无效测量当成 `0` |
 | 已获得当前目标的尺寸 | `ready` | `{ width, height }` | 当前测得高度，包括真实的 `0` |
 | 显式调用 `clear()` | `idle` | `null` | `0` |
 
@@ -374,7 +375,7 @@ Hook 无需传入内容依赖或动画参数。返回值如下：
 
 | 返回值 | 类型 | 用途 |
 | --- | --- | --- |
-| `register` | `(value: ControlValue) => React.RefCallback<T>` | 注册自然布局节点，同一 key 返回稳定的 callback ref |
+| `register` | `(value: ControlValue) => React.RefCallback<T>` | 注册可观察的自然布局盒，同一 key 返回稳定的 callback ref |
 | `activate` | `(value: ControlValue) => void` | 选择测量目标，允许先激活后挂载 |
 | `clear` | `() => void` | 取消激活并把目标高度设为 `0` |
 | `height` | `number \| "auto"` | 直接传给 Motion 的动画目标 |
@@ -396,6 +397,26 @@ Hook 无需传入内容依赖或动画参数。返回值如下：
 ## 测量边界与多月布局
 
 尺寸统一使用未受 CSS transform 缩放影响的布局 **border box**，包含目标自身的 padding 和 border，不包含它自身的 margin。`ResizeObserver` 持续响应内容、padding、border 和宽度引起的尺寸变化；宽高数值都不变时不会发布新测量。
+
+### 测量目标必须是可观察的布局盒
+
+布局盒是元素自身参与排版、具有可测宽高的区域。测量目标应使用 `block`、`inline-block`、`flow-root`、`flex`、`grid` 等可以正常观察尺寸的布局；`inline-flex`、`inline-grid` 也可使用。
+
+普通 `span` 等**非替换型 inline 元素**不满足这个约束：它们的可见尺寸不能作为有效的 ResizeObserver 测量。`display: contents` 同样不支持，因为元素自身不生成布局盒。应把 ref 放到独立包装层，而不是让 Hook 修改调用方的 CSS：
+
+```tsx
+<div ref={register("content")} className="flow-root">
+  <span>需要测量的内容</span>
+</div>
+```
+
+`img`、`video` 等由图像或媒体内容形成独立尺寸的**替换元素**不受普通 inline 元素的限制；它们的可观察 inline 盒仍可直接注册。约束针对实际布局，不是禁止使用 `span` 标签：为 `span` 设置 `inline-block` 或 `block` 后，也可以作为目标。
+
+Hook 在首次测量和后续 ResizeObserver 通知中检查目标布局。发现不受支持的布局时，当前测量失效，`state` 保持或进入 `pending`，`height` 保留上一目标高度；尚无历史值时保持 `"auto"`。开发构建中，每个观察周期最多给出一次警告；生产构建同样拒绝无效测量，但不输出该警告。观察关系保留，修正布局并收到新的尺寸通知后会恢复，不需要重新注册或激活。
+
+调用方应保证目标在测量期间保持受支持的布局。**真实零高仍然有效**：空内容、目标或祖先暂时 `display: none` 都可以得到 `ready` 的零尺寸；不要通过忽略所有 `0` 来规避不支持的布局。
+
+### 多月布局与其他约束
 
 Tabs 测量当前选中面板；Calendar 测量包住整个 DayPicker 的自然布局区域。多月日历不逐月相加，也不选某一个月份代替整体：纵排的月份、间距、横排的整体高度，以及导航、footer 和根节点留白，均以浏览器实际布局为准。
 

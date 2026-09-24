@@ -184,11 +184,15 @@ bun run lint
 bun run format
 ```
 
-根构建脚本当前顺序：
+根构建脚本通过 `momo topology` 自动计算依赖顺序：
 
-```text
-cli -> core -> host -> drive
+```bash
+bun run ./packages/cli/src/bin.ts topology --filter './packages/*'
 ```
+
+它读取各包的四类依赖声明，串行执行已有的 build 脚本；当前顺序为
+`cli -> core -> host -> design -> drive`。新增包时无需手动调整根构建链。
+使用 `bun run build --dry-run` 可只查看顺序。
 
 `momo build` 会先清理当前包的 `dist/`，再执行校验和类型产物生成。不要把依赖包与
 被依赖包并行构建，否则下游可能在上游 `dist/` 被清空时找不到声明文件。
@@ -286,6 +290,7 @@ matched middlewares
 
 - 原则：仓库开发工具层。
 - `momo build` 负责清理 `dist`、运行校验脚本、用 `Bun.build` 输出 ESM。
+- `momo topology` 根据 workspace 依赖图串行运行包级 build，先检查依赖图，失败立即停止。
 - 修改 CLI 后先构建 `cli`，再构建其他包。
 - `packages/*/momo.config.ts` 定义包级构建 target。
 
@@ -315,7 +320,7 @@ matched middlewares
 ## 8. 常见坑
 
 - **并行构建竞态**：上游包清理 `dist` 时，下游类型检查可能找不到声明文件。
-  使用根脚本顺序构建，或手动按 `cli -> core -> host -> drive` 执行。
+  使用根脚本的 `momo topology` 自动按依赖顺序构建。
 - **`realize` 与函数值**：函数会被调用；如果函数本身是配置值，不要传给 `realize`。
 - **Bun build 纯 re-export**：多入口构建时，纯 re-export 可能生成不理想产物。
   公开 wrapper 优先显式 import 后再 `export const`。

@@ -121,7 +121,7 @@ for (const [name, subpath] of identities) {
   }
 }
 
-if (root?.toSearchParams({ page: 1 })?.get('page') !== '1') {
+if (root?.toSearchParams({ page: 1 }).get('page') !== '1') {
   throw new Error('toSearchParams is not available from the root export');
 }
 `;
@@ -134,7 +134,7 @@ import {
 } from '@momots/drive';
 
 const drive = new Drive();
-const params: URLSearchParams | undefined = toSearchParams({ page: 1 });
+const params: URLSearchParams = toSearchParams({ page: 1 });
 
 export const request: Promise<DriveFetchedContext<unknown>> = drive.request({
   api: 'https://example.com',

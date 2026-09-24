@@ -20,6 +20,7 @@ export interface AutoHeightApi<T extends HTMLElement = HTMLDivElement> {
   state: AutoHeightState;
   rect: ElementSize;
   height: number | 'auto';
+  /** Register a natural layout box, not a non-replaced inline or display: contents element. */
   register: (value: ControlValue) => React.RefCallback<T>;
   activate: (value: ControlValue) => void;
   clear: () => void;
@@ -95,6 +96,9 @@ function useHeightTarget<T extends HTMLElement>(
  * `state` describes the current measurement. `height` is the presentation
  * target: initially auto, retained while pending, and zero after clear().
  * Keep the measured element independent of the animated container's height.
+ * Targets must provide an observable layout box (e.g. block, inline-block,
+ * flow-root, flex or grid). Non-replaced inline and display: contents targets
+ * stay pending and warn in development builds; genuine zero and display: none are valid.
  */
 export function useAutoHeight<
   T extends HTMLElement = HTMLDivElement,
