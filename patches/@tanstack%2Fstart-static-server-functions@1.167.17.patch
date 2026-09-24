@@ -1,0 +1,26 @@
+diff --git a/dist/esm/staticFunctionMiddleware.js b/dist/esm/staticFunctionMiddleware.js
+index c6fecf9ebb3ce93e574642f49bf66495bc62d9a0..d6025b312335ede8a198173c9f29695d543da957 100644
+--- a/dist/esm/staticFunctionMiddleware.js
++++ b/dist/esm/staticFunctionMiddleware.js
+@@ -57,7 +57,7 @@ var fetchItem = async ({ data, functionId }) => {
+ 		hash: jsonToFilenameSafeString(data)
+ 	});
+ 	let result = staticClientCache?.get(url);
+-	result = await fetch(url, { method: "GET" }).then((r) => r.json()).then((d) => fromJSON(d, { plugins: getDefaultSerovalPlugins() }));
++	result = await fetch(`/${process.env.TSS_ROUTER_BASEPATH || ''}${url}`.replace(/\/+/g, '/'), { method: "GET" }).then((r) => r.json()).then((d) => fromJSON(d, { plugins: getDefaultSerovalPlugins() }));
+ 	return result;
+ };
+ var staticFunctionMiddleware = createMiddleware({ type: "function" }).client(async (ctx) => {
+diff --git a/src/staticFunctionMiddleware.ts b/src/staticFunctionMiddleware.ts
+index e6681fce1d781e0c97696e04b54346af74564659..6c9e3de74651ba07c96a0cbb65c2deb063af0569 100644
+--- a/src/staticFunctionMiddleware.ts
++++ b/src/staticFunctionMiddleware.ts
+@@ -116,7 +116,7 @@ const fetchItem = async ({
+ 
+   let result: any = staticClientCache?.get(url)
+ 
+-  result = await fetch(url, {
++  result = await fetch(`/${process.env.TSS_ROUTER_BASEPATH || ''}${url}`.replace(/\/+/g, '/'), {
+     method: 'GET',
+   })
+     .then((r) => r.json())

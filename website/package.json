@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "bun --bun vite dev",
     "build": "bun --bun vite build",
-    "start": "cp serve.json .output/public/serve.json && serve -c serve.json .output/public",
-    "start:nitro": "bun run .output/server/index.mjs",
+    "check:static": "bun scripts/check-static.ts",
+    "start": "serve dist/client",
     "preview": "bun --bun vite preview",
     "types:check": "fumadocs-mdx && tsc --noEmit",
     "postinstall": "fumadocs-mdx",

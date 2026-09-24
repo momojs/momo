@@ -62,7 +62,7 @@ Drive 在合并 query 时保留 fragment，但 fragment 遵循 URL/Fetch 语义�
 import { toSearchParams } from "@momots/drive";
 
 function buildListUrl(params: { page?: number; size?: number; q?: string }) {
-  const qs = toSearchParams(params)?.toString();
+  const qs = toSearchParams(params).toString();
   return qs ? `/api/list?${qs}` : "/api/list";
 }
 

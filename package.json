@@ -25,5 +25,8 @@
   },
   "overrides": {
     "type-fest": "5.4.4"
+  },
+  "patchedDependencies": {
+    "@tanstack/start-static-server-functions@1.167.17": "patches/@tanstack%2Fstart-static-server-functions@1.167.17.patch"
   }
 }
