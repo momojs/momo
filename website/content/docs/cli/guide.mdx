@@ -1,6 +1,6 @@
 ---
 title: 向导
-description: momo build、momo doctor、momo topology 与 momo tarball 命令及配置说明。
+description: momo build、momo doctor 与 momo topology 命令及配置说明。
 icon: BookOpen
 ---
 
@@ -10,21 +10,17 @@ icon: BookOpen
 | --- | --- | --- |
 | `momo build` | 读取最近的 `momo.config.*` 并构建当前包 | 成功 `0` / 出错 `1` |
 | `momo doctor` | 只读检查构建配置、依赖规则与本地产物 | 无错误 `0` / 有错误 `1` |
-| `momo tarball` | 打包当前包，并在干净消费项目中验证发布产物 | 成功 `0` / 出错 `1` |
 | `momo topology` | 按 workspace 依赖顺序串行执行各包的 build 脚本 | 成功 `0` / 图或参数错误 `1` / 构建失败透传退出码 |
 | `momo help` / `-h` / `--help` | 显示帮助 | `0` |
 | *(无命令)* | 显示帮助 | `1` |
 
-`momo build`、`momo doctor` 和 `momo tarball` 接受 `-c, --config <path>` 显式指定配置文件；相对配置路径以当前工作目录为基准。未指定时会从当前目录向上查找 `momo.config.ts`、`momo.config.mts`、`momo.config.js` 或 `momo.config.mjs`。构建配置中的路径以配置文件所在目录为基准。
+`momo build` 和 `momo doctor` 接受 `-c, --config <path>` 显式指定配置文件；相对配置路径以当前工作目录为基准。未指定时会从当前目录向上查找 `momo.config.ts`、`momo.config.mts`、`momo.config.js` 或 `momo.config.mjs`。构建配置中的路径以配置文件所在目录为基准。
 
 ```bash
 momo build
 momo build -c packages/host/momo.config.ts
 momo doctor
 momo doctor --json -c packages/host/momo.config.ts
-momo tarball
-momo tarball --keep
-momo tarball --destination ./artifacts
 momo topology --filter './packages/*'
 momo topology --filter '@momots/drive' --dry-run
 momo --help
@@ -50,13 +46,6 @@ export default defineConfig({
       'assets/tailwind.css': 'tailwind.css',
     },
     executables: [],
-  },
-  tarball: {
-    imports: ['.', './subpath'],
-    forbidImports: ['@momots/internal-package'],
-    identities: [
-      { export: 'example', from: ['.', './subpath'] },
-    ],
   },
 });
 ```
@@ -118,7 +107,7 @@ workspace 声明支持路径数组和 `{ "packages": [...] }`，也支持 `!` �
 
 ## 本地诊断
 
-`momo doctor` 检查当前包能否按配置构建，以及已有产物是否与配置一致。它不调用 build、package scripts 或 `tarball.check`，不安装依赖，也不创建、清理或修复文件。与其他命令一样，它会执行配置模块的顶层代码，因此应使用可信且没有顶层副作用的配置；使用 `--json` 时也应避免配置向标准输出打印内容。
+`momo doctor` 检查当前包能否按配置构建，以及已有产物是否与配置一致。它不调用 build 或 package scripts，不安装依赖，也不创建、清理或修复文件。与其他命令一样，它会执行配置模块的顶层代码，因此应使用可信且没有顶层副作用的配置；使用 `--json` 时也应避免配置向标准输出打印内容。
 
 检查范围包括：
 
@@ -154,39 +143,7 @@ workspace 声明支持路径数组和 `{ "packages": [...] }`，也支持 `!` �
 
 每条诊断包含 `severity`、`code`、`message`，以及可选的 `path`（相关文件或配置字段）。`ok` 表示没有错误；未找到配置时 `config` 为 `null`。配置加载失败、无效命令参数等错误也使用同一报告结构。CI 可以根据退出码判断成功与否，或按 `code` 处理特定问题。
 
-doctor 只检查本地配置与文件，不验证发布文件清单、依赖安装或运行时导入。发布前继续使用 `momo tarball` 检查实际打包后的消费行为。
-
-## Tarball 校验
-
-`momo tarball` 使用 `bun pm pack --ignore-scripts` 创建 tarball，随后将它解压到临时消费项目。命令默认执行以下检查：
-
-- 发布后的 `package.json` 不含 `workspace:` 依赖；
-- 每个非通配符 export 指向的文件真实存在；
-- 配置的禁止依赖没有残留在 JavaScript 或声明文件中；
-- 包可以从干净消费项目导入；
-- 配置的跨入口导出保持引用身份。
-
-默认校验完成后会删除 tarball 和临时消费项目。`--destination <dir>` 永久保存 tarball；`--keep` 同时保留临时目录，适合排查失败。
-
-| `tarball` 字段 | 默认值 | 说明 |
-| --- | --- | --- |
-| `imports` | 所有静态 exports | 在临时消费项目中动态导入的子路径 |
-| `identities` | `[]` | 比较同一导出在多个入口之间的引用身份 |
-| `forbidImports` | `[]` | 不得残留在 `dist` JavaScript 或声明文件中的包名 |
-| `check` | — | 接收 tarball、解压包和消费项目路径的包级扩展校验 |
-
-`tarball.check` 适合 Tailwind 编译、框架渲染或额外 TypeScript consumer 等包特有断言。通用 pack、解压和清理逻辑应留给 CLI。命令不会隐式执行 build，因此通常先构建，再运行校验：
-
-```json
-{
-  "scripts": {
-    "test:tarball": "bun run build && momo tarball",
-    "prepack": "bun run test && bun run test:tarball"
-  }
-}
-```
-
-CLI 内部使用 `--ignore-scripts`，因此从 `prepack` 调用不会递归触发生命周期脚本。
+doctor 只检查本地配置与文件，不验证发布文件清单、依赖安装或运行时导入。
 
 ## 浏览器测试
 

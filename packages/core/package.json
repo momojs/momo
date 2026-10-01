@@ -1,6 +1,6 @@
 {
   "name": "@momots/core",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Bun-first functional primitives for MomoTS packages and apps.",
   "keywords": [
     "momots",

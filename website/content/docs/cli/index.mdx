@@ -6,7 +6,7 @@ icon: Rocket
 
 `@momots/cli` 提供 `momo build`，统一 MomoTS 包的类型生成与 `Bun.build` 流程。
 
-使用 `momo doctor` 检查构建配置和本地产物，使用 `momo tarball` 验证实际发布包。doctor 支持 `--json` 输出，便于在 CI 中读取诊断结果。
+使用 `momo doctor` 检查构建配置和本地产物。doctor 支持 `--json` 输出，便于在 CI 中读取诊断结果。
 
 在 workspace 中使用 `momo topology --filter './packages/*'`，可以按包之间的依赖顺序串行构建；`--dry-run` 只显示构建计划。
 

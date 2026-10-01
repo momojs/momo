@@ -4,7 +4,7 @@
 letting related requests share authentication, logging, error handling, and
 other transport policy through middleware.
 
-Current release: `0.1.0-beta.0` (`beta` tag).
+Current release: `0.1.0-beta.1` (`beta` tag).
 
 Use Drive when a service has several endpoints that should follow the same
 rules. For a few unrelated requests, native `fetch` is usually clearer.
@@ -88,6 +88,13 @@ a known empty response and `T | undefined` when a body is optional.
   to replay.
 
 ## Documentation
+
+The [CSRF recipe](https://github.com/momojs/momo/blob/main/website/content/docs/drive/recipes.mdx#csrf)
+provides an optional send stage for cookie-session APIs. Its `origin` and
+`header` options accept `Realizable<string>`, and its token getter may return a
+Promise. Import `csrf`, `CsrfTokenMissingError`, and the `CsrfOptions` type from
+`@momots/drive/recipes/csrf`. CSRF and `repeat` currently occupy the same `send`
+stage and cannot be configured together.
 
 Read the [Drive documentation](https://github.com/momojs/momo/tree/main/website/content/docs/drive)
 for the design rationale, tutorial, task-focused examples, and exact API

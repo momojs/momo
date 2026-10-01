@@ -59,12 +59,9 @@ export function validateBuildConfig(
   }
 
   for (const key of Object.keys(config)) {
-    if (key !== 'build' && key !== 'tarball') {
+    if (key !== 'build') {
       add('warning', 'config.unknown-field', `未知配置字段：${key}。`, key);
     }
-  }
-  if (config.tarball !== undefined && !isRecord(config.tarball)) {
-    add('error', 'config.invalid-field', 'tarball 必须是对象。', 'tarball');
   }
 
   const value = config.build;

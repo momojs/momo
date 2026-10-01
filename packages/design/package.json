@@ -1,6 +1,6 @@
 {
   "name": "@momots/design",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "React 19 interface primitives combining Base UI, Motion, and Tailwind CSS v4.",
   "keywords": [
     "momots",
@@ -160,12 +160,11 @@
     "build": "momo build",
     "test": "bun test src",
     "test:browser": "bun test browser-tests",
-    "test:tarball": "momo tarball",
     "format": "biome format --write .",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "types": "tsc --project tsconfig.build.json",
-    "prepack": "bun run build && bun run test && bun run typecheck:spec && bun run test:tarball"
+    "prepack": "bun run build && bun run test && bun run typecheck:spec"
   },
   "devDependencies": {
     "@momots/cli": "workspace:*",

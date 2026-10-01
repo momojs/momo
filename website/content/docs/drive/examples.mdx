@@ -152,25 +152,27 @@ async function download(url: string): Promise<Blob> {
 
 ## 只为写操作添加 CSRF 头
 
-路径不足以表达条件时，用谓词读取请求快照：
+使用 [CSRF recipe](/docs/drive/recipes#csrf)，在 prepare 已经确定 method 后校验来源并添加 token。
+从独立子路径导入后配置 `stages.send`：
 
 ```ts
 import { Drive } from "@momots/drive";
+import { csrf } from "@momots/drive/recipes/csrf";
 
-const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
-export const drive = new Drive().use(
-  (snapshot) =>
-    writeMethods.has((snapshot.req.method ?? "").toUpperCase()),
-  async (context, next) => {
-    context.req.headers.set("X-CSRF-Token", getCsrfToken());
-    await next();
+export const drive = new Drive({
+  stages: {
+    send: csrf({
+      origin: () => window.location.origin,
+      header: () => "X-CSRF-Token",
+      token: () => getCsrfToken(),
+    }),
   },
-);
+});
 ```
 
-谓词匹配早于 `request()` 的自动方法推断。依赖方法时应使用快捷方法，或在
-`request()` / `exec()` 中显式传入 `method`。
+`getCsrfToken()` 是应用提供的函数，可以返回字符串或 Promise。recipe 覆盖显式方法
+与自动推断的 POST；目标来源不匹配或写请求缺少 token 时，会在发送前报错。它占用
+`stages.send`，当前不能与 `repeat` 同时配置。服务端仍须校验 token。
 
 ## 自定义 RPC 响应解析
 

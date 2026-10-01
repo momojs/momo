@@ -46,8 +46,8 @@
     ".env": ".env.*, env.*",
     ".gitconfig": ".gitignore, .gitattributes",
     "dockerfile": "dockerfile.*, .dockerignore",
-    "tsconfig.json": "biome.*, tsconfig*, global.d.ts",
-    "package.json": "bunfig.*, package.json.*, bun.*",
+    "tsconfig.json": "biome.*, tsconfig*, *.d.ts, *.config.json",
+    "package.json": "bunfig.*, package.json.*, bun.*, *.config.ts",
     "drizzle.config.ts": "drizzle*"
   },
   "[svg]": {

@@ -20,11 +20,6 @@
       "types": "./src/config.ts",
       "bun": "./src/config.ts",
       "import": "./dist/config.js"
-    },
-    "./tarball": {
-      "types": "./src/tarball.ts",
-      "bun": "./src/tarball.ts",
-      "import": "./dist/tarball.js"
     }
   },
   "files": [

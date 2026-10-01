@@ -54,37 +54,6 @@ export default defineConfig({
 });
 ```
 
-## 验证内联依赖
-
-构建时内联一个 workspace 包，并验证发布产物不再引用它：
-
-```ts
-import { defineConfig } from '@momots/cli';
-
-export default defineConfig({
-  build: {
-    bundle: ['@momots/host'],
-    splitting: true,
-  },
-  tarball: {
-    forbidImports: ['@momots/host'],
-    identities: [
-      { export: 'Drive', from: ['.', './core'] },
-    ],
-  },
-});
-```
-
-```json
-{
-  "scripts": {
-    "test:tarball": "bun run build && momo tarball"
-  }
-}
-```
-
-使用 `momo tarball --keep` 可以保留临时消费项目；需要发布或手工检查 `.tgz` 时，使用 `momo tarball --destination ./artifacts`。
-
 ## 测试脚本
 
 ```json

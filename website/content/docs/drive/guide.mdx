@@ -30,10 +30,11 @@ import {
 
 | 入口 | 内容 |
 | --- | --- |
-| `@momots/drive` | 推荐入口；包含全部主要公共 API |
+| `@momots/drive` | 日常请求 API；可选 recipes 从各自子路径导入 |
 | `@momots/drive/core` | `Drive` |
 | `@momots/drive/context` | `DriveContext` |
 | `@momots/drive/parser` | 默认 parser、`isRawTextBody` 与相关类型 |
+| `@momots/drive/recipes/csrf` | `csrf`、`CsrfTokenMissingError` 与 `CsrfOptions` 类型；见 [Recipes](/docs/drive/recipes#csrf) |
 | `@momots/drive/stages` | 可选阶段，目前包含 `repeat` |
 | `@momots/drive/stages/repeat` | `repeat` |
 | `@momots/drive/types` | 类型定义，包括少数低层辅助类型 |

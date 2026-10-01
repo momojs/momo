@@ -61,7 +61,7 @@
     },
     "packages/drive": {
       "name": "@momots/drive",
-      "version": "0.1.0-beta.0",
+      "version": "0.1.0-beta.1",
       "dependencies": {
         "mime": "^4.1.0",
         "nanoid": "^3.3.15",

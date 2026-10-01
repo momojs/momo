@@ -69,11 +69,10 @@
     "build": "momo build",
     "test": "bun test src",
     "test:browser": "bun test browser-tests",
-    "test:tarball": "momo tarball",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "types": "tsc --project tsconfig.build.json",
-    "prepack": "bun run build && bun run test && bun run typecheck:spec && bun run test:browser && bun run test:tarball"
+    "prepack": "bun run build && bun run test && bun run typecheck:spec && bun run test:browser"
   },
   "devDependencies": {
     "@momots/cli": "workspace:*",
