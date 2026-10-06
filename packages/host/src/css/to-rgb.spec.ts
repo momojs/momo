@@ -96,4 +96,29 @@ describe('toRGB', () => {
     expect(toRGB('nope')).toBeNull();
     expect(toRGB()).toBeNull();
   });
+
+  test.each([
+    'rgb( )',
+    'rgba( )',
+    'rgb(/)',
+    'rgb( / 50%)',
+    'rgb(1 2)',
+    'rgb(1 2 3 /)',
+    'rgb(1 2 3 / / 50%)',
+    'rgb(1 2 3 4)',
+    'rgb(1,,2,3)',
+    'rgba(1,2,3,)',
+    'rgba(1,2,3,0.5,1)',
+    'rgb(from #fff)',
+    'rgb(from #fff / alpha)',
+    'rgb(from #fff r g b /)',
+    'rgb(from #fff r g b / / alpha)',
+    'rgb(from #fff r g b r)',
+    'rgb(from rgb( ) r g b)',
+    'color-mix(in srgb, rgb( ), #fff)',
+    'color-mix(in srgb, , #000, #fff)',
+    'color-mix(in srgb, #000, #fff, #f00)',
+  ])('returns null for missing or extra color components: %s', (source) => {
+    expect(toRGB(source)).toBeNull();
+  });
 });

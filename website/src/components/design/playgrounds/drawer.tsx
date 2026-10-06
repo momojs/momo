@@ -84,7 +84,7 @@ export function DrawerPlayground() {
         description={
           <span>Choose how updates should reach this workspace.</span>
         }
-        content={{ className: 'min-h-0' }}
+        slots={{ content: { className: 'min-h-0' } }}
         footer={
           <div className='w-full p-4 pt-2'>
             <DrawerClose render={<Button className='w-full' />}>

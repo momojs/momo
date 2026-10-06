@@ -73,21 +73,18 @@ Alert 本身不会消失，也不会渲染关闭按钮。需要可关闭提示�
 
 ## Slots
 
-`iconSlot`、`contentSlot`、`titleSlot`、`descriptionSlot` 与 `actionSlot` 遵循 momo 的 slot 约定：
-
-- `undefined` 根据对应内容自动渲染默认 slot。
-- props object 配置默认元素。
-- ReactNode 完整替换 slot。
-- `false` 移除 slot。
+Alert 共享 `ContentProps` 的 `title` 与 `description`。`slots.icon`、`slots.content`、`slots.title`、`slots.description`、`slots.action` 遵循 [Content Slots](/docs/design/content-slots) 约定：省略时按内容渲染默认节点，props object 配置节点，`render` 更改标签，`false` 移除节点。
 
 ```tsx
 <Alert
   variant="danger"
   title="上传失败"
   description="请检查网络后重试。"
-  titleSlot={{ className: "uppercase" }}
-  descriptionSlot={{ id: "upload-error" }}
-  actionSlot={<button type="button">重试上传</button>}
+  action={<button type="button">重试上传</button>}
+  slots={{
+    title: { render: <h3 />, className: "uppercase" },
+    description: { id: "upload-error" },
+  }}
 />
 ```
 
@@ -123,14 +120,10 @@ Alert 本身不会消失，也不会渲染关闭按钮。需要可关闭提示�
 | `description` | `ReactNode` | 补充说明或处理建议 |
 | `action` | `ReactNode` | 可选按钮或链接 |
 | `role` | `AriaRole \| null` | 默认 `"alert"`；`null` 移除 live-region role |
-| `iconSlot` | slot config | 配置、替换或移除 Icon |
-| `contentSlot` | slot config | 配置、替换或移除 Content |
-| `titleSlot` | slot config | 配置、替换或移除 Title |
-| `descriptionSlot` | slot config | 配置、替换或移除 Description |
-| `actionSlot` | slot config | 配置、替换或移除 Action |
+| `slots` | `ContentSlotsProps<AlertContentSlots>` | 配置内容节点，支持 `render` 或 `false` |
 | `className` | `string` | 追加根容器样式 |
 | `...props` | `React.ComponentProps<"div">` | 其余原生 div 属性 |
 
 ### Primitives
 
-所有 primitives 都接受对应原生元素的 props 与 `className`。`AlertRoot` 额外接受 `variant` 和可为空的 `role`；其余部件负责稳定的布局、排版和 `data-slot` 元数据。
+所有 primitives 都接受对应原生元素的 props 与 `className`。内容 primitives 还支持 `render` 来合并默认样式、事件与 ref。`AlertRoot` 额外接受 `variant` 和可为空的 `role`；其余部件负责稳定的布局、排版和 `data-slot` 元数据。

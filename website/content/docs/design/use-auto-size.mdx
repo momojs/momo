@@ -1,10 +1,10 @@
 ---
-title: useAutoHeight
-description: 用内容增减、面板切换和延迟挂载等场景，理解自然高度如何成为稳定、可中断的动画目标。
-icon: MoveVertical
+title: useAutoSize
+description: 把内容宽高变成稳定的动画目标，支持单轴或双轴动画、面板切换和延迟挂载。
+icon: Maximize
 ---
 
-`useAutoHeight` 把内容的自然高度交给动画容器：内容决定需要多高，Hook 持续测量，Motion 负责从当前显示高度移动到新目标。它适用于 Tabs、动态详情、分步表单，以及单月或多月日历。
+`useAutoSize` 持续测量当前内容的布局尺寸，提供稳定的 `width` 和 `height` 动画目标。调用方可以只动画宽度、只动画高度，或同时动画宽高；Motion 负责从当前显示尺寸移动到新目标。它适用于按内容定宽的紧凑面板、浮层，以及只需调整高度的 Tabs、动态详情和日历。
 
 ## 为什么需要它
 
@@ -14,10 +14,11 @@ icon: MoveVertical
 
 | 遇到的问题 | Hook 提供的行为 |
 | --- | --- |
+| 简要状态切换为详情，需要同时变宽、变高 | 一次测量同步更新宽高目标，交给 `animate={{ width, height }}` |
 | 内容加载后变高，原来的高度不够用 | 持续观察当前目标的自然尺寸，并更新数值高度 |
 | 宽度变化导致换行，依赖项却没有改变 | 尺寸变化由 `ResizeObserver` 捕获，无需手动维护内容依赖列表 |
 | 不同面板高度不同，切换时页面突然跳动 | 按 key 注册并激活面板，把目标高度交给同一个 Motion 容器 |
-| 新面板尚未挂载，容器不应突然塌下去 | 进入 `pending`，保留上一次动画目标高度 |
+| 新面板尚未挂载，容器不应突然塌下去 | 进入 `pending`，保留上一次宽高目标 |
 | 空内容确实为零高，或者业务上需要收起 | 有效的零高直接返回 `0`；主动收起使用 `clear()` |
 | 动画没结束，用户就再次操作 | 更新同一个容器的目标，由 Motion 从当前显示高度继续运动 |
 
@@ -25,14 +26,16 @@ icon: MoveVertical
 
 ## 先观察：测量状态与动画目标
 
-选择场景后操作按钮，观察“当前测量高度”“动画目标高度”和容器下方分界线。切换场景或点击“重新开始”会重建演示；系统开启减少动态效果时，高度立即更新。
+默认场景展示紧凑面板同时变宽、变高。切换到其他场景可以观察仅高度动画；状态区域显示当前测量和动画目标。切换场景或点击“重新开始”会重建演示；系统开启减少动态效果时，尺寸立即更新。
 
-<UseAutoHeightPlayground />
+<UseAutoSizePlayground />
 
 以下操作都从对应场景的初始状态开始。具体像素取决于字体和可用宽度，重点看变化关系：
 
 | 场景与操作 | 测量与目标如何变化 | 界面行为 |
 | --- | --- | --- |
+| 紧凑面板 → 显示同步详情 → 显示简要状态 | 宽高同时更新，`ready` | 外层跟随内容固有宽高变化，可中途改向 |
+| 紧凑面板 → `clear()` → 重新激活 | 宽高目标都先归零，再恢复有效测量 | 内层保持挂载，收起后仍可展开 |
 | 内容增减 → 添加补充内容 → 移除补充内容 | `ready`，高度先增大再减小 | 容器跟随内容展开、收回 |
 | 内容增减 → 缩窄内容 | 换行增多时，测得高度随之增大 | 无需再次调用 `activate` |
 | 面板切换 → 显示详情 → 立即显示摘要 | 目标从详情高度改为摘要高度 | 同一容器在动画中途改向 |
@@ -42,18 +45,68 @@ icon: MoveVertical
 | 等待挂载 → `clear()` → 重新激活 | `idle → ready`，动画目标先为 `0` 再恢复 | 注册的内容仍可被重新激活 |
 | 多月布局 → 纵向排列 | 测得整个区域的新高度 | 月份、间距、标题和底部说明一起计入 |
 
-## 场景一：详情内容增加或减少
+## 场景一：紧凑面板同时调整宽高
+
+下面的状态卡片使用内容固有宽度。内层 `w-max` 对应 `width: max-content`，其宽度不会跟随动画容器每一帧的宽度，因此能提供稳定的终点。装饰放在外层，内容留白放在测量区域内。
+
+```tsx
+import { useLayoutEffect } from "react";
+import { useAutoSize } from "@momots/design/effects";
+import { motion, useReducedMotion } from "motion/react";
+
+function CompactStatus({ expanded }: { expanded: boolean }) {
+  const { register, activate, width, height } = useAutoSize();
+  const reduced = useReducedMotion();
+
+  useLayoutEffect(() => {
+    activate("content");
+  }, [activate]);
+
+  return (
+    <div className="inline-block align-top rounded-lg border">
+      <motion.div
+        initial={false}
+        animate={{ width, height }}
+        transition={reduced ? { type: "tween", duration: 0 } : undefined}
+        className="overflow-hidden"
+      >
+        <div ref={register("content")} className="grid w-max gap-2 p-4">
+          <p>{expanded ? "全部内容已保存" : "已保存"}</p>
+          {expanded && (
+            <>
+              <p>图片、说明与标签均已同步。</p>
+              <p>可以继续编辑。</p>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+```
+
+只需宽度动画时，改为 `animate={{ width }}`；高度将继续参与自然布局。只需高度动画时，使用 `animate={{ height }}`。Hook 不设置元素样式，也不要求两个轴一起使用。
+
+### 宽度需要独立的布局依据
+
+普通块元素的 `width: auto` 通常跟随父容器。将它测得的宽度再写回父容器，会把流式宽度固定为像素值，或让动画的中间宽度不断影响测量结果。仅仅分成内外两层并不足以解决这个依赖。
+
+宽度动画适合使用短内容的固有宽度、明确的目标宽度，或独立测量区域。上面的 `max-content` 适合紧凑状态卡；长文本需要由调用方根据可用空间确定目标宽度，再测量换行后的高度。不要把动画容器自身作为可用宽度的来源；`max-width: 100%` 等百分比约束也可能重新引入依赖。
+
+宽高动画会影响布局；需要随父容器伸缩的 Tabs 和日历应继续只使用高度目标。后续场景演示这一用法。
+
+## 场景二：详情内容增加或减少
 
 Hook 从包根入口或 `@momots/design/effects` 导出。动画容器和测量目标必须是两个独立元素：
 
 ```tsx
 import type { ReactNode } from "react";
 import { useLayoutEffect } from "react";
-import { useAutoHeight } from "@momots/design/effects";
+import { useAutoSize } from "@momots/design/effects";
 import { motion, useReducedMotion } from "motion/react";
 
 function HeightRegion({ children }: { children: ReactNode }) {
-  const { register, activate, height } = useAutoHeight();
+  const { register, activate, height } = useAutoSize();
   const reduced = useReducedMotion();
 
   useLayoutEffect(() => {
@@ -110,7 +163,7 @@ function ProductDetails() {
 
 如果图片已通过宽高或 `aspect-ratio` 预留空间，加载完成后布局尺寸没有变化，Hook 就不会产生新的尺寸更新。
 
-## 场景二：容器变窄，文字重新换行
+## 场景三：容器变窄，文字重新换行
 
 内容字符串不变，不代表高度不变。侧栏展开、窗口变窄或字体变化，都可能让文本多占几行。测量的是浏览器实际布局，因此不需要把这些因素逐个写进 Hook 的依赖数组：
 
@@ -133,9 +186,9 @@ function ResponsiveDetails() {
 }
 ```
 
-只变宽度、没有改变高度时，`state.rect.width` 仍会更新，`height` 则保持不变。宽高数值都相同时，不会发布重复测量。
+只变宽度、没有改变高度时，`state.rect.width` 和动画目标 `width` 会更新，`height` 则保持不变。这里仅传入 `animate={{ height }}`，因此实际宽度继续由外部布局决定。宽高数值都相同时，不会发布重复测量。
 
-## 场景三：切换摘要与详情，允许中途改向
+## 场景四：切换摘要与详情，允许中途改向
 
 多个逻辑目标使用不同 key 注册，通过 `activate` 选择当前目标。注册只表示“这个节点存在”，不会自动选中它。
 
@@ -151,7 +204,7 @@ function PanelRegion({
   value: Panel;
   onChange: (next: Panel) => void;
 }) {
-  const { register, activate, height } = useAutoHeight();
+  const { register, activate, height } = useAutoSize();
   const reduced = useReducedMotion();
 
   useLayoutEffect(() => {
@@ -205,7 +258,7 @@ function PanelRegion({
 
 已有的 [Tabs](/docs/design/tabs) 组件已经接入这套高度策略，使用 Tabs 时无需再包一层同样的测量逻辑。
 
-## 场景四：新面板尚未挂载
+## 场景五：新面板尚未挂载
 
 异步加载、条件渲染或分步流程中，可以先表达“接下来需要这个目标”，再等待它挂载。下面的 `ready` 由数据加载状态决定：
 
@@ -217,7 +270,7 @@ function DeferredPanel({
   selected: "summary" | "details";
   ready: boolean;
 }) {
-  const { register, activate, height } = useAutoHeight();
+  const { register, activate, height } = useAutoSize();
   const reduced = useReducedMotion();
 
   useLayoutEffect(() => {
@@ -262,7 +315,7 @@ Hook 保留空间，不保留已卸载的内容，也不自动显示加载状态
 
 切换目标时旧目标停止被观察，迟到的旧通知不会覆盖新目标。同一 key 重新挂载时会接入新节点，旧挂载的清理也不会删除替代节点。
 
-## 场景五：真实零高与主动收起
+## 场景六：真实零高与主动收起
 
 “等着新内容出现”“内容确实为空”“已经没有选中项”是三种不同状态：
 
@@ -282,13 +335,13 @@ useLayoutEffect(() => {
 }, [selected, activate, clear]);
 ```
 
-`clear()` 撤销激活意图，但不会删除仍挂载的注册项。之后调用 `activate` 可以重新测量它们；如果目标已经卸载，则会重新进入 `pending`。刚清空后再等待目标挂载，保留的高度是 `0`。
+`clear()` 撤销激活意图，但不会删除仍挂载的注册项。之后调用 `activate` 可以重新测量它们；如果目标已经卸载，则会重新进入 `pending`。刚清空后再等待目标挂载，保留的宽高都是 `0`。只传 `height` 的调用方仍然只收起高度。
 
 key 支持 `string`、`number` 和 `null`，其中 `0`、`"0"`、`null` 是三个不同目标。`activate(null)` 会选择 key 为 `null` 的目标，不能代替 `clear()`。
 
 高度为 `0` 只描述动画容器，不会移除外层边框与 padding，也不会自动卸载内容或管理键盘焦点。收起包含交互控件的区域时，调用方还应同步处理内容的可见性和可访问性。
 
-## 场景六：一个月变成多个月，测量整体布局
+## 场景七：一个月变成多个月，测量整体布局
 
 日历或卡片组经常既能横排，也能纵排。把每个子项的高度相加，只对部分纵排结构有效；横排时应该看整行高度，还需要计入标题、间距和底部内容。
 
@@ -327,7 +380,7 @@ function MonthLayout({
 
 横排时，两个月份共同撑起整行；纵排时，月份和间距依次占据高度。切换布局、月份数或每月周数后，Hook 都读取整个包装区域的实际尺寸。接入 DayPicker 等现有日历时，也应测量包住整个日历的自然布局区域，避免逐月求和或只取其中一个月份。
 
-## 场景七：减少动态效果，仍然跟随内容
+## 场景八：减少动态效果，仍然跟随内容
 
 测量与动画分开之后，可以保留同一套尺寸逻辑，只调整过渡策略：
 
@@ -347,42 +400,46 @@ const reduced = useReducedMotion();
 </motion.div>
 ```
 
-开启减少动态效果后，内容增减、目标切换和等待挂载的规则保持一致，只是高度直接更新。演示中的“立即更新高度”也使用这条路径。
+开启减少动态效果后，内容增减、目标切换和等待挂载的规则保持一致，只是高度直接更新。演示中的“立即更新尺寸”也使用这条路径。
 
 ## 当前测量与动画目标
 
-`state` 描述当前目标是否具有有效测量，`height` 则描述动画应前往的高度。两者不是同一份状态：
+`state` 描述当前目标是否具有有效测量，`width` 和 `height` 则描述动画应前往的尺寸。等待新目标挂载时，测量失效，但动画目标仍然保留：
 
-| 场景 | `state.status` | `state.rect` | `height` |
+| 场景 | `state.status` | `state.rect` | `width` / `height` |
 | --- | --- | --- | --- |
 | 初次渲染，尚未激活 | `idle` | `null` | `"auto"` |
-| 已激活，但目标尚未挂载或暂时卸载 | `pending` | `null` | 保留上一次目标高度；没有历史值则为 `"auto"` |
-| 已激活，但目标使用不支持的布局 | `pending` | `null` | 同样保留上一次目标高度，不把无效测量当成 `0` |
-| 已获得当前目标的尺寸 | `ready` | `{ width, height }` | 当前测得高度，包括真实的 `0` |
+| 已激活，但目标尚未挂载或暂时卸载 | `pending` | `null` | 各自保留上一次目标尺寸；没有历史值则为 `"auto"` |
+| 已激活，但目标使用不支持的布局 | `pending` | `null` | 同样各自保留上一次目标尺寸，不把无效测量当成 `0` |
+| 已获得当前目标的尺寸 | `ready` | `{ width, height }` | 当前测得宽高，包括真实的 `0` |
 | 显式调用 `clear()` | `idle` | `null` | `0` |
 
-`pending` 和 `ready` 还包含激活的 `value`。兼容字段 `rect` 在没有当前测量时返回 `{ width: 0, height: 0 }`；需要判断测量是否有效时，应读取 `state`。
+`pending` 和 `ready` 还包含激活的 `value`。当前尺寸只通过 `state.rect` 提供：`idle` 和 `pending` 时为 `null`，表示没有有效测量；`ready` 时为 `{ width, height }`，其中宽度或高度为 `0` 仍是有效测量。读取尺寸前先判断 `state.status === "ready"`，不要用零值代替尚未获得的测量。
 
-不要使用 `rect.height || "auto"`：真实零高不是未测量，目标切换期间也不应退回自然高度。直接把 `height` 交给同一个 Motion 容器；切换途中更新目标时，由 Motion 接续当前显示值。
+有效测量被接受时，当前尺寸和用于后续 `pending` 的宽高目标会在同一次状态更新中确定，宽高作为一个快照原子更新。目标切换或测量失效只清除当前测量；`clear()` 则同时清除测量并把宽高都设为 `0`。已经过期的通知不会更新当前尺寸，也不会覆盖保留的任一维度。
+
+保留的是最近一次有效的**目标尺寸**，不是动画此刻在屏幕上的尺寸；实时显示值及动画衔接仍由 Motion 管理。
+
+不要使用 `state.rect?.height || "auto"`：真实零高不是未测量，目标切换期间也不应退回自然高度。两个轴都应直接使用对应的 `width` / `height` 动画目标；切换途中更新目标时，由 Motion 接续当前显示值。
 
 ## API
 
 ```ts
-function useAutoHeight<T extends HTMLElement = HTMLDivElement>(): AutoHeightApi<T>;
+function useAutoSize<T extends HTMLElement = HTMLDivElement>(): AutoSizeApi<T>;
 ```
 
-Hook 无需传入内容依赖或动画参数。返回值如下：
+Hook 无需传入内容依赖、轴选项或动画参数。始终测量宽高，由调用方选择 `animate={{ width }}`、`animate={{ height }}` 或 `animate={{ width, height }}`。返回值如下：
 
 | 返回值 | 类型 | 用途 |
 | --- | --- | --- |
 | `register` | `(value: ControlValue) => React.RefCallback<T>` | 注册可观察的自然布局盒，同一 key 返回稳定的 callback ref |
 | `activate` | `(value: ControlValue) => void` | 选择测量目标，允许先激活后挂载 |
-| `clear` | `() => void` | 取消激活并把目标高度设为 `0` |
-| `height` | `number \| "auto"` | 直接传给 Motion 的动画目标 |
-| `state` | `AutoHeightState` | 区分 `idle`、`pending` 和有效测量的 `ready` |
-| `rect` | `{ width: number; height: number }` | 兼容尺寸快照，无有效测量时为零值；有效性以 `state` 为准 |
+| `clear` | `() => void` | 取消激活并把宽高目标都设为 `0` |
+| `width` | `number \| "auto"` | 宽度动画目标：初始为 `"auto"`，等待期间保留，清空后为 `0` |
+| `height` | `number \| "auto"` | 高度动画目标，与 `width` 采用相同规则 |
+| `state` | `AutoSizeState` | 区分 `idle`、`pending` 和有效测量的 `ready` |
 
-相关导出类型包括 `AutoHeightApi<T>` 与 `AutoHeightState`。`ControlValue` 为 `string | number | null`。
+相关导出类型包括 `AutoSizeApi<T>` 与 `AutoSizeState`。`ControlValue` 为 `string | number | null`。
 
 ### 注册与激活约定
 
@@ -412,7 +469,7 @@ Hook 无需传入内容依赖或动画参数。返回值如下：
 
 `img`、`video` 等由图像或媒体内容形成独立尺寸的**替换元素**不受普通 inline 元素的限制；它们的可观察 inline 盒仍可直接注册。约束针对实际布局，不是禁止使用 `span` 标签：为 `span` 设置 `inline-block` 或 `block` 后，也可以作为目标。
 
-Hook 在首次测量和后续 ResizeObserver 通知中检查目标布局。发现不受支持的布局时，当前测量失效，`state` 保持或进入 `pending`，`height` 保留上一目标高度；尚无历史值时保持 `"auto"`。开发构建中，每个观察周期最多给出一次警告；生产构建同样拒绝无效测量，但不输出该警告。观察关系保留，修正布局并收到新的尺寸通知后会恢复，不需要重新注册或激活。
+Hook 在首次测量和后续 ResizeObserver 通知中检查目标布局。发现不受支持的布局时，当前测量失效，`state` 保持或进入 `pending`，`width` 和 `height` 保留上一目标尺寸；尚无历史值时保持 `"auto"`。开发构建中，每个观察周期最多给出一次警告；生产构建同样拒绝无效测量，但不输出该警告。观察关系保留，修正布局并收到新的尺寸通知后会恢复，不需要重新注册或激活。
 
 调用方应保证目标在测量期间保持受支持的布局。**真实零高仍然有效**：空内容、目标或祖先暂时 `display: none` 都可以得到 `ready` 的零尺寸；不要通过忽略所有 `0` 来规避不支持的布局。
 
@@ -422,7 +479,7 @@ Tabs 测量当前选中面板；Calendar 测量包住整个 DayPicker 的自然�
 
 需要遵守以下布局约束：
 
-- 不要把 ref 挂到正在设置 `height` 的动画容器上，也不要让目标通过 `height: 100%` 依赖该容器；否则会形成测量反馈循环。
+- 不要把 ref 挂到正在设置宽高的动画容器上。测量目标在每个被动画控制的轴上都应独立于该容器，例如不要通过 `height: 100%` 或 `width: 100%` 跟随它；否则会形成测量反馈循环。
 - 动画容器本身不放 padding 或 border；装饰放在外层，内容自身的留白放在测量区域内。
 - 需要计入的内容必须参与目标的自然布局。绝对定位内容、阴影和 transform 后的视觉溢出不属于该测量；子元素外边距可由 `flow-root` 包装层收纳。
 - 多个面板在退出和进入时同时存在，应由调用方组织它们的流内布局；Hook 不接管 Presence 或业务选择状态。

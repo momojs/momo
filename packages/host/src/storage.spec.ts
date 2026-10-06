@@ -26,6 +26,62 @@ describe('MemoryStorage', () => {
     expect(memory).toBeDefined();
     expect(memory.length).toBe(0);
   });
+
+  test('defaults to memory only when localStorage is absent', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'localStorage',
+    );
+    const sync = new Storagefy<string>('missing-local-storage');
+    const async = new StoragefyAsync<string>('missing-local-storage');
+    try {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: undefined,
+      });
+      sync.set('sync');
+      await async.set('async');
+      expect(sync.storage).toBe(memory);
+      expect(sync.get()).toBe('sync');
+      expect(await async.get()).toBe('async');
+    } finally {
+      memory.removeItem('Storagefy:missing-local-storage');
+      memory.removeItem('StoragefyAsync:missing-local-storage');
+      if (descriptor)
+        Object.defineProperty(globalThis, 'localStorage', descriptor);
+      else Reflect.deleteProperty(globalThis, 'localStorage');
+    }
+  });
+
+  test('propagates denied storage access before writing to memory', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'localStorage',
+    );
+    const error = new DOMException('Storage blocked', 'SecurityError');
+    const errors = spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get() {
+          throw error;
+        },
+      });
+      const sync = new Storagefy<string>('blocked-local-storage');
+      const async = new StoragefyAsync<string>('blocked-local-storage');
+      expect(() => sync.set('sync')).toThrow(error);
+      await expect(async.set('async')).rejects.toThrow(error);
+      expect(() => sync.get()).toThrow(error);
+      await expect(async.get()).rejects.toThrow(error);
+      expect(memory.getItem('Storagefy:blocked-local-storage')).toBeNull();
+      expect(memory.getItem('StoragefyAsync:blocked-local-storage')).toBeNull();
+    } finally {
+      errors.mockRestore();
+      if (descriptor)
+        Object.defineProperty(globalThis, 'localStorage', descriptor);
+      else Reflect.deleteProperty(globalThis, 'localStorage');
+    }
+  });
 });
 
 describe('Storagefy', () => {

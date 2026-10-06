@@ -38,22 +38,23 @@ function vendor() {
 
 /**
  * 生成音频指纹（部分浏览器限制）
- * @returns {string} 音频指纹
+ * @returns {Promise<string>} 音频指纹
  */
-function audio() {
-  try {
-    if (!globalThis.AudioContext) return 'no_audio';
+async function audio() {
+  const { AudioContext } = globalThis;
+  const closure: { clear?: () => unknown } = {};
 
-    const ctx = new globalThis.AudioContext();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.start();
-    gain.gain.value = 0; // 静音避免干扰用户
-    return [ctx.sampleRate, oscillator.type].join('|');
+  try {
+    if (!AudioContext) return 'no_audio';
+
+    const ctx = new AudioContext();
+    closure.clear = () => ctx.close();
+    // 保留原默认 oscillator 类型标记，避免仅因移除音频图而改变指纹输入。
+    return [ctx.sampleRate, 'sine'].join('|');
   } catch (_) {
     return 'no_audio';
+  } finally {
+    closure.clear?.();
   }
 }
 
@@ -80,23 +81,24 @@ function fonts() {
  * @returns {Promise<string>} 浏览器指纹
  */
 export async function projection(): Promise<string> {
-  const navigation = globalThis.performance?.getEntriesByType('navigation')[0];
+  const { performance, navigator, screen, crypto } = globalThis;
+  const { language, userAgent } = navigator;
+  const navigation = performance?.getEntriesByType('navigation')[0];
   // 组合浏览器参数（避免敏感信息）
   const params = {
-    userAgent: globalThis.navigator?.userAgent,
-    language: globalThis.navigator?.language,
+    language,
+    userAgent,
+    screen: { ...screen },
     canvas: canvas(),
-    screen: { ...globalThis.screen },
     webglVendor: vendor(),
-    audioContextHash: audio(),
     installedFonts: await fonts(),
+    audioContextHash: await audio(),
     timezone: new Date().getTimezoneOffset(),
     ...(navigation ?? {}),
   };
-  const paramsString = JSON.stringify(params);
   const encoder = new TextEncoder();
-  const data = encoder.encode(paramsString);
-  const buffer = await globalThis.crypto.subtle.digest('SHA-1', data);
+  const data = encoder.encode(JSON.stringify(params));
+  const buffer = await crypto.subtle.digest('SHA-1', data);
   const hashed = Array.from(new Uint8Array(buffer));
   return hashed.map((b) => b.toString(16).padStart(2, '0')).join('');
 }

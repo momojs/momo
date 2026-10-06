@@ -118,3 +118,98 @@ icon: Palette
 3. 补齐完全相同的 semantic / base token 名称。
 4. 引入 `./semantic.css`，让 `bg-momo-bg-*`、`text-momo-fg-*`、`border-momo-border-*` 等 utility 可用。
 5. 不添加 CSS animation token；组件动画默认交给 Motion。
+
+
+## 动效主题
+
+`@momots/design/motion` 内置通过官方 Motion+ MCP 获取的 `@motion/ui-theme`
+源码。组件从同一份主题读取动效参数，无需额外安装同名 npm 包。
+颜色主题和动效主题独立：切换 `theme-neutral` / `theme-anthropic` 不会自动改变动效。
+
+```tsx
+// motion.theme.ts
+import { defineTheme } from '@momots/design/motion';
+
+export default defineTheme({
+  transitions: {
+    ui: { stiffness: 350, damping: 35 },
+    gentle: { stiffness: 110, damping: 22 },
+  },
+  stagger: { tight: 0.04 },
+  travel: { enter: 24, section: 48 },
+  reducedMotion: 'calm',
+});
+```
+
+```tsx
+import { MotionUIThemeProvider } from '@momots/design/motion';
+import motionTheme from './motion.theme';
+
+export function App() {
+  return (
+    <MotionUIThemeProvider theme={motionTheme}>
+      <YourApp />
+    </MotionUIThemeProvider>
+  );
+}
+```
+
+`defineTheme` 将部分配置合并到默认值，省略的字段会保留。Provider 接收完整的
+resolved theme；嵌套 Provider 会替换主题，不会隐式合并父主题。没有 Provider 时
+组件仍使用同一套默认值。React portal 内的组件也能读取所属 React 树的动效主题。
+
+| Token | 用途 |
+| --- | --- |
+| `transitions.snap` | 按压、切换、指示器等即时反馈 |
+| `transitions.ui` | 常规控件、菜单、Toast 与状态切换 |
+| `transitions.gentle` | Dialog、尺寸变化等较大表面 |
+| `transitions.lively` | 数字等强调反馈 |
+| `transitions.ambient` | 加载等循环动画，`duration` 控制周期 |
+| `stagger` | 子项错峰间隔，单位秒 |
+| `travel` | 装饰性入场位移，单位像素；不改变拖动距离等交互几何 |
+| `inView` | 提供给业务区块的 viewport 入场默认值 |
+
+每个 transition 同时有空间运动用的 `stiffness` / `damping`，以及淡入淡出用的
+`duration` / `ease`。调整弹簧不会自动重算淡入淡出时长，可按需要同时配置。
+正常动效下，组件显式传入的 `transition`、`duration`、`toastSpring` 等参数优先。
+
+### 减少动态效果
+
+`reducedMotion` 定义系统开启 `prefers-reduced-motion` 后的行为：
+
+- `calm`：空间和尺寸变化立即完成，保留透明度渐变，关闭装饰性循环动画。
+- `off`：受管理的动画立即完成，保留状态更新与退出卸载流程。
+
+未开启系统偏好时，两种配置都采用完整动效。对于 momo 管理的动画目标，减少动态效果
+策略优先于显式 transition 参数。调用者自定义的 `animate`、`variants` 和 `render`
+内容仍需要自行遵循系统偏好。
+
+### 自定义组件
+
+`useMotionUITheme`、`useMotionUITransition` 保留官方 API。
+`useFeel` 是 momo 的适配 hook，额外返回已应用减少动态效果策略的三种 transition：
+
+```tsx
+import { pose, useFeel } from '@momots/design/motion';
+import { motion } from 'motion/react';
+
+function Panel() {
+  const { theme, reduced, mode, transition } = useFeel('gentle');
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: reduced ? 0 : theme.travel.enter }}
+      animate={pose({ opacity: 1, y: 0 }, mode)}
+      transition={transition}
+    />
+  );
+}
+```
+
+`transition` 用于混合目标，`spatial` 用于位置、尺寸或命令式数值动画，`fade`
+用于透明度。`reduced` 为真时，组件还需要去掉装饰性的位移、缩放、模糊目标；
+只设置 transition 并不会自动改写这些目标。`pose` 为减少动态效果
+模式生成固定终点的关键帧，使系统偏好在动画途中变化时也能中断已有运动。
+
+本次主题覆盖 momo 自有的 Motion 动画。Drawer/Sheet 的 Base UI 手势与 CSS
+transition、Field.Error 以及颜色/边框等 CSS 反馈继续使用现有实现。
+`themeToCssVars` / `cssVarsToStyleString` 可按需生成主题变量，Provider 不会自动注入 CSS。

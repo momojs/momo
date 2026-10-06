@@ -31,6 +31,10 @@ All public entries are import-safe in browsers and Bun. Import safety does not
 mean that DOM-only behavior is available. Bun services should prefer subpath
 imports so their runtime dependencies remain explicit.
 
+Storage uses memory only when `localStorage` is absent. If the browser denies
+access to `localStorage`, `Storagefy` and `StoragefyAsync` propagate the error;
+pass `MemoryStorage` explicitly when memory storage is intended.
+
 | Entry | Browser | Bun service | Bun behavior |
 | --- | --- | --- | --- |
 | `buffer` | Full | Full | Uses Web Platform `Blob`, Base64, and typed arrays |
@@ -81,6 +85,13 @@ import { isCSSStyleRule } from "@momots/host/guard/is-css-style-rule";
 import { isMobile } from "@momots/host/guard/is-mobile";
 import { Storagefy } from "@momots/host/storage";
 ```
+
+`toCurl` emits FormData text with `--form-string` and file parts with `-F`.
+Binary bodies use `--data-binary` with a local file reference: `File` uses its
+name, while unnamed Blob, ArrayBuffer, views, and text containing NUL use
+`./body.bin`. Save the corresponding bytes before running the command;
+`toCurl` does not write files. For a view, save only its byte offset/length
+range. Shared buffers and streams are rejected.
 
 ## Design
 

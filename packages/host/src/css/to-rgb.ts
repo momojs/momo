@@ -72,7 +72,7 @@ const splitTopLevel = (value: string, separator: string): string[] => {
   }
 
   parts.push(value.slice(start).trim());
-  return parts.filter(Boolean);
+  return parts;
 };
 
 const splitWhitespaceTopLevel = (value: string): string[] => {
@@ -281,9 +281,14 @@ export function toRGB(val?: string): RGBColor | null {
       const base = toRGB(token.color);
       if (!base) return null;
 
-      const [rgbSource, alphaSource = 'alpha'] = splitTopLevel(token.rest, '/');
-      const [red, green, blue] = splitWhitespaceTopLevel(rgbSource);
-      if (!red || !green || !blue) return null;
+      const [rgbSource, alphaSource = 'alpha', ...extra] = splitTopLevel(
+        token.rest,
+        '/',
+      );
+      if (!rgbSource || !alphaSource || extra.length > 0) return null;
+      const channels = splitWhitespaceTopLevel(rgbSource);
+      if (channels.length !== 3) return null;
+      const [red, green, blue] = channels;
 
       return {
         red: parseRelativeExpression(red, base, 'red'),
@@ -298,8 +303,10 @@ export function toRGB(val?: string): RGBColor | null {
       }
 
       if (value.includes(',')) {
-        const [red, green, blue, alpha = '1'] = splitTopLevel(value, ',');
-        if (!red || !green || !blue) return null;
+        const channels = splitTopLevel(value, ',');
+        if (channels.length !== 3 && channels.length !== 4) return null;
+        const [red, green, blue, alpha = '1'] = channels;
+        if (!red || !green || !blue || !alpha) return null;
 
         return {
           red: parseRGBChannel(red),
@@ -309,9 +316,14 @@ export function toRGB(val?: string): RGBColor | null {
         };
       }
 
-      const [rgbSource, alphaSource = '1'] = splitTopLevel(value, '/');
-      const [red, green, blue] = splitWhitespaceTopLevel(rgbSource);
-      if (!red || !green || !blue) return null;
+      const [rgbSource, alphaSource = '1', ...extra] = splitTopLevel(
+        value,
+        '/',
+      );
+      if (!rgbSource || !alphaSource || extra.length > 0) return null;
+      const channels = splitWhitespaceTopLevel(rgbSource);
+      if (channels.length !== 3) return null;
+      const [red, green, blue] = channels;
 
       return {
         red: parseRGBChannel(red),
@@ -335,7 +347,9 @@ export function toRGB(val?: string): RGBColor | null {
       return { color, percentage };
     },
     colorMix: (value: string): RGBPart | null => {
-      const [method, left, right] = splitTopLevel(value, ',');
+      const components = splitTopLevel(value, ',');
+      if (components.length !== 3) return null;
+      const [method, left, right] = components;
       if (!method || !left || !right) return null;
       if (!/^in\s+srgb(?:\s|$)/i.test(method)) return null;
 

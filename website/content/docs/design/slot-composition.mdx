@@ -4,7 +4,9 @@ description: 使用 SlotBaseConfig 与 render 配置或替换组件内部插槽�
 icon: Boxes
 ---
 
-`SlotBaseConfig` 与 `render` 为 Numeric、Sheet、Drawer 等封装提供统一的 slot 契约：调用方既可以保留默认组件并追加 props，也可以用任意 ReactNode 完整替换它。
+`SlotBaseConfig` 与 `render` 为 Numeric 等封装提供 slot 契约：调用方既可以保留默认组件并追加 props，也可以用任意 ReactNode 完整替换它。
+
+Drawer、Popover、Sheet、Dialog、Alert 与 Toast 的内容节点使用 [Content Slots](/docs/design/content-slots)，通过 `slots` 和 `render` 合并节点属性；请勿与这里的完整节点替换混用。
 
 <SlotCompositionPlayground />
 

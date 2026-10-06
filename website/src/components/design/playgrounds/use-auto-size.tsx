@@ -6,10 +6,16 @@ import { motion, useReducedMotion } from 'motion/react';
 
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Select } from '../../../../../packages/design/src/components/select';
-import { useAutoHeight } from '../../../../../packages/design/src/effects/height';
+import { useAutoSize } from '../../../../../packages/design/src/effects/auto-size';
 import { CheckboxControl, PlaygroundFrame } from './shared';
 
 const scenarios = [
+  {
+    value: 'size',
+    label: '紧凑面板的宽高变化',
+    description:
+      '内容按固有宽度布局，外层同时调整宽高；可以中途切换或清空后重新激活。',
+  },
   {
     value: 'content',
     label: '内容增减与换行',
@@ -35,7 +41,7 @@ const scenarios = [
 type Scenario = (typeof scenarios)[number]['value'];
 type Panel = 'summary' | 'details';
 
-const formatHeight = (value: number | 'auto') =>
+const formatSize = (value: number | 'auto') =>
   value === 'auto' ? value : `${Math.round(value * 100) / 100} px`;
 
 function Description({ expanded = false }: { expanded?: boolean }) {
@@ -67,12 +73,12 @@ function MonthDiagram({ weeks }: { weeks: number }) {
   );
 }
 
-export function UseAutoHeightPlayground() {
-  const [scenario, setScenario] = useState<Scenario>('content');
+export function UseAutoSizePlayground() {
+  const [scenario, setScenario] = useState<Scenario>('size');
   const [revision, setRevision] = useState(0);
 
   return (
-    <HeightScenario
+    <SizeScenario
       key={`${scenario}-${revision}`}
       scenario={scenario}
       onScenarioChange={setScenario}
@@ -81,7 +87,7 @@ export function UseAutoHeightPlayground() {
   );
 }
 
-function HeightScenario({
+function SizeScenario({
   scenario,
   onScenarioChange,
   onReset,
@@ -90,9 +96,9 @@ function HeightScenario({
   onScenarioChange: (scenario: Scenario) => void;
   onReset: () => void;
 }) {
-  const { register, activate, clear, state, height } = useAutoHeight();
+  const { register, activate, clear, state, width, height } = useAutoSize();
   const prefersReducedMotion = useReducedMotion();
-  const [staticHeight, setStaticHeight] = useState(false);
+  const [staticSize, setStaticSize] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const [panel, setPanel] = useState<Panel>('summary');
@@ -111,7 +117,9 @@ function HeightScenario({
         ? cleared
           ? undefined
           : target
-        : 'content';
+        : scenario === 'size' && cleared
+          ? undefined
+          : 'content';
 
   useLayoutEffect(() => {
     if (activeKey === undefined) clear();
@@ -164,14 +172,14 @@ function HeightScenario({
             </>
           )}
           <CheckboxControl
-            label='立即更新高度'
-            checked={staticHeight}
-            onChange={setStaticHeight}
+            label='立即更新尺寸'
+            checked={staticSize}
+            onChange={setStaticSize}
           />
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
             {prefersReducedMotion
-              ? '系统已开启减少动态效果，高度立即更新。'
-              : '默认使用弹簧动画；开启“立即更新高度”可只观察测量结果。'}
+              ? '系统已开启减少动态效果，尺寸立即更新。'
+              : '默认使用弹簧动画；开启“立即更新尺寸”可只观察测量结果。'}
           </p>
           <Button size='sm' variant='ghost' onClick={onReset}>
             重新开始
@@ -190,14 +198,26 @@ function HeightScenario({
             </output>
           </p>
           <p>
-            当前测量高度：
-            <output aria-label='当前测量高度'>
-              {state.rect ? formatHeight(state.rect.height) : '尚无有效测量'}
+            当前测量宽度：
+            <output aria-label='当前测量宽度'>
+              {state.rect ? formatSize(state.rect.width) : '尚无有效测量'}
             </output>
           </p>
           <p>
+            当前测量高度：
+            <output aria-label='当前测量高度'>
+              {state.rect ? formatSize(state.rect.height) : '尚无有效测量'}
+            </output>
+          </p>
+          {scenario === 'size' && (
+            <p>
+              动画目标宽度：
+              <output aria-label='动画目标宽度'>{formatSize(width)}</output>
+            </p>
+          )}
+          <p>
             动画目标高度：
-            <output aria-label='动画目标高度'>{formatHeight(height)}</output>
+            <output aria-label='动画目标高度'>{formatSize(height)}</output>
           </p>
           {scenario === 'panels' && (
             <p>
@@ -220,6 +240,24 @@ function HeightScenario({
           </p>
         </div>
         <div className='flex flex-wrap gap-momo-xs'>
+          {scenario === 'size' && (
+            <>
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() => setExpanded((previous) => !previous)}
+              >
+                {expanded ? '显示简要状态' : '显示同步详情'}
+              </Button>
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() => setCleared((previous) => !previous)}
+              >
+                {cleared ? '重新激活' : 'clear()'}
+              </Button>
+            </>
+          )}
           {scenario === 'content' && (
             <Button
               size='sm'
@@ -306,19 +344,42 @@ function HeightScenario({
         </div>
         <div
           className='min-w-0 rounded-momo-md border border-momo-border-default bg-momo-bg-surface'
-          style={{ width: scenario === 'content' && narrow ? '65%' : '100%' }}
+          style={{
+            width:
+              scenario === 'size'
+                ? 'max-content'
+                : scenario === 'content' && narrow
+                  ? '65%'
+                  : '100%',
+          }}
         >
           <motion.div
-            aria-label='高度动画容器'
+            aria-label='尺寸动画容器'
             className='overflow-hidden'
             initial={false}
-            animate={{ height }}
+            animate={scenario === 'size' ? { width, height } : { height }}
             transition={
-              prefersReducedMotion || staticHeight
+              prefersReducedMotion || staticSize
                 ? { type: 'tween', duration: 0 }
                 : { type: 'spring', bounce: 0, duration: 0.45 }
             }
           >
+            {scenario === 'size' && (
+              <div
+                ref={register('content')}
+                className='grid w-max gap-momo-sm p-momo-md text-momo-body-sm'
+              >
+                <p className='font-medium'>
+                  {expanded ? '全部内容已保存' : '已保存'}
+                </p>
+                {expanded && (
+                  <>
+                    <p>图片、说明与标签均已同步。</p>
+                    <p className='text-momo-fg-muted'>可以继续编辑。</p>
+                  </>
+                )}
+              </div>
+            )}
             {scenario === 'content' && (
               <div ref={register('content')} className='flow-root'>
                 <Description expanded={expanded} />

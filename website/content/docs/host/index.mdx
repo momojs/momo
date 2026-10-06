@@ -65,32 +65,8 @@ import { projection } from "@momots/host/fingerprint";
 | 二进制      | `buffer`      | `bytesToHex`、`hexToBytes`、`blobToBytes`      |
 | CSS         | `css/*`       | `toRGB`、`toCSSVariable`、`toCSSRGBVariable`   |
 | Canvas      | `canvas`      | `measureText`                                  |
-| 请求        | `fetch`       | `toCurl`、`generate`                           |
+| 请求        | `fetch`       | `toCurl`                                       |
 | 滚动        | `nearest`     | `nearestScrollable`                            |
 | 指纹        | `fingerprint` | `projection`                                   |
 
 接下来可以查阅 [向导](/docs/host/guide) 了解每个 API，或阅读 [示例](/docs/host/examples) 获取可复制片段。
-
-## 比较
-
-`@momots/host` **不是** Bowser、ua-parser-js 或 localForage 的替代品。它是从项目实践中提炼出**高频宿主场景**的纯函数与小类封装，与社区通用库互补：复杂的 UA 解析、IndexedDB 抽象、Polyfill 仍建议使用专用方案；`@momots/host` 额外提供微信/小程序渠道判定、带过期与跨标签页事件的类型化存储、Chrome 对齐的 cURL 生成等能力。
-
-### 与社区工具库的对照
-
-| 特性                      | **@momots/host**             | **ua-parser-js / Bowser** | **localForage** | **qs**       |
-| ------------------------- | ---------------------------- | ------------------------- | --------------- | ------------ |
-| 定位                      | 场景化宿主能力补充           | 通用 UA 解析              | 异步存储抽象    | 查询串序列化 |
-| TypeScript                | 一等公民                     | 中等                      | 中等            | 部分         |
-| 子路径 tree-shaking       | 设计优先（`exports` 子路径） | 按包导入                  | 按包导入        | 按函数导入   |
-| 微信 / 小程序宿主相关工具 | 有                           | 无                        | —               | —            |
-| Fetch → cURL              | 有                           | —                         | —               | —            |
-| CSS 颜色解析              | 有                           | —                         | —               | —            |
-
-### 选型建议
-
-| 对比对象                         | 何时用 `@momots/host`                                                               |
-| -------------------------------- | ----------------------------------------------------------------------------------- |
-| **ua-parser-js / Bowser**        | 只需判定移动端、微信、小程序等常见渠道，不需要完整设备型号解析时；                  |
-| **localForage / idb-keyval**     | 需要同步 `localStorage` 语义、过期时间、跨标签页 `StorageEvent` 或 AES 加密封装时； |
-| **手写 UA 正则**                 | 需要可测试、可 SSR 注入 UA、且与项目其它 Momots 包风格一致时；                      |
-| **Chrome DevTools Copy as cURL** | 需要在应用内一键复制与 DevTools 格式一致的 cURL 命令时。                            |

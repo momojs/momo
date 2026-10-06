@@ -88,6 +88,21 @@ function SyncSettings() {
 
 不可逆的删除、支付等确认流程应使用 `AlertDialog` 语义，而不是把普通 Dialog 当作警报对话框。
 
+## 内容节点
+
+`title`、`description`、`children`、`footer` 使用共享的 [Content Slots](/docs/design/content-slots) 约定。通过 `slots` 配置标签、属性和样式：
+
+```tsx
+slots={{
+  header: { render: <header /> },
+  title: { render: <h3 />, className: "font-semibold" },
+  content: { className: "space-y-3" },
+  footer: { render: <footer /> },
+}}
+```
+
+省略某个 slot 时使用默认节点，传 `false` 可隐藏节点。标题与说明的可访问关联由 Base UI 维护。
+
 ## Props
 
 | Prop | 类型 | 说明 |
@@ -109,10 +124,10 @@ function SyncSettings() {
 | `disablePointerDismissal` | `boolean` | 阻止点击弹层外部关闭 |
 | `triggerProps` / `portalProps` | Base UI props | 传给 Trigger 与 Portal 的底层属性 |
 | `backdropProps` / `viewportProps` / `popupProps` | Base UI props | 传给遮罩、定位层与弹层的底层属性 |
-| `titleProps` / `descriptionProps` / `closeProps` | Base UI props | 传给对应语义节点的底层属性 |
+| `closeProps` | Base UI props | 传给关闭节点的底层属性 |
 | `className` | `string` | Popup 表面追加 Tailwind class |
 | `triggerClassName` / `backdropClassName` / `viewportClassName` | `string` | 对应外层 slot 样式 |
-| `headerClassName` / `titleClassName` / `descriptionClassName` | `string` | 标题区域 slot 样式 |
-| `contentClassName` / `footerClassName` / `closeClassName` | `string` | 正文、底部与关闭按钮 slot 样式 |
+| `slots` | `ContentSlotsProps` | 配置 header、title、description、content、footer 节点 |
+| `closeClassName` | `string` | 关闭按钮样式 |
 
 除上述属性外，其余 Base UI Dialog Root 属性会透传到内部 Root。

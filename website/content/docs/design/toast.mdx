@@ -157,15 +157,17 @@ Viewport 提供命名的通知区域，Root 自动关联标题和说明；后方
 - `portal`：配置 `container` 或 `disabled`；也可直接传 `false`。
 - `viewport`：追加承载层的原生 div props、class 与 ARIA 属性。
 - `root`：追加每条 Motion Root 的 class、事件与 ARIA；`animate`、`initial`、`exit`、`style` 和 drag 生命周期由封装保留。
-- `content`：配置每条通知的内容布局。
-- `icon`、`text`、`title`、`description`、`action`、`close`：slot config，可传 props object、ReactNode 完整替换，或用 `false` 移除。
+- `slots.content`、`slots.text`、`slots.title`、`slots.description`：配置内容节点，支持 `render` 更改标签或用 `false` 移除。
+- `slots.icon`、`slots.action`、`slots.close`：配置 Motion 节点属性，或用 `false` 移除。
+
+通知的 `title`、`description` 内容统一放在 `ToastOptions`，Provider 的 `children` 仍是应用子树。完整约定见 [Content Slots](/docs/design/content-slots)。
 
 ```tsx
 <ToastProvider
   placement="top-center"
   viewport={{ "aria-label": "系统通知" }}
   root={{ className: "max-w-sm" }}
-  close={{ label: "关闭" }}
+  slots={{ close: { label: "关闭" } }}
 >
   <App />
 </ToastProvider>
@@ -190,8 +192,8 @@ Viewport 提供命名的通知区域，Root 自动关联标题和说明；后方
 | `stackOpacity`                          | `number`                                                           | 每层透明度差，默认 `0.2`                            |
 | `staggerInterval`                       | `number`                                                           | 队列响应间隔，默认 `0.02` 秒                        |
 | `toastSpring`                           | `{ stiffness; damping }`                                           | 重排 spring，默认 `{ stiffness: 400, damping: 30 }` |
-| `portal`、`viewport`、`root`、`content` | primitive config                                                   | 配置结构层                                          |
-| `icon` … `close`                        | slot config                                                        | 配置、替换或移除内容零件                            |
+| `portal`、`viewport`、`root` | primitive config                                                   | 配置结构层                                          |
+| `slots`                        | slot config                                                        | 配置内容节点或移除可选节点                            |
 
 ### useToast
 

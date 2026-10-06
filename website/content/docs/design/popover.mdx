@@ -1,0 +1,126 @@
+---
+title: Popover
+description: 带锚点定位、焦点管理与 Motion 进入退出动画的浮层。
+icon: MessageSquare
+---
+
+`Popover` 基于 Base UI Popover 和 Motion，适合放置与触发元素相关的表单、设置和补充信息。默认采用非模态交互，支持碰撞避让、Esc / 外部点击关闭和焦点恢复，样式沿用 momo semantic token。
+
+<PopoverPlayground />
+
+## 使用
+
+```tsx
+import { Button } from '@momots/design/components/button';
+import { Input } from '@momots/design/components/input';
+import { Popover, PopoverClose } from '@momots/design/components/popover';
+
+<Popover
+  trigger={<Button variant='outline'>编辑工作区</Button>}
+  title='工作区设置'
+  description='修改显示在工作区中的名称。'
+  showArrow
+  footer={
+    <PopoverClose render={<Button size='sm' />}>完成</PopoverClose>
+  }
+>
+  <label className='grid gap-momo-xs'>
+    工作区名称
+    <Input defaultValue='我的工作区' />
+  </label>
+</Popover>
+```
+
+`trigger` 通过 Base UI Trigger 组合，保留原元素的事件、样式和 ref，并添加打开语义与键盘交互。`PopoverClose` 必须位于 Popover 的正文或 `footer` 内，也可以通过 `render` 组合 momo Button。
+
+## 状态与关闭
+
+不传 `open` 时组件自行管理状态，`defaultOpen` 设置初始值。受控用法与 Dialog 一致：
+
+```tsx
+const [open, setOpen] = useState(false);
+
+<Popover
+  open={open}
+  onChange={setOpen}
+  trigger={<Button>打开设置</Button>}
+  title='设置'
+>
+  ...
+</Popover>
+```
+
+`onChange` 接收未被取消的状态变化请求；受控模式仍由调用方更新 `open`。需要读取关闭原因或阻止某次关闭时使用 `onOpenChange`：
+
+```tsx
+<Popover
+  trigger={<Button>编辑草稿</Button>}
+  title='编辑草稿'
+  onOpenChange={(nextOpen, details) => {
+    if (!nextOpen && details.reason === 'outside-press' && hasUnsavedChanges) {
+      details.cancel();
+    }
+  }}
+>
+  ...
+</Popover>
+```
+
+## 定位与动画
+
+- `side` 默认为 `bottom`，`align` 默认为 `center`，`sideOffset` 默认为 `8`。
+- `positionerProps` 支持 `anchor`、`collisionBoundary`、`collisionPadding`、`collisionAvoidance`、`positionMethod` 等 Base UI 定位属性，其中的同名定位属性优先于顶层简写。
+- `showArrow` 默认关闭；箭头和缩放原点会跟随碰撞处理后的实际位置。
+- `Positioner` 负责定位，内部 `Popup` 负责淡入和轻微缩放；退出动画结束后移除 Portal。
+- 动画使用统一的 `ui` motion preset；系统开启 reduced motion 时默认只保留透明度变化，主题配置为 `off` 时立即完成切换。
+- 默认宽度由 `size` 决定，同时受可用空间限制；可通过 `className` 覆盖宽度，正文超高时独立滚动。
+
+## 内容与焦点
+
+`title` 和 `description` 自动关联到浮层的可访问名称与说明。如果不展示标题，请通过 `popupProps={{ 'aria-label': '工作区设置' }}` 提供可访问名称。
+
+打开时默认聚焦内部首个可交互元素，触屏打开时 Base UI 会优先聚焦浮层本身以避免立即弹出虚拟键盘。关闭时恢复焦点，具体目标可通过 `popupProps.initialFocus` 和 `popupProps.finalFocus` 定制。
+
+`modal` 默认为 `false`。使用 `true` 或 `'trap-focus'` 时，请在正文或 `footer` 内保留 `PopoverClose`，以启用相应的焦点圈定并让触屏读屏用户能够关闭浮层。
+
+菜单项导航、选项选择应分别使用对应的 Menu / Select 组件语义。
+
+## 内容节点
+
+`title`、`description`、`children`、`footer` 使用共享的 [Content Slots](/docs/design/content-slots) 约定。通过 `slots` 配置标签、属性和样式：
+
+```tsx
+slots={{
+  header: { render: <header /> },
+  title: { render: <h3 />, className: "font-semibold" },
+  content: { className: "space-y-3" },
+  footer: { render: <footer /> },
+}}
+```
+
+省略某个 slot 时使用默认节点，传 `false` 可隐藏节点。标题与说明的可访问关联由 Base UI 维护。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `open` / `defaultOpen` | `boolean` | 受控状态 / 非受控初始值，默认关闭 |
+| `onChange` | `(open: boolean) => void` | 未被取消的状态变化请求 |
+| `onOpenChange` | Base UI callback | 可读取原因并取消的完整事件 |
+| `trigger` | `ReactElement` | 通过 Base UI Trigger 组合的触发元素 |
+| `title` / `description` | `ReactNode` | 可选标题与说明 |
+| `children` / `footer` | `ReactNode` | 正文与底部操作 |
+| `size` | `'sm' \| 'md' \| 'lg'` | 默认宽度 14 / 18 / 24rem，默认 `'md'` |
+| `side` | Base UI side | 默认 `'bottom'`，支持四个方向与逻辑方向 |
+| `align` | `'start' \| 'center' \| 'end'` | 默认 `'center'` |
+| `sideOffset` / `alignOffset` | `number \| function` | 沿方向轴 / 对齐轴的偏移，默认 8 / 0 |
+| `showArrow` | `boolean` | 是否显示锚点箭头，默认 `false` |
+| `modal` | `boolean \| 'trap-focus'` | 外部交互与焦点策略，默认 `false` |
+| `triggerProps` / `portalProps` | Base UI props | Trigger 与 Portal 属性，支持自定义 Portal 容器 |
+| `positionerProps` / `popupProps` | Base UI props | 定位与浮层属性，包括焦点配置 |
+| `arrowProps` | Base UI props | 箭头节点属性 |
+| `className` | `string` | Popup 表面样式 |
+| `triggerClassName` / `positionerClassName` / `arrowClassName` | `string` | 对应节点样式 |
+| `slots` | `ContentSlotsProps` | 配置 header、title、description、content、footer 节点 |
+
+其余 Base UI Popover Root 属性会透传到内部 Root。`PopoverClose` 接受 Base UI Close 属性，包括 `render`、`className` 和 `ref`。

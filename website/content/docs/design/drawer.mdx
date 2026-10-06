@@ -20,9 +20,9 @@ import {
 <Drawer
   direction="down"
   trigger={<Button>通知设置</Button>}
-  title={<span>通知设置</span>}
-  description={<span>选择工作区接收通知的方式。</span>}
-  content={{ className: "min-h-0" }}
+  title="通知设置"
+  description="选择工作区接收通知的方式。"
+  slots={{ content: { className: "min-h-0" } }}
   footer={
     <div className="w-full p-4 pt-2">
       <DrawerClose render={<Button className="w-full" />}>
@@ -37,7 +37,7 @@ import {
 </Drawer>
 ```
 
-`title` 应始终存在，为抽屉提供可访问名称。它和 `description` 接受 React element 或 Base UI render callback；语义属性会合并到传入的元素。`DrawerClose` 必须放在当前 Drawer 内。
+`title` 应始终存在，为抽屉提供可访问名称。它和 `description` 都接受 ReactNode 内容；节点渲染方式通过 `slots.title.render` 与 `slots.description.render` 配置。`DrawerClose` 必须放在当前 Drawer 内。
 
 ## 滑动与停靠点
 
@@ -68,15 +68,24 @@ const points = [0.35, 0.7, 1];
 
 ## Slots
 
-| Prop | 类型 | 说明 |
-| --- | --- | --- |
-| `trigger` | Base UI render | 组合为 `Drawer.Trigger` 的触发元素 |
-| `title` | Base UI render | 组合为 `Drawer.Title` 的可访问标题 |
-| `description` | Base UI render | 组合为 `Drawer.Description` 的说明 |
-| `content` | slot config | 内容容器配置，默认 `true` |
-| `footer` | Base UI render | 底部操作容器 |
+Drawer 采用共享的 [Content Slots](/docs/design/content-slots) 约定：`title`、`description`、`children`、`footer` 是内容，`slots.header`、`slots.title`、`slots.description`、`slots.content`、`slots.footer` 配置对应节点。
 
-`content` 传入 props object 可为默认容器追加 class 和原生属性。直接传入 ReactNode 会替换整个内容容器，也会跳过 Drawer 自动组装的手柄、标题、正文与 footer；一般应优先使用 props object。
+```tsx
+<Drawer
+  title="通知设置"
+  slots={{
+    header: { render: <header /> },
+    title: { render: <h3 /> },
+    content: { className: "gap-3" },
+    footer: { className: "p-4" },
+  }}
+  footer={<DrawerClose render={<Button />}>完成</DrawerClose>}
+>
+  抽屉正文
+</Drawer>
+```
+
+`slots.content` 只配置正文，不包含手柄、标题和底部操作。内部 Base UI Content 容器负责滑动和嵌套状态，不受正文 slot 的替换或隐藏影响。`trigger` 仍接受 Base UI render 元素或回调。
 
 ## Props
 

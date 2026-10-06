@@ -26,6 +26,8 @@ UA 类守卫默认读取 `navigator.userAgent`（或 `location.hostname`），�
 
 断言 UA 是否表示 Android 系统。
 
+**社区对照：** [UAParser.js 的 `getOS()`](https://docs.uaparser.dev/api/main/get-os.html) 返回系统名称与版本；`isAndroid` 只返回 Android 判定结果，适合简单条件分支，也可显式传入 UA 用于 SSR 或测试。
+
 ```ts
 const isAndroid = (ua?: string): boolean;
 ```
@@ -47,6 +49,8 @@ isAndroid(); // 当前环境
 ### isIOS
 
 根据 UA 判断是否 iOS 系统。
+
+**社区对照：** [UAParser.js 的 `getOS()`](https://docs.uaparser.dev/api/main/get-os.html) 可解析系统名称与版本；`isIOS` 只检查 UA 中的 iOS 相关标记，适合布尔判断，不提供版本信息。
 
 ```ts
 function isIOS(ua?: string): boolean;
@@ -70,6 +74,8 @@ isIOS('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'); // => true
 
 根据 UA 判断是否移动端。
 
+**社区对照：** [UAParser.js](https://docs.uaparser.dev/v1/) 可解析设备类型、型号与厂商，[Bowser](https://github.com/bowser-js/bowser) 提供浏览器、系统与平台信息。`isMobile` 将常见移动端 UA 统一判为 `true`，不区分手机和平板；需要细分设备信息时可使用这些解析库。
+
 ```ts
 function isMobile(ua?: string): boolean;
 ```
@@ -92,6 +98,8 @@ isMobile(); // 当前环境
 
 断言是否处于微信内置浏览器（公众号 WebView）。
 
+**社区对照：** [UAParser.js](https://docs.uaparser.dev/v1/) 和 [Bowser](https://github.com/bowser-js/bowser) 提供浏览器名称、版本等解析结果；`isWechat` 只检查 `micromessenger` 标记，适合微信渠道分支。需要进一步区分小程序时，配合 `isMiniprogram` 或使用 `isWechatWeb`。
+
 ```ts
 const isWechat = (ua?: string): boolean;
 ```
@@ -113,6 +121,8 @@ isWechat(); // 是否在微信内
 ### isMiniprogram
 
 断言是否处于微信小程序 WebView。UA 含 `miniprogram`，或 `window.__wxjs_environment === 'miniprogram'` 时返回 `true`。
+
+**社区对照：** [UAParser.js](https://docs.uaparser.dev/v1/) 和 [Bowser](https://github.com/bowser-js/bowser) 可用于解析 UA 中的浏览器与系统信息；`isMiniprogram` 用于小程序渠道判定，并额外读取微信注入的 `window.__wxjs_environment` 标记，可与通用 UA 解析结果组合使用。
 
 ```ts
 const isMiniprogram = (ua?: string): boolean;
@@ -360,6 +370,24 @@ Body / 二进制类守卫均接受 `unknown` 输入，返回 TypeScript 类型�
 function isArrayBuffer(data: unknown): data is ArrayBuffer;
 ```
 
+### isSharedArrayBuffer
+
+```ts
+function isSharedArrayBuffer(data: unknown): data is SharedArrayBuffer;
+```
+
+仅接受 `SharedArrayBuffer` 本体，不接受 TypedArray 或 DataView 视图。
+环境未提供 `SharedArrayBuffer` 全局时返回 `false`，不会抛错。
+
+```ts
+import { isSharedArrayBuffer } from '@momots/host/guard/is-shared-array-buffer';
+
+if (isSharedArrayBuffer(value)) {
+  // value 已收窄为 SharedArrayBuffer
+  console.log(value.byteLength);
+}
+```
+
 ### isUint8Array
 
 ```ts
@@ -378,11 +406,18 @@ function isArrayBufferView(data: unknown): data is ArrayBufferView;
 function isArrayBufferLike(data: unknown): data is ArrayBufferLike;
 ```
 
+接受 `ArrayBuffer` 和 `SharedArrayBuffer`，不接受 TypedArray、DataView 或普通包装对象。
+等价于 `isArrayBuffer(data) || isSharedArrayBuffer(data)`，在没有 `SharedArrayBuffer`
+全局的环境中仍可调用。
+
 ### isBufferSource
 
 ```ts
 function isBufferSource(data: unknown): data is BufferSource;
 ```
+
+接受非共享 `ArrayBuffer` 及其 TypedArray / DataView 视图。共享 buffer 及其视图返回
+`false`，避免把共享内存误当作可跨运行时使用的 Fetch body。
 
 ### isBlob
 
@@ -433,6 +468,25 @@ isNonRawBodyInit(new Blob()); // => true
 isNonRawBodyInit('hello');    // => false
 ```
 
+### isStorage
+
+```ts
+function isStorage(data: unknown): data is Storage;
+```
+
+判断是否为当前运行环境的原生 `Storage` 实例，例如 `localStorage` 或 `sessionStorage`。
+`MemoryStorage` 等自定义实现返回 `false`；环境未提供 `Storage` 全局时也返回 `false`。
+判断过程不会读取 `localStorage` 或 `sessionStorage`，不会触发这些全局属性的访问异常。
+
+```ts
+import { isStorage } from '@momots/host/guard/is-storage';
+
+if (isStorage(value)) {
+  // value 已收窄为 Storage
+  console.log(value.length);
+}
+```
+
 ## 字符串守卫
 
 子路径：`guard/is-hex-string`
@@ -466,7 +520,7 @@ isHexString('rgb(1, 2, 3)'); // => false
 
 ### memory
 
-基于 `@momots/core` 的 `singleton` 创建的全局 `MemoryStorage` 单例。`Storagefy` 在 `localStorage` 不可用时自动降级到此实例。
+基于 `@momots/core` 的 `singleton` 创建的全局 `MemoryStorage` 单例。`Storagefy` 在运行时没有 `localStorage` 时使用此实例；访问已有 `localStorage` 被拒绝时直接抛出原始异常。
 
 在 Bun 中，该单例只属于当前进程：不会跨进程或重启保留，也不会产生浏览器的跨标签页 `StorageEvent`。需要持久化时请显式注入实现了 `Storage` 接口的外部存储。
 
@@ -487,7 +541,9 @@ class MemoryStorage implements Storage {
 
 ### Storagefy&lt;T&gt;
 
-类型化的同步存储单元。键存为 `Storagefy:<key>`，值包装为 `{ value, expired }` JSON。默认使用 `localStorage`，不可用时降级到 `memory`。过期时间单位为**秒**；变更时会派发 `StorageEvent`。
+类型化的同步存储单元。键存为 `Storagefy:<key>`，值包装为 `{ value, expired }` JSON。默认使用 `localStorage`，运行时没有该 API 时使用 `memory`；浏览器拒绝访问时直接抛错，不静默写入内存。需要内存存储时可显式传入 `MemoryStorage`。过期时间单位为**秒**；变更时会派发 `StorageEvent`。
+
+**社区对照：** [localForage](https://github.com/localForage/localForage) 提供异步存储抽象，[idb-keyval](https://github.com/jakearchibald/idb-keyval) 提供基于 IndexedDB 的 Promise 键值存储。`Storagefy` 适合需要同步 `Storage` 读写、类型化值、过期时间与浏览器存储事件的场景；需要 IndexedDB 存储时可使用前述社区库。
 
 ```ts
 class Storagefy<T> {
@@ -506,7 +562,7 @@ class Storagefy<T> {
   static keys(storage?: Storage): string[];
   static used(storage?: Storage): number;
   static clear(storage?: Storage): void;
-  static isNativeStorage: (storage: Storage) => boolean;
+  static isNativeStorage: typeof isStorage;
   static dispatch: (...args) => void;
 }
 ```
@@ -517,6 +573,9 @@ class Storagefy<T> {
 | `expire(arg)` | 更新现有值的过期秒数但不改变值；可根据已解码的当前值计算秒数，键不存在时不写入 |
 | `get()` | 读取值；过期或解析失败时自动删除并返回 `null` |
 | `remove()` | 删除键并派发 `StorageEvent` |
+
+`Storagefy.isNativeStorage` 与 `StoragefyAsync.isNativeStorage` 均为 `isStorage` 的别名。
+事件派发也使用该守卫：原生存储传入 `storageArea`，自定义存储传入 `null`。
 
 | 实例属性 | 说明 |
 | --- | --- |
@@ -544,6 +603,8 @@ cache.get(); // => { name: 'Momo' } | null
 ### StoragefyAsync&lt;T&gt;
 
 与 `Storagefy` 语义一致，但支持可插拔的**异步** encode/decode。默认用 `JSON.parse` / `JSON.stringify`；提供 `static createAES<T>(hexKey)` 构造 AES-GCM 编解码器。`hexKey` 必须是 AES 支持的 16、24 或 32 字节 key 的十六进制字符串（分别对应 32、48 或 64 个 hex 字符）。
+
+**社区对照：** [localForage](https://github.com/localForage/localForage) 和 [idb-keyval](https://github.com/jakearchibald/idb-keyval) 用异步 API 访问底层存储。`StoragefyAsync` 的异步部分用于编解码，例如 AES-GCM 加解密；底层仍要求同步 `Storage` 接口，不能直接传入这些库的异步存储实例。
 
 ```ts
 class StoragefyAsync<T> {
@@ -826,29 +887,11 @@ const width = measureText('Momo', {
 
 子路径：`fetch`
 
-### generate
-
-cURL 命令各片段生成器，行为对齐 Chrome DevTools 的「Copy as cURL」。
-
-```ts
-const generate = {
-  method(init?: RequestInit): string;
-  header(init?: RequestInit): string | void;
-  body(init?: RequestInit): Promise<string | void>;
-  compress(init?: RequestInit): string;
-};
-```
-
-| 方法 | 说明 |
-| --- | --- |
-| `method` | 生成 `-X` 参数；GET 不输出 |
-| `header` | 生成 `-H` 参数；忽略 `content-length` |
-| `body` | 生成 `--data-raw` / `--data-binary` / `-F`；FormData 中 Blob 以 `@filename` 占位 |
-| `compress` | 存在 `accept-encoding` 时输出 `--compressed` |
-
 ### toCurl
 
 把 `fetch` 请求参数转成多行 cURL 命令（行尾 `\` 续行 + 两空格缩进）。
+
+**工具对照：** [Chrome DevTools 的 Copy as cURL](https://developer.chrome.com/docs/devtools/network/reference/) 可从 Network 面板复制已记录的请求；`toCurl` 根据调用方提供的 URL 和 `RequestInit` 生成命令，适合在应用内提供复制入口，不会自动补齐浏览器实际发送的 Cookie 或其他请求头。[qs](https://github.com/ljharb/qs/blob/main/README.md) 负责查询串解析与序列化；需要嵌套查询参数时，可先用它构造 URL，再交给 `toCurl`。
 
 ```ts
 function toCurl(uri: string | URL, init?: RequestInit): Promise<string>;
@@ -862,6 +905,23 @@ function toCurl(uri: string | URL, init?: RequestInit): Promise<string>;
 | 返回 | 说明 |
 | --- | --- |
 | `Promise<string>` | 完整 cURL 命令字符串 |
+
+`body: URLSearchParams` 按原生 Fetch 表单请求体序列化，保留参数顺序、重复键与空值。
+这与 Drive 的显式 `body` 通道一致；Drive 的 `query` 和自动 `data: URLSearchParams`
+通道由 Drive 自身合并到 URL，调用 `toCurl` 时应传入已经编码完成的 URL 和请求参数。
+
+FormData 文本中的 `@`、`<`、`;type=` 按字面值发送，换行按 Fetch 规范化为 CRLF。
+文件名按 cURL multipart 语法转义。无法用该命令语法准确表达的含 `=` 字段名、
+含 NUL 的表单文本会抛出 `TypeError`；文件 MIME 类型支持主类型及可选的 charset 参数。
+
+`Blob`、非共享 `ArrayBuffer`、TypedArray 和 DataView 使用 `--data-binary @文件`。
+`File` 引用 `./<文件名>`；其余二进制 body 和含 NUL 的文本引用 `./body.bin`。
+这些是文件引用：执行命令前需将原始字节保存到对应文件，`toCurl` 不自动创建文件。
+TypedArray / DataView 只需保存其 `byteOffset` / `byteLength` 范围，文本按 UTF-8 保存。
+FormData 中的 File 同样需要提前保存；匿名 Blob 的文件名由 FormData 提供。
+
+共享 buffer 及其视图、ReadableStream 会抛出 `TypeError`，避免生成丢失 body 的命令。
+函数不会消费或锁定传入的 ReadableStream。
 
 ```ts
 import { toCurl } from '@momots/host/fetch';
@@ -924,6 +984,9 @@ function projection(): Promise<string>;
 | `Promise<string>` | 40 位小写 hex 指纹字符串 |
 
 部分浏览器禁用 Canvas 或限制 AudioContext 时会回退为 `no_canvas` / `no_audio` 等占位值，仍参与哈希。
+
+音频信息仅读取 AudioContext 的采样率，不创建或启动音频节点。创建的 AudioContext
+会在读取成功或失败后尝试关闭，`projection()` 等待异步关闭完成；关闭失败不会中断指纹生成。
 
 ```ts
 import { projection } from '@momots/host';

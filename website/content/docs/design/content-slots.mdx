@@ -1,0 +1,82 @@
+---
+title: Content Slots
+description: Drawer、Popover、Sheet、Dialog、Alert 与 Toast 的共享内容属性和节点配置。
+icon: PanelsTopLeft
+---
+
+从 `@momots/design/shared` 导出的 `ContentProps` 统一内容字段，`ContentSlotsProps` 统一节点配置入口。Drawer、Popover、Sheet 与 Dialog 支持完整内容结构；Alert 和 Toast 只选取实际支持的字段。
+
+```tsx
+interface ContentProps {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  children?: React.ReactNode;
+  footer?: React.ReactNode;
+}
+```
+
+## 内容与节点
+
+`title`、`description`、`children`、`footer` 都表示内容。`header` 是标题与说明的容器，通过 `slots.header` 配置；正文容器使用 `slots.content`。
+
+```tsx
+<Popover
+  trigger={<Button>设置</Button>}
+  title="工作区设置"
+  description="修改工作区的显示方式。"
+  footer={<PopoverClose render={<Button />}>完成</PopoverClose>}
+  slots={{
+    header: { render: <header />, className: "gap-2" },
+    title: { render: <h3 />, id: "workspace-title" },
+    description: { className: "text-momo-fg-muted" },
+    content: { render: <section />, className: "space-y-3" },
+    footer: { render: <footer />, className: "justify-end" },
+  }}
+>
+  <Input aria-label="工作区名称" />
+</Popover>
+```
+
+上面的内容字段与五个 slot 同样适用于 Drawer、Sheet 和 Dialog。各组件保留自己的开关状态、定位、手势与动画属性。
+
+## Slot 规则
+
+| 配置 | 行为 |
+| --- | --- |
+| 省略 / `undefined` | 有对应内容时使用默认节点 |
+| props object | 配置节点属性、ref、事件和样式 |
+| `{ render: <section /> }` | 使用指定元素，合并默认属性、样式、事件和 ref |
+| `{ render: (props, state) => … }` | 自行渲染节点；必须透传 `props`，可用状态以该 slot 的类型为准 |
+| `false` | 移除该节点及其子树 |
+
+slot 配置不接受 `children`，内容统一放在顶层属性中。`render` 元素也应保持无内容，或由回调透传 `props.children`。`0` 和空字符串是有效内容；`undefined`、`null`、`false` 不创建对应内容节点。
+
+标题与说明继续使用各组件自己的语义节点。更改标签时保留组件提供的 ID 和 ARIA 属性；需要自定义 ID 时可放在 slot props 或 render 元素上。关闭 `slots.header` 会同时移除标题与说明；如果浮层仍需显示，应通过其 popup 属性提供 `aria-label` 等可访问名称。
+
+## 支持范围
+
+| 组件 | 内容字段 | 内容 slots |
+| --- | --- | --- |
+| Drawer / Popover / Sheet / Dialog | `title`、`description`、`children`、`footer` | `header`、`title`、`description`、`content`、`footer` |
+| Alert | 共享 `title`、`description`；另有 `icon`、`action` | `icon`、`content`、`title`、`description`、`action` |
+| ToastOptions | 共享 `title`、`description`；操作通过 `actionProps` 提供 | 由 Provider / List 的 `slots` 配置 |
+| ToastProvider / ToastList | Provider 的 `children` 是应用子树 | `content`、`text`、`title`、`description`、`icon`、`action`、`close` |
+
+Alert 的 `content` 包裹标题、说明和操作；Toast 的 `content` 包裹整条通知，`text` 包裹标题与说明。它们没有独立正文或 footer，因此不暴露这两个内容字段。
+
+Toast 的 `content`、`text`、`title`、`description` 支持 `render`；`icon`、`action`、`close` 保留 Motion 节点，可配置其原生 Motion 属性或传 `false`。ToastProvider 的 `children` 始终是应用子树，通知内容通过 `toast.add({ title, description })` 提供。
+
+## 从旧属性迁移
+
+| 原写法 | 新写法 |
+| --- | --- |
+| Dialog / Popover `titleProps={props}` | `slots={{ title: props }}` |
+| Dialog / Popover `contentClassName="…"` | `slots={{ content: { className: "…" } }}` |
+| Dialog / Popover `headerClassName` 等内容区域样式 | 对应 `slots.header` / `title` / `description` / `footer` 的 `className` |
+| Drawer `content={{ className: "…" }}` | `slots={{ content: { className: "…" } }}`，现在只配置正文 |
+| Drawer / Sheet `title={<h3>标题</h3>}` 作为 render | `title="标题" slots={{ title: { render: <h3 /> } }}` |
+| Drawer / Sheet `footer` 的 render callback | `footer={内容}`，回调放到 `slots.footer.render` |
+| Alert `titleSlot={props}` 等 | `slots={{ title: props }}` 等 |
+| ToastProvider `close={{ label: "关闭" }}` 等 | `slots={{ close: { label: "关闭" } }}` 等 |
+
+这套契约使用 Base UI 原语和 `useRender` 完成节点组合。旧的 [SlotBaseConfig / render](/docs/design/slot-composition) 仍用于其他组件；它允许直接替换整棵节点，含义与这里的 `slots` 不同。

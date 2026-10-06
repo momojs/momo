@@ -1,17 +1,9 @@
-import { isObjectType } from 'remeda';
-
 import { isArrayBuffer } from './is-array-buffer';
-import { isUint8Array } from './is-uint8-array';
+import { isSharedArrayBuffer } from './is-shared-array-buffer';
 
 /**
- * 断言目标值是否为ArrayBufferLike对象
+ * 断言目标值是否为 ArrayBuffer 或 SharedArrayBuffer，不包含视图。
  */
 export function isArrayBufferLike(data: unknown): data is ArrayBufferLike {
-  return (
-    isArrayBuffer(data) ||
-    isUint8Array(data) ||
-    (isObjectType(data) &&
-      'ArrayBuffer' in data &&
-      isArrayBuffer(data.ArrayBuffer))
-  );
+  return isArrayBuffer(data) || isSharedArrayBuffer(data);
 }

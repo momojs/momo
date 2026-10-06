@@ -3,6 +3,7 @@ import { cardinality, realize, singleton } from '@momots/core';
 import { isFunction } from 'remeda';
 
 import { bytesToHex, hexToBytes } from './buffer';
+import { isStorage } from './guard/is-storage';
 
 export class MemoryStorage implements Storage {
   private readonly store = new Map<string, string>();
@@ -81,12 +82,6 @@ const store = {
     }, 0);
     return total / 1024; // KB
   },
-  isNative: (storage: Storage) => {
-    return (
-      storage === globalThis.localStorage ||
-      storage === globalThis.sessionStorage
-    );
-  },
   emit: (
     key: string,
     newValue: string | null = null,
@@ -107,22 +102,14 @@ const store = {
         newValue,
         oldValue,
         url: globalThis.location?.href ?? '',
-        storageArea: store.isNative(storageArea) ? storageArea : null,
+        storageArea: isStorage(storageArea) ? storageArea : null,
       }),
     );
   },
   resolve: (storage?: Realizable<Storage>): Storage => {
     if (storage) return realize(storage);
-    try {
-      if (typeof globalThis === 'undefined') {
-        throw new Error('globalThis is undefined');
-      }
-      const { localStorage } = globalThis ?? {};
-      if (localStorage) return localStorage;
-    } catch (err) {
-      console.warn(err);
-    }
-    return memory;
+    // 无 Web Storage 的运行时使用内存；访问被拒绝时直接抛出原始异常。
+    return globalThis.localStorage ?? memory;
   },
   clear: (storage: Storage, namespace: string) => {
     store.keys(storage, namespace).forEach((key) => {
@@ -216,7 +203,7 @@ export class Storagefy<T> {
     return store.usage(storage, Storagefy.namespace);
   }
 
-  static isNativeStorage = store.isNative;
+  static isNativeStorage = isStorage;
 
   static dispatch = store.emit;
 
@@ -363,7 +350,7 @@ export class StoragefyAsync<T> {
     return store.usage(storage, StoragefyAsync.namespace);
   }
 
-  static isNativeStorage = store.isNative;
+  static isNativeStorage = isStorage;
 
   static dispatch = store.emit;
 

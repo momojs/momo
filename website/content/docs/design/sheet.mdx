@@ -1,0 +1,41 @@
+---
+title: Sheet
+description: 从视口边缘展开的对话面板。
+icon: PanelRightOpen
+---
+
+Sheet 基于 Base UI Dialog，提供四个方向的边缘面板。需要滑动关闭或停靠点时使用 [Drawer](/docs/design/drawer)。
+
+```tsx
+import { Button } from "@momots/design/components/button";
+import { Sheet } from "@momots/design/components/sheet";
+
+<Sheet
+  trigger={<Button>工作区设置</Button>}
+  title="工作区设置"
+  description="选择工作区的默认显示方式。"
+  footer={<Button>保存</Button>}
+  slots={{
+    title: { render: <h3 /> },
+    content: { className: "space-y-3" },
+    footer: { render: <footer /> },
+  }}
+>
+  面板正文
+</Sheet>
+```
+
+内容属性遵循 [Content Slots](/docs/design/content-slots)：`title`、`description`、`children`、`footer` 都是 ReactNode；`slots.header`、`slots.title`、`slots.description`、`slots.content`、`slots.footer` 配置节点。
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `open` / `defaultOpen` | `boolean` | 受控 / 非受控打开状态 |
+| `onOpenChange` | Base UI callback | 状态变化，可通过 details 取消 |
+| `trigger` | Base UI render | 打开面板的元素或 render callback |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | 展开方向，默认 `"right"` |
+| `title` / `description` / `children` / `footer` | `ReactNode` | 标题、说明、正文与底部内容 |
+| `slots` | `ContentSlotsProps<SheetContentSlots>` | 内容节点配置 |
+| `popup` | Base UI Dialog Popup props | 面板属性与样式，不包含 `children` |
+| `backdrop` / `close` | `SlotBaseConfig` | 遮罩与关闭按钮配置，默认启用，`false` 可关闭 |
+
+其余 Base UI Dialog Root 属性直接透传。应提供可访问标题；自定义 `render` 回调时透传收到的 props，保留 ID、ref 和交互处理。
