@@ -149,6 +149,53 @@ describe('createToastManager', () => {
 });
 
 describe('ToastProvider', () => {
+  test('renders loading and result geometry while preserving custom icon content', () => {
+    const result = JSON.parse(
+      renderToastScenario(`
+      const manager = createToastManager();
+      manager.add({ id: 'operation', type: 'loading', title: 'Saving' });
+      const render = (slots) => renderToStaticMarkup(createElement(ToastProvider, {
+        toastManager: manager, portal: false, slots: { close: false, ...slots },
+      }));
+      const loading = render();
+      manager.update('operation', { type: 'success', title: 'Saved' });
+      const success = render();
+      manager.update('operation', { type: 'loading' });
+      const custom = render({ icon: { children: createElement('span', null, 'Custom loader') } });
+      process.stdout.write(JSON.stringify({ loading, success, custom }));
+    `),
+    ) as { loading: string; success: string; custom: string };
+
+    expect(result.loading).toContain('data-wui="spinner"');
+    expect(result.loading).not.toContain('data-slot="icon"');
+    expect(result.success).toContain('data-slot="icon"');
+    expect(result.success).not.toContain('data-wui="spinner"');
+    expect(result.custom).toContain('Custom loader');
+    expect(result.custom).not.toContain('data-wui="spinner"');
+  });
+
+  test('allows non-strict consumers outside a provider while keeping strict consumers explicit', () => {
+    const markup = renderToastScenario(`
+      function NonStrictProbe() {
+        const toast = useToast({ strict: false });
+        return createElement('span', null, toast === null ? 'No toast provider' : 'Connected');
+      }
+      process.stdout.write(renderToStaticMarkup(createElement(NonStrictProbe)));
+
+      function StrictProbe() {
+        useToast();
+        return null;
+      }
+      try {
+        renderToStaticMarkup(createElement(StrictProbe));
+        throw new Error('Expected strict useToast to require a provider');
+      } catch (error) {
+        if (error.message !== 'Toast components must be rendered inside ToastProvider.') throw error;
+      }
+    `);
+    expect(markup).toBe('<span>No toast provider</span>');
+  });
+
   test('provides a generic reactive controller and renders the standalone host', () => {
     const typedManager: ToastManager<{ source: string }> = createToastManager<{
       source: string;
@@ -254,10 +301,12 @@ describe('ToastProvider', () => {
         createElement(ToastProvider, {
           toastManager: manager,
           portal: false,
-          content: { id: 'custom-content', className: 'content-class' },
-          icon: false,
-          description: false,
-          close: false,
+          slots: {
+            content: { id: 'custom-content', className: 'content-class' },
+            icon: false,
+            description: false,
+            close: false,
+          },
         }),
       );
       process.stdout.write(markup);
@@ -271,6 +320,72 @@ describe('ToastProvider', () => {
     expect(markup).toContain('data-slot="toast-title"');
   });
 
+  test('links custom semantic IDs and removes references to hidden text', () => {
+    const markup = renderToastScenario(`
+      const manager = createToastManager();
+      manager.add({ title: 0, description: 'Details' });
+      process.stdout.write(renderToStaticMarkup(createElement(ToastProvider, {
+        toastManager: manager, portal: false,
+        slots: {
+          title: { render: createElement('h3', { id: 'custom-title' }), className: 'custom-title-class' },
+          description: false,
+        },
+      })));
+    `);
+    expect(markup).toContain('aria-labelledby="custom-title"');
+    expect(markup).toContain('id="custom-title"');
+    expect(markup).toContain('custom-title-class');
+    expect(markup).toContain('>0</h3>');
+    expect(markup).not.toContain('aria-describedby');
+
+    const hidden = renderToastScenario(`
+      const manager = createToastManager();
+      manager.add({ title: 'Hidden title', description: 'Hidden details' });
+      process.stdout.write(renderToStaticMarkup(createElement(ToastProvider, {
+        toastManager: manager, portal: false, slots: { text: false },
+      })));
+    `);
+    expect(hidden).not.toContain('aria-labelledby');
+    expect(hidden).not.toContain('aria-describedby');
+    expect(hidden).not.toContain('data-slot="toast-text"');
+  });
+
+  test('renders shorthand with live item state, generated labels and default content', () => {
+    const markup = renderToastScenario(`
+      const manager = createToastManager();
+      manager.add({ title: 'First', description: 'First details' });
+      manager.add({ title: 'Second', description: 'Second details' });
+      process.stdout.write(renderToStaticMarkup(createElement(ToastProvider, {
+        toastManager: manager, portal: false,
+        slots: {
+          content: (props, state) => createElement('section', {
+            ...props, 'data-stack-state': state.index + ':' + state.behind,
+          }),
+          text: createElement('article'),
+          title: (props) => createElement('h3', props),
+          description: createElement('div', { className: 'custom-description' }),
+          icon: false,
+          close: { label: 'Dismiss' },
+        },
+      })));
+    `);
+    expect(markup).toContain('data-stack-state="0:false"');
+    expect(markup).toContain('data-stack-state="1:true"');
+    expect(markup).toContain('<article');
+    expect(markup).toContain('>Second</h3>');
+    expect(markup).toContain('>First</h3>');
+    expect(markup).toContain('custom-description');
+    expect(markup).toContain('aria-label="Dismiss"');
+    expect(markup).not.toContain('data-slot="toast-icon"');
+    const titles = [...markup.matchAll(/aria-labelledby="([^"]+)"/g)];
+    const descriptions = [...markup.matchAll(/aria-describedby="([^"]+)"/g)];
+    expect(titles).toHaveLength(2);
+    expect(descriptions).toHaveLength(2);
+    for (const [, id] of [...titles, ...descriptions]) {
+      expect(markup).toContain(`id="${id}"`);
+    }
+  });
+
   test('is implemented with Motion presence rather than Base UI or CSS transitions', async () => {
     const source = await Bun.file(
       new URL('./toast.tsx', import.meta.url),
@@ -278,9 +393,7 @@ describe('ToastProvider', () => {
 
     expect(source).toContain('<AnimatePresence initial={false}>');
     expect(source).toContain('initial={initial}');
-    expect(source).toContain('animate={stackTarget}');
     expect(source).toContain("exit='exit'");
-    expect(source).toContain("type: 'spring'");
     expect(source).not.toContain("from '@base-ui/react/toast'");
     expect(source).not.toContain('transition-transform');
     expect(source).not.toContain('transition-all');

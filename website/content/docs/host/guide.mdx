@@ -883,6 +883,50 @@ const width = measureText('Momo', {
 });
 ```
 
+## 文本截断
+
+子路径：`truncated`，也可以从 `@momots/host` 根入口导入。
+
+### truncated
+
+按像素宽度从中间截断文本，保留开头和结尾。测量使用完整候选文本的原始 Canvas 宽度，不叠加经验补偿；字符数量按字素簇计算，不拆分 emoji 或组合字符。
+
+```ts
+type TruncatedParams = {
+  width?: number;
+  font?: string;
+  ellipsis?: string;
+  tail?: number | { min: number };
+};
+
+function truncated(text: string, params?: TruncatedParams): string;
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `width` | `Infinity` | 结果的最大像素宽度；`NaN` 也视为不限制 |
+| `font` | `'10px sans-serif'` | 用于测量的 CSS font 字符串 |
+| `ellipsis` | `'...'` | 中间省略符，可以为空字符串 |
+| `tail` | 未指定 | 数字表示固定保留的尾部字素数；`{ min }` 表示均分时尾部至少保留的字素数；未指定时均分 |
+
+宽度限制优先于尾部保留数量；尾部放不下时会减少，连省略符都放不下时返回空字符串。保留数量向下取整，负数及非有限值按 `0` 处理。原文能放下、未限制宽度或当前环境无法测量时返回原文。
+
+```ts
+import { truncated } from '@momots/host/truncated';
+
+const filename = 'very-long-filename.txt';
+const fixedTail = truncated(filename, {
+  width: 160,
+  font: '16px Arial',
+  tail: 4,
+});
+const minimumTail = truncated(filename, {
+  width: 160,
+  font: '16px Arial',
+  tail: { min: 4 },
+});
+```
+
 ## 请求转 cURL
 
 子路径：`fetch`

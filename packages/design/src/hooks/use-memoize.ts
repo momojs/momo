@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 
-export function useCacheCallback<Args extends unknown[], Result, Key>(
+export function useMemoize<Args extends unknown[], Result, Key>(
   callback: (...args: Args) => Result,
   hash: (...args: Args) => Key,
 ) {

@@ -12,9 +12,10 @@ import { StarIcon } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { VariantProps } from 'cva';
-import { MotionConfig, motion, useReducedMotion } from 'motion/react';
+import { MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks/index.js';
+import { pose, useFeel } from '../motion/index.js';
 import { cva } from '../tailwind/index.js';
 
 const RATING_DEFAULTS = {
@@ -255,7 +256,8 @@ export function Rating({
     onChange: onValueChange,
   });
   const [hoveredValue, setHoveredValue] = useState(0);
-  const prefersReducedMotion = useReducedMotion();
+  const { reduced, mode, transition, spatial, fade } =
+    useFeel('snap');
   const currentValue = normalizeValue(
     selectedValue,
     resolvedMax,
@@ -359,7 +361,7 @@ export function Rating({
   };
 
   return (
-    <MotionConfig reducedMotion='user'>
+    <MotionConfig transition={transition}>
       <div
         {...props}
         data-slot='rating'
@@ -399,15 +401,15 @@ export function Rating({
                 className: itemClassName,
               })}
               initial={false}
-              animate={{ scale: fill > 0 ? 1 : 0.96 }}
-              whileHover={isInteractive ? { scale: 1.08 } : undefined}
-              whileTap={isInteractive ? { scale: 0.9 } : undefined}
-              transition={{
-                type: 'spring',
-                stiffness: 420,
-                damping: 28,
-                mass: 0.7,
-              }}
+              animate={pose(
+                { scale: reduced || fill > 0 ? 1 : 0.96 },
+                mode,
+              )}
+              whileHover={
+                isInteractive && !reduced ? { scale: 1.08 } : undefined
+              }
+              whileTap={isInteractive && !reduced ? { scale: 0.9 } : undefined}
+              transition={transition}
               onClick={(event) => selectValue(event, index)}
               onPointerMove={(event) => previewValue(event, index)}
             >
@@ -423,13 +425,13 @@ export function Rating({
               <motion.span
                 className='pointer-events-none absolute inset-0 grid place-items-center overflow-hidden'
                 initial={false}
-                animate={{
-                  clipPath: `inset(0 ${100 - fill * 100}% 0 0)`,
-                }}
-                transition={{
-                  duration: prefersReducedMotion ? 0 : 0.18,
-                  ease: 'easeOut',
-                }}
+                animate={pose(
+                  {
+                    clipPath: `inset(0 ${100 - fill * 100}% 0 0)`,
+                  },
+                  mode,
+                )}
+                transition={reduced ? spatial : fade}
               >
                 <HugeiconsIcon
                   icon={icon}

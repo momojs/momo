@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { Field } from '../../../../../packages/design/src/components/field';
 import { Input } from '../../../../../packages/design/src/components/input';
+import { ToastProvider } from '../../../../../packages/design/src/components/toast';
 import {
   CheckboxControl,
   PlaygroundFrame,
@@ -33,75 +34,77 @@ export function FieldPlayground() {
   const effectiveInvalid = invalid || (required && value.trim().length === 0);
 
   return (
-    <PlaygroundFrame
-      controls={
-        <>
-          <SelectControl
-            label='Variant'
-            value={variant}
-            options={variantOptions}
-            onChange={setVariant}
-          />
-          <TextControl label='Value' value={value} onChange={setValue} />
-          <TextControl
-            label='Description'
-            value={description}
-            onChange={setDescription}
-          />
-          <TextControl label='Error' value={error} onChange={setError} />
-          <CheckboxControl
-            label='Disabled'
-            checked={disabled}
-            onChange={setDisabled}
-          />
-          <CheckboxControl
-            label='Required'
-            checked={required}
-            onChange={setRequired}
-          />
-          <CheckboxControl
-            label='Invalid'
-            checked={invalid}
-            onChange={setInvalid}
-          />
-          <CheckboxControl
-            label='Description'
-            checked={showDescription}
-            onChange={setShowDescription}
-          />
-          <CheckboxControl
-            label='Error message'
-            checked={showError}
-            onChange={setShowError}
-          />
-        </>
-      }
-      state={
-        <code>
-          value: {value || 'empty'}; variant: {variant}; disabled:{' '}
-          {String(disabled)}; required: {String(required)}; invalid:{' '}
-          {String(effectiveInvalid)}
-        </code>
-      }
-    >
-      <Field
-        name='workspace-email'
-        label='Workspace email'
-        variant={variant}
-        disabled={disabled}
-        invalid={effectiveInvalid}
-        description={showDescription ? description : undefined}
-        error={showError ? error : undefined}
-        className='w-full max-w-sm text-left'
+    <ToastProvider placement='top-center' timeout={5000} limit={3}>
+      <PlaygroundFrame
+        controls={
+          <>
+            <SelectControl
+              label='Variant'
+              value={variant}
+              options={variantOptions}
+              onChange={setVariant}
+            />
+            <TextControl label='Value' value={value} onChange={setValue} />
+            <TextControl
+              label='Description'
+              value={description}
+              onChange={setDescription}
+            />
+            <TextControl label='Error' value={error} onChange={setError} />
+            <CheckboxControl
+              label='Disabled'
+              checked={disabled}
+              onChange={setDisabled}
+            />
+            <CheckboxControl
+              label='Required'
+              checked={required}
+              onChange={setRequired}
+            />
+            <CheckboxControl
+              label='Invalid'
+              checked={invalid}
+              onChange={setInvalid}
+            />
+            <CheckboxControl
+              label='Description'
+              checked={showDescription}
+              onChange={setShowDescription}
+            />
+            <CheckboxControl
+              label='Error message'
+              checked={showError}
+              onChange={setShowError}
+            />
+          </>
+        }
+        state={
+          <code>
+            value: {value || 'empty'}; variant: {variant}; disabled:{' '}
+            {String(disabled)}; required: {String(required)}; invalid:{' '}
+            {String(effectiveInvalid)}
+          </code>
+        }
       >
-        <Input
-          type='email'
-          value={value}
-          required={required}
-          placeholder='name@example.com'
-          onValueChange={setValue}
-        />
-      </Field>
-    </PlaygroundFrame>
+        <Field
+          name='workspace-email'
+          label='Workspace email'
+          variant={variant}
+          disabled={disabled}
+          invalid={effectiveInvalid}
+          description={showDescription ? description : undefined}
+          error={showError ? error : undefined}
+          className='w-full max-w-sm text-left'
+        >
+          <Input
+            type='email'
+            value={value}
+            required={required}
+            placeholder='name@example.com'
+            onValueChange={setValue}
+          />
+        </Field>
+      </PlaygroundFrame>
+    </ToastProvider>
   );
 }

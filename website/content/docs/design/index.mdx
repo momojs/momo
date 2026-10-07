@@ -1,22 +1,26 @@
 ---
 title: 开始
-description: "@momots/design —— 基于 motion、Base UI 与 Tailwind CSS 的 React 组件库。"
+description: "@momots/design —— 面向 React 19.2+，基于 motion、Base UI 与 Tailwind CSS 的组件库。"
 icon: Rocket
 ---
 
-`@momots/design` 是 momo 的 React 组件层。它把 **Base UI** 的无样式交互能力、**motion** 的过渡动画、以及 **Tailwind CSS** 的样式表达组合起来，用来沉淀项目中可复用、可调试、可 tree-shaking 的组件。
+`@momots/design` 是 momo 面向 **React 19.2+** 的组件层。它把 **Base UI** 的无样式交互能力、**motion** 的过渡动画、以及 **Tailwind CSS** 的样式表达组合起来，用来沉淀项目中可复用、可调试、可 tree-shaking 的组件。
 
 ## 安装
+
+React API 兼容基线为 **19.2+**，Hooks 直接使用原生 `useEffectEvent`。当前发布的
+`react` 与 `react-dom` peer 范围均为 `^19.2.7`（`>=19.2.7 <20.0.0`），请安装版本一致的 React 与 React DOM。
 
 ```bash
 bun add @momots/design@alpha @momots/core@beta @momots/host@beta
 bun add @base-ui/react @hugeicons/react @hugeicons/core-free-icons
-bun add cva date-fns motion react react-dom remeda tailwind-merge tailwindcss type-fest
+bun add react@^19.2.7 react-dom@^19.2.7
+bun add cn cva date-fns motion remeda tailwindcss type-fest
 ```
 
-`@momots/core`、`@momots/host`、`@base-ui/react`、`motion`、`react`、`remeda`、`type-fest`、`cva`、`date-fns`、`tailwind-merge` 与 Hugeicons 应作为 peer dependencies 由应用侧提供，避免组件库把 React、基础工具、图标或动画运行时重复打进产物。
+`@momots/core`、`@momots/host`、`@base-ui/react`、`motion`、`react`、`react-dom`、`remeda`、`type-fest`、`cn`、`cva`、`date-fns` 与 Hugeicons 应作为 peer dependencies 由应用侧提供，避免组件库把 React、基础工具、图标或动画运行时重复打进产物。
 
-`@ncdai/react-wheel-picker` 与 `motion-plus` 会作为普通 dependencies 随
+`@ncdai/react-wheel-picker`、`morphicons` 与 `motion-plus` 会作为普通 dependencies 随
 `@momots/design` 安装；其余运行时依赖保持为 peer dependencies，由应用统一版本。
 
 ## 调试优先
@@ -52,6 +56,9 @@ bun add cva date-fns motion react react-dom remeda tailwind-merge tailwindcss ty
   </Card>
   <Card title="Field" href="/docs/design/field">
     统一标签、控件、说明与校验错误的字段容器。
+  </Card>
+  <Card title="Icon" href="/docs/design/icon">
+    改变图标数据即可平滑变形，统一尺寸、描边与动效主题。
   </Card>
   <Card title="Input" href="/docs/design/input">
     支持 Base UI 表单状态与三档尺寸的原子输入框。

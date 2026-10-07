@@ -7,6 +7,7 @@ import type { HTMLMotionProps, SVGMotionProps } from 'motion/react';
 import { motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks/index.js';
+import { pose, useFeel } from '../motion/index.js';
 import { cva } from '../tailwind/index.js';
 
 const variants = {
@@ -52,6 +53,8 @@ function Indicator({
   size,
   ...props
 }: IndicatorProps) {
+  const { theme, reduced, mode, spatial, fade } = useFeel('snap');
+  const transition = { ...spatial, opacity: fade };
   return (
     <BaseCheckbox.Indicator
       keepMounted
@@ -67,6 +70,7 @@ function Indicator({
           initial='unchecked'
           animate={isChecked ? 'checked' : 'unchecked'}
           {...props}
+          {...(reduced && { transition })}
         >
           {isIndeterminate ? (
             <motion.line
@@ -76,11 +80,14 @@ function Indicator({
               y2='12'
               strokeLinecap='round'
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{
-                pathLength: 1,
-                opacity: 1,
-                transition: { duration: 0.2 },
-              }}
+              animate={pose(
+                {
+                  pathLength: 1,
+                  opacity: 1,
+                  transition,
+                },
+                mode,
+              )}
             />
           ) : (
             <motion.path
@@ -88,21 +95,25 @@ function Indicator({
               strokeLinejoin='round'
               d='M4.5 12.75l6 6 9-13.5'
               variants={{
-                checked: {
-                  pathLength: 1,
-                  opacity: 1,
-                  transition: {
-                    duration: 0.2,
-                    delay: 0.2,
+                checked: pose(
+                  {
+                    pathLength: 1,
+                    opacity: 1,
+                    transition: {
+                      ...transition,
+                      delay: reduced ? 0 : theme.stagger.tight,
+                    },
                   },
-                },
-                unchecked: {
-                  pathLength: 0,
-                  opacity: 0,
-                  transition: {
-                    duration: 0.2,
+                  mode,
+                ),
+                unchecked: pose(
+                  {
+                    pathLength: 0,
+                    opacity: 0,
+                    transition,
                   },
-                },
+                  mode,
+                ),
               }}
             />
           )}
@@ -169,6 +180,7 @@ export function Checkbox({
   size = 'md',
   ...props
 }: CheckboxProps) {
+  const { reduced, transition } = useFeel('snap');
   const [isChecked = false, setIsChecked] = useControllableValue({
     value: checked,
     defaultValue: defaultChecked,
@@ -196,10 +208,16 @@ export function Checkbox({
       render={
         <motion.button
           data-slot='checkbox'
-          whileTap={{ scale: 0.95 }}
-          whileHover={{ scale: 1.05 }}
+          whileTap={reduced ? undefined : { scale: 0.95 }}
+          whileHover={reduced ? undefined : { scale: 1.05 }}
+          transition={transition}
           className={variants.root({ size, className })}
           {...props}
+          {...(reduced && {
+            whileTap: undefined,
+            whileHover: undefined,
+            transition,
+          })}
         />
       }
     >

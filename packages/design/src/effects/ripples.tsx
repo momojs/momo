@@ -1,11 +1,13 @@
 'use client';
 
 import type { Ref } from 'react';
-import { useEffectEvent, useImperativeHandle, useState } from 'react';
+import { useEffectEvent, useImperativeHandle, useRef, useState } from 'react';
 
 import type { OmitOf } from '@momots/core';
 import type { HTMLMotionProps } from 'motion/react';
 import { motion } from 'motion/react';
+
+import { pose, useFeel } from '../motion/index.js';
 
 type Ripple = {
   id: number;
@@ -28,10 +30,13 @@ export function Ripples({
   style,
   scale = 10,
   color = 'var(--ripple-button-ripple-color)',
-  transition = { duration: 0.6, ease: 'easeOut' },
+  transition,
+  onAnimationComplete,
   ...props
 }: RipplesProps) {
   const [ripples, setRipples] = useState<Ripple[]>([]);
+  const nextId = useRef(0);
+  const preset = useFeel('ui');
 
   const call = useEffectEvent((event: PointerEvent) => {
     const { target, clientX, clientY } = event;
@@ -42,16 +47,12 @@ export function Ripples({
       const y = clientY - rect.top;
 
       const newRipple: Ripple = {
-        id: Date.now(),
+        id: nextId.current++,
         x,
         y,
       };
 
       setRipples((prev) => [...prev, newRipple]);
-
-      setTimeout(() => {
-        setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
-      }, 600);
     }
   });
 
@@ -60,9 +61,11 @@ export function Ripples({
   return ripples.map((ripple) => (
     <motion.span
       key={ripple.id}
-      initial={{ scale: 0, opacity: 0.5 }}
-      animate={{ scale, opacity: 0 }}
-      transition={transition}
+      initial={{ scale: preset.reduced ? scale : 0, opacity: 0.5 }}
+      animate={pose({ scale, opacity: 0 }, preset.mode)}
+      transition={
+        preset.reduced ? preset.transition : (transition ?? preset.transition)
+      }
       style={{
         position: 'absolute',
         borderRadius: '50%',
@@ -75,6 +78,10 @@ export function Ripples({
         ...style,
       }}
       {...props}
+      onAnimationComplete={(definition) => {
+        setRipples((prev) => prev.filter((item) => item.id !== ripple.id));
+        onAnimationComplete?.(definition);
+      }}
     />
   ));
 }

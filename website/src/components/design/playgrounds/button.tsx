@@ -25,6 +25,7 @@ const buttonVariantOptions = [
 
 const buttonSizeOptions = [
   { value: 'default', label: 'Default' },
+  { value: 'inline', label: 'Inline' },
   { value: 'xs', label: 'Extra Small' },
   { value: 'sm', label: 'Small' },
   { value: 'lg', label: 'Large' },

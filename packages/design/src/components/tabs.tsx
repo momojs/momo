@@ -4,9 +4,9 @@ import type { ReactNode } from 'react';
 import { useLayoutEffect, useRef } from 'react';
 
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
-import { motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 
-import { useAutoHeight } from '../effects/height.js';
+import { useAutoSize } from '../effects/auto-size.js';
 import {
   Highlight,
   useHighlightLayer,
@@ -14,6 +14,7 @@ import {
   useHighlightTrigger,
 } from '../effects/highlight.js';
 import { useControllableValue } from '../hooks/use-controllable-value.js';
+import { pose, useFeel } from '../motion/index.js';
 import type { ControlOption } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
 
@@ -97,8 +98,8 @@ export function Tabs<T extends string>(props: TabsProps<T>) {
     ...rootProps
   } = props;
 
-  const { activate, register, clear, height } = useAutoHeight();
-  const reduced = useReducedMotion();
+  const { activate, register, clear, height } = useAutoSize();
+  const { mode, spatial } = useFeel('ui');
 
   const listRef = useRef<HTMLDivElement>(null);
   const hoverLayer = useHighlightLayer<HTMLElement, HTMLDivElement>(listRef);
@@ -195,8 +196,8 @@ export function Tabs<T extends string>(props: TabsProps<T>) {
           data-slot='tabs-height'
           className='overflow-hidden'
           initial={false}
-          animate={{ height }}
-          transition={reduced ? { type: 'tween', duration: 0 } : undefined}
+          animate={pose({ height }, mode)}
+          transition={spatial}
         >
           {options.map(({ value, content }) => (
             <Panel

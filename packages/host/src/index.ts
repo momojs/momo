@@ -40,3 +40,4 @@ export * from './guard/is-wechat-web';
 export * from './nearest';
 export * from './persistent';
 export * from './storage';
+export * from './truncated';

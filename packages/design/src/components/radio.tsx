@@ -11,6 +11,7 @@ import type { HTMLMotionProps } from 'motion/react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks/index.js';
+import { pose, useFeel } from '../motion/index.js';
 import type { ControlOption, ControlValue } from '../shared/index.js';
 import { cx } from '../tailwind/index.js';
 
@@ -21,6 +22,7 @@ interface RadioIndicatorProps
 }
 
 function Indicator({ isChecked, keepMounted, ...props }: RadioIndicatorProps) {
+  const { reduced, mode, transition } = useFeel('snap');
   return (
     <AnimatePresence>
       {isChecked && (
@@ -32,10 +34,12 @@ function Indicator({ isChecked, keepMounted, ...props }: RadioIndicatorProps) {
               key='radio-group-indicator'
               data-slot='radio-group-indicator'
               className='relative flex items-center justify-center'
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }}
+              initial={{ opacity: 0, scale: reduced ? 1 : 0 }}
+              animate={pose({ opacity: 1, scale: 1 }, mode)}
+              exit={{ opacity: 0, scale: reduced ? 1 : 0 }}
+              transition={transition}
               {...props}
+              {...(reduced && { transition })}
             />
           }
         >
@@ -67,6 +71,7 @@ export function Radio({
   className,
   ...props
 }: RadioProps) {
+  const { reduced, transition } = useFeel('snap');
   return (
     <BaseRadio.Root
       value={value}
@@ -81,9 +86,15 @@ export function Radio({
       render={
         <motion.button
           data-slot='radio'
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={reduced ? undefined : { scale: 1.05 }}
+          whileTap={reduced ? undefined : { scale: 0.95 }}
+          transition={transition}
           {...props}
+          {...(reduced && {
+            whileTap: undefined,
+            whileHover: undefined,
+            transition,
+          })}
         />
       }
     />
@@ -103,13 +114,14 @@ export function RadioGroup<T extends ControlValue>({
   onValueChange,
   ...props
 }: RadioGroupProps<T>) {
+  const { transition } = useFeel('snap');
   const [current, setCurrent] = useControllableValue({
     value,
     defaultValue,
   });
 
   return (
-    <MotionConfig transition={{ type: 'spring', stiffness: 200, damping: 16 }}>
+    <MotionConfig transition={transition}>
       <BaseRadioGroup
         data-slot='radio-group'
         value={current}

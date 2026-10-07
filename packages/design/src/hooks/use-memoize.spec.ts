@@ -49,14 +49,14 @@ function useCallback<Fn extends Callback>(
 
 mock.module('react', () => ({ useCallback, useMemo }));
 
-const { useCacheCallback } = await import('./use-cache-callback');
+const { useMemoize } = await import('./use-memoize');
 
 function render<Args extends unknown[], Result, Key>(
   callback: (...args: Args) => Result,
   hash: (...args: Args) => Key,
 ) {
   cursor = 0;
-  return useCacheCallback(callback, hash);
+  return useMemoize(callback, hash);
 }
 
 beforeEach(() => {
@@ -64,7 +64,7 @@ beforeEach(() => {
   cursor = 0;
 });
 
-describe('useCacheCallback', () => {
+describe('useMemoize', () => {
   test('creates one result per hash key', () => {
     let calls = 0;
     const callback = (value: string) => ({ id: ++calls, value });

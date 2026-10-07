@@ -17,15 +17,17 @@ import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { VariantProps } from 'cva';
-import {
-  AnimatePresence,
-  MotionConfig,
-  motion,
-  useReducedMotion,
-} from 'motion/react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue, usePresenceGate } from '../hooks/index.js';
-import { cva } from '../tailwind/index.js';
+import { pose, useFeel } from '../motion/index.js';
+import type {
+  ContentContainerProps,
+  ContentProps,
+  ContentSlotsProps,
+} from '../shared/index.js';
+import { asClass, asContentSlots, hasContent } from '../shared/index.js';
+import { cva, cx } from '../tailwind/index.js';
 
 const variants = {
   backdrop: cva({
@@ -79,11 +81,18 @@ export function DialogClose(props: DialogCloseProps) {
 }
 
 /** A themed modal dialog with composable content and actions. */
+export interface DialogContentSlots {
+  header: ContentContainerProps;
+  title: DialogTitleProps;
+  description: DialogDescriptionProps;
+  content: ContentContainerProps;
+  footer: ContentContainerProps;
+}
+
 export interface DialogProps
-  extends Omit<
-      DialogRootProps,
-      'children' | 'defaultOpen' | 'onOpenChange' | 'open'
-    >,
+  extends ContentProps,
+    ContentSlotsProps<DialogContentSlots>,
+    Omit<DialogRootProps, 'children' | 'defaultOpen' | 'onOpenChange' | 'open'>,
     VariantProps<typeof variants.popup> {
   /** Controls whether the dialog is open. */
   open?: boolean;
@@ -93,12 +102,6 @@ export interface DialogProps
   trigger?: ReactElement;
   /** Accessible dialog title. */
   title: ReactNode;
-  /** Optional supporting text associated with the dialog. */
-  description?: ReactNode;
-  /** Main scrollable dialog content. */
-  children?: ReactNode;
-  /** Optional actions rendered below the content. */
-  footer?: ReactNode;
   /** Whether to show the built-in top-right close control. */
   showCloseButton?: boolean;
   /** Accessible name for the built-in close control. */
@@ -110,11 +113,6 @@ export interface DialogProps
   triggerClassName?: string;
   backdropClassName?: string;
   viewportClassName?: string;
-  headerClassName?: string;
-  titleClassName?: string;
-  descriptionClassName?: string;
-  contentClassName?: string;
-  footerClassName?: string;
   closeClassName?: string;
   triggerProps?: Omit<DialogTriggerProps, 'children' | 'className' | 'render'>;
   portalProps?: Omit<DialogPortalProps, 'children' | 'keepMounted'>;
@@ -130,8 +128,6 @@ export interface DialogProps
     DialogPopupProps,
     'children' | 'className' | 'hidden' | 'render'
   >;
-  titleProps?: Omit<DialogTitleProps, 'children' | 'className'>;
-  descriptionProps?: Omit<DialogDescriptionProps, 'children' | 'className'>;
   closeProps?: Omit<BaseDialogCloseProps, 'children' | 'className' | 'render'>;
   /** Called after an accepted open-state change. */
   onChange?: (open: boolean) => void;
@@ -152,6 +148,7 @@ export function Dialog(props: DialogProps) {
     description,
     children,
     footer,
+    slots: slotConfig,
     size = 'md',
     showCloseButton = true,
     closeLabel = 'Close dialog',
@@ -160,25 +157,19 @@ export function Dialog(props: DialogProps) {
     triggerClassName,
     backdropClassName,
     viewportClassName,
-    headerClassName,
-    titleClassName,
-    descriptionClassName,
-    contentClassName,
-    footerClassName,
     closeClassName,
     triggerProps,
     portalProps,
     backdropProps,
     viewportProps,
     popupProps,
-    titleProps,
-    descriptionProps,
     closeProps,
     modal = true,
     onChange,
     onOpenChange,
     ...rootProps
   } = props;
+  const slots = asContentSlots<DialogContentSlots>(slotConfig);
 
   const [isOpen = false, setOpen] = useControllableValue({
     value: open,
@@ -186,10 +177,16 @@ export function Dialog(props: DialogProps) {
     onChange,
   });
   const { visible, createGate } = usePresenceGate(isOpen);
-  const prefersReducedMotion = useReducedMotion();
+  const {
+    reduced: prefersReducedMotion,
+    transition,
+    theme,
+    mode,
+  } = useFeel('gentle');
+  const feedback = useFeel('snap');
 
   return (
-    <MotionConfig reducedMotion='user'>
+    <MotionConfig transition={transition}>
       <BaseDialog.Root
         {...rootProps}
         modal={modal}
@@ -228,9 +225,9 @@ export function Dialog(props: DialogProps) {
                     render={
                       <motion.div
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                        animate={pose({ opacity: 1 }, mode)}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        transition={feedback.fade}
                         style={{ willChange: 'opacity' }}
                       />
                     }
@@ -263,61 +260,35 @@ export function Dialog(props: DialogProps) {
                             : {
                                 opacity: 0,
                                 filter: 'blur(10px)',
-                                z: -100,
+                                z: -theme.travel.section * 2,
                                 rotateY: 25,
                                 rotateX: 5,
                                 transformPerspective: 500,
                               }
                         }
-                        animate={
-                          prefersReducedMotion
-                            ? {
-                                opacity: 1,
-                                transition: {
-                                  duration: 0.14,
-                                  ease: 'easeOut',
-                                },
-                              }
-                            : {
-                                opacity: 1,
-                                filter: 'blur(0px)',
-                                rotateX: 0,
-                                rotateY: 0,
-                                z: 0,
-                                transition: {
-                                  delay: 0.2,
-                                  duration: 0.5,
-                                  ease: [0.17, 0.67, 0.51, 1],
-                                  opacity: {
-                                    delay: 0.2,
-                                    duration: 0.5,
-                                    ease: 'easeOut',
-                                  },
-                                },
-                              }
-                        }
+                        animate={pose(
+                          {
+                            opacity: 1,
+                            filter: 'blur(0px)',
+                            rotateX: 0,
+                            rotateY: 0,
+                            z: 0,
+                          },
+                          mode,
+                        )}
                         exit={
                           prefersReducedMotion
-                            ? {
-                                opacity: 0,
-                                transition: {
-                                  duration: 0.12,
-                                  ease: 'easeOut',
-                                },
-                              }
+                            ? { opacity: 0 }
                             : {
                                 opacity: 0,
                                 filter: 'blur(10px)',
-                                z: -100,
+                                z: -theme.travel.section * 2,
                                 rotateY: 25,
                                 rotateX: 5,
                                 transformPerspective: 500,
-                                transition: {
-                                  duration: 0.3,
-                                  ease: [0.67, 0.17, 0.62, 0.64],
-                                },
                               }
                         }
+                        transition={transition}
                         style={{
                           transformPerspective: 500,
                           willChange: 'transform, opacity, filter',
@@ -325,56 +296,69 @@ export function Dialog(props: DialogProps) {
                       />
                     }
                   >
-                    <div
-                      data-slot='dialog-header'
-                      className={variants.header({
-                        className: headerClassName,
-                      })}
-                    >
-                      <BaseDialog.Title
-                        {...titleProps}
-                        data-slot='dialog-title'
-                        className={variants.title({
-                          className: titleClassName,
-                        })}
-                      >
-                        {title}
-                      </BaseDialog.Title>
-                      {description != null && (
-                        <BaseDialog.Description
-                          {...descriptionProps}
-                          data-slot='dialog-description'
-                          className={variants.description({
-                            className: descriptionClassName,
-                          })}
+                    {slots.header !== false &&
+                      ((hasContent(title) && slots.title !== false) ||
+                        (hasContent(description) &&
+                          slots.description !== false)) && (
+                        <useContentRender
+                          {...slots.header}
+                          data-slot='dialog-header'
+                          className={cx(
+                            variants.header(),
+                            slots.header?.className,
+                          )}
                         >
-                          {description}
-                        </BaseDialog.Description>
+                          {hasContent(title) && slots.title !== false && (
+                            <BaseDialog.Title
+                              {...slots.title}
+                              data-slot='dialog-title'
+                              className={asClass(
+                                variants.title(),
+                                slots.title?.className,
+                              )}
+                            >
+                              {title}
+                            </BaseDialog.Title>
+                          )}
+                          {hasContent(description) &&
+                            slots.description !== false && (
+                              <BaseDialog.Description
+                                {...slots.description}
+                                data-slot='dialog-description'
+                                className={asClass(
+                                  variants.description(),
+                                  slots.description?.className,
+                                )}
+                              >
+                                {description}
+                              </BaseDialog.Description>
+                            )}
+                        </useContentRender>
                       )}
-                    </div>
-
-                    {children != null && (
-                      <div
+                    {hasContent(children) && slots.content !== false && (
+                      <useContentRender
+                        {...slots.content}
                         data-slot='dialog-content'
-                        className={variants.content({
-                          className: contentClassName,
-                        })}
+                        className={cx(
+                          variants.content(),
+                          slots.content?.className,
+                        )}
                       >
                         {children}
-                      </div>
+                      </useContentRender>
                     )}
-
-                    {footer != null && (
-                      <div
+                    {hasContent(footer) && slots.footer !== false && (
+                      <useContentRender
+                        {...slots.footer}
                         data-slot='dialog-footer'
-                        className={variants.footer({
-                          className: footerClassName,
-                        })}
+                        className={cx(
+                          variants.footer(),
+                          slots.footer?.className,
+                        )}
                       >
                         {footer}
-                      </div>
+                      </useContentRender>
                     )}
-
                     {showCloseButton && (
                       <DialogClose
                         {...closeProps}
@@ -382,7 +366,14 @@ export function Dialog(props: DialogProps) {
                         className={variants.close({
                           className: closeClassName,
                         })}
-                        render={<motion.button whileTap={{ scale: 0.92 }} />}
+                        render={
+                          <motion.button
+                            whileTap={
+                              prefersReducedMotion ? undefined : { scale: 0.92 }
+                            }
+                            transition={feedback.spatial}
+                          />
+                        }
                       >
                         {closeIcon ?? (
                           <HugeiconsIcon

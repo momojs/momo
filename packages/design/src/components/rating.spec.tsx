@@ -28,6 +28,9 @@ mock.module('react', () => ({
   ...react,
   useCallback: (callback: (...args: unknown[]) => unknown) => callback,
   useState: () => [hoveredState, setHoveredValue],
+  useContext: () => null,
+  useMemo: <T,>(factory: () => T) => factory(),
+  useSyncExternalStore: () => prefersReducedMotion,
 }));
 
 mock.module('../hooks', () => ({
@@ -45,10 +48,10 @@ mock.module('motion/react', () => ({
   motion: {
     span: 'span',
   },
-  useReducedMotion: () => prefersReducedMotion,
 }));
 
 const { Rating } = await import('./rating');
+const { defaultTheme } = await import('../motion/index.js');
 
 function renderRating(props: RatingProps = {}) {
   const wrapper = Rating(props) as TestElement;
@@ -119,7 +122,9 @@ describe('Rating', () => {
     const items = getItems(root);
     const [emptyIcon, filledLayer] = getChildren(items[0] as TestElement);
 
-    expect(wrapper.props.reducedMotion).toBe('user');
+    expect(wrapper.props.transition).toMatchObject(
+      defaultTheme.transitions.snap,
+    );
     expect(root.type).toBe('div');
     expect(root.props['data-slot']).toBe('rating');
     expect(root.props['data-size']).toBe('sm');
@@ -331,11 +336,13 @@ describe('Rating', () => {
     const filledLayer = getChildren(item)[1] as TestElement;
 
     expect(item.props.initial).toBe(false);
-    expect(item.props.whileTap).toEqual({ scale: 0.9 });
+    expect(item.props.whileTap).toBeUndefined();
+    expect(item.props.whileHover).toBeUndefined();
+    expect(item.props.animate).toEqual({ scale: [1, 1] });
     expect(filledLayer.props.initial).toBe(false);
-    expect(filledLayer.props.transition).toEqual({
+    expect(filledLayer.props.transition).toMatchObject({
+      type: 'tween',
       duration: 0,
-      ease: 'easeOut',
     });
     expect(capturedOptions?.value).toBe(1);
   });

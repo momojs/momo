@@ -48,6 +48,7 @@ import { projection } from "@momots/host/fingerprint";
 | `css/to-rgb` | 完整 | 完整 | 纯字符串解析，不依赖 DOM |
 | `css/to-css-variable` | 完整 | 不可用 | 无 DOM 时返回 `initial` 或 `undefined` |
 | `canvas` | 完整 | 不可用 | 无 Canvas 时 `measureText` 返回 `undefined` |
+| `truncated` | 完整 | 降级 | 无 Canvas 时返回原文 |
 | `fingerprint` | 浏览器语义 | 宿主语义 | 标识 Bun 宿主/进程，不是请求方访客指纹 |
 | Web API 守卫 | 完整 | 完整 | 可判断 `Blob`、Stream、`FormData`、buffer 等对象 |
 | DOM 守卫与 `nearest` | 完整 | 不可用 | 无 DOM 时返回 `false` 或 `undefined` |
@@ -65,6 +66,7 @@ import { projection } from "@momots/host/fingerprint";
 | 二进制      | `buffer`      | `bytesToHex`、`hexToBytes`、`blobToBytes`      |
 | CSS         | `css/*`       | `toRGB`、`toCSSVariable`、`toCSSRGBVariable`   |
 | Canvas      | `canvas`      | `measureText`                                  |
+| 文本截断    | `truncated`   | `truncated`                                    |
 | 请求        | `fetch`       | `toCurl`                                       |
 | 滚动        | `nearest`     | `nearestScrollable`                            |
 | 指纹        | `fingerprint` | `projection`                                   |

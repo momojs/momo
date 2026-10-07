@@ -89,6 +89,10 @@ toast.add({
 
 保存 `add()` 返回的 id，即可原位更新通知；使用同一个显式 id 再次 `add()` 也会合并现有通知并刷新计时器。
 
+更新导致内容高度变化时，Toast 会平滑调整高度；宽度保持由 viewport 决定。开启减少动态效果时，高度立即更新。
+
+默认状态图标共用 `Spinner` 的 Morphicons 入口：loading 完成时从当前圆弧平滑变成结果图标，其他状态之间也会继续变形，沿用 [Icon](/docs/design/icon) 的 `snap` 主题和减少动态效果策略。自定义图标仍可通过 `slots.icon.children` 提供。
+
 ```tsx
 const id = toast.add({
   type: "loading",
@@ -196,6 +200,17 @@ Viewport 提供命名的通知区域，Root 自动关联标题和说明；后方
 | `slots`                        | slot config                                                        | 配置内容节点或移除可选节点                            |
 
 ### useToast
+
+`useToast()` 默认使用 `strict: true`，要求组件位于 `ToastProvider` 内。允许独立使用的组件可以调用 `useToast({ strict: false })`：有 Provider 时返回同一个响应式 controller，没有时返回 `null`，由调用方选择备用展示方式。
+
+```tsx
+const toast = useToast({ strict: false });
+
+function showHelp() {
+  if (toast) toast.add({ description: "用于接收工作区通知。" });
+  else setHelpOpen(true);
+}
+```
 
 | 方法                      | 说明                                |
 | ------------------------- | ----------------------------------- |

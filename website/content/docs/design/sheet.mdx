@@ -1,41 +1,265 @@
 ---
 title: Sheet
-description: 从视口边缘展开的对话面板。
+description: 支持四个展开方向、焦点管理和内容插槽的边缘对话面板。
 icon: PanelRightOpen
 ---
 
-Sheet 基于 Base UI Dialog，提供四个方向的边缘面板。需要滑动关闭或停靠点时使用 [Drawer](/docs/design/drawer)。
+`Sheet` 基于 Base UI Dialog，将设置、详情或编辑表单放在视口边缘。默认从右侧展开，提供模态交互、焦点管理、Esc / 外部点击关闭和关闭后的焦点恢复。
+
+<SheetPlayground />
+
+预览中可切换展开方向、模态模式、遮罩和长内容。切换 Modal 时，演示会为非模态与仅圈定焦点的模式关闭遮罩；也可以单独调整 Backdrop。底部始终保留 Done 按钮，便于在隐藏右上角关闭按钮后退出面板。
+
+## 使用
 
 ```tsx
-import { Button } from "@momots/design/components/button";
-import { Sheet } from "@momots/design/components/sheet";
+import { Dialog as BaseDialog } from '@base-ui/react/dialog';
+import { Button } from '@momots/design/components/button';
+import { Input } from '@momots/design/components/input';
+import { Sheet } from '@momots/design/components/sheet';
 
 <Sheet
   trigger={<Button>工作区设置</Button>}
-  title="工作区设置"
-  description="选择工作区的默认显示方式。"
-  footer={<Button>保存</Button>}
+  title='工作区设置'
+  description='修改工作区的显示名称。'
+  close={false}
+  footer={
+    <BaseDialog.Close render={<Button />}>
+      完成
+    </BaseDialog.Close>
+  }
+>
+  <label className='grid gap-2'>
+    工作区名称
+    <Input defaultValue='设计工作区' />
+  </label>
+</Sheet>
+```
+
+省略 `open` 时，Sheet 自行管理状态；`defaultOpen` 设置初始值，默认为 `false`。`trigger` 通过 Base UI Trigger 组合元素，添加打开语义、键盘交互和 ARIA 属性。
+
+底部内容由调用方提供。当前没有导出的 `SheetClose`，可在 Sheet 的正文或 `footer` 内使用 `BaseDialog.Close`；它与面板共享同一个 Root，适合非受控用法。上例隐藏右上角关闭节点，使用底部的“完成”按钮关闭面板。
+
+## 展开方向与尺寸
+
+`side` 表示面板贴合的视口边缘，默认为 `right`：
+
+| `side` | 默认布局 |
+| --- | --- |
+| `right` | 靠右、占满视口高度；宽度为视口的 3/4，`sm` 起使用 `max-w-sm` 限制最大宽度 |
+| `left` | 靠左，尺寸规则与 `right` 相同 |
+| `top` | 靠上、占满视口宽度；高度由内容决定 |
+| `bottom` | 靠下、占满视口宽度；高度由内容决定 |
+
+通过 `popup.className` 调整面板尺寸。例如加宽右侧设置面板：
+
+```tsx
+<Sheet
+  side='right'
+  trigger={<Button>查看详情</Button>}
+  title='项目详情'
+  popup={{ className: 'w-full sm:max-w-xl' }}
+>
+  项目详情内容
+</Sheet>
+```
+
+正文默认使用 `min-h-0 flex-1 overflow-y-auto`，内容较长时在面板内部滚动。上下展开的面板默认没有最大高度限制，应按需要限制高度，给正文留出滚动空间：
+
+```tsx
+<Sheet
+  side='bottom'
+  trigger={<Button>活动记录</Button>}
+  title='活动记录'
+  popup={{ className: 'max-h-[80dvh]' }}
+  slots={{ content: { className: 'space-y-3 pb-4' } }}
+>
+  {Array.from({ length: 20 }, (_, index) => (
+    <p key={index}>活动记录 {index + 1}</p>
+  ))}
+</Sheet>
+```
+
+`popup.side` 也可设置方向，并且会覆盖顶层 `side`；通常只设置顶层属性即可。Sheet 使用 CSS 透明度与位移过渡，不提供拖拽、滑动关闭或停靠点。这些交互应使用 [Drawer](/docs/design/drawer)；居中对话框则使用 [Dialog](/docs/design/dialog)。
+
+## 受控状态与关闭
+
+受控模式使用 `open` 和 `onOpenChange`。保存成功后可更新 `open` 关闭面板：
+
+```tsx
+import { useState } from 'react';
+
+import { Dialog as BaseDialog } from '@base-ui/react/dialog';
+import { Button } from '@momots/design/components/button';
+import { Sheet } from '@momots/design/components/sheet';
+
+function WorkspaceSettings({ save }: { save: () => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSave() {
+    setSaving(true);
+    setError('');
+    try {
+      await save();
+      setOpen(false);
+    } catch {
+      setError('保存失败，请重试。');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen, details) => {
+        if (!nextOpen && saving) {
+          details.cancel();
+          return;
+        }
+        setOpen(nextOpen);
+      }}
+      trigger={<Button>编辑设置</Button>}
+      title='工作区设置'
+      close={false}
+      footer={
+        <>
+          <Button disabled={saving} onClick={handleSave}>
+            {saving ? '保存中…' : '保存'}
+          </Button>
+          <BaseDialog.Close
+            disabled={saving}
+            render={<Button variant='secondary' />}
+          >
+            取消
+          </BaseDialog.Close>
+        </>
+      }
+    >
+      检查设置后保存到当前工作区。
+      {error && <p role='alert'>{error}</p>}
+    </Sheet>
+  );
+}
+```
+
+Sheet 直接沿用 Base UI 的 `onOpenChange(nextOpen, details)`，没有额外的 `onChange` 简写。`details.reason` 可区分 `trigger-press`、`outside-press`、`escape-key`、`close-press` 等原因；调用 `details.cancel()` 后应立即返回，避免继续更新受控状态。
+
+上例在保存期间阻止交互触发的关闭请求。直接调用 `setOpen(false)` 不会经过 `onOpenChange`，因此成功回调可以主动关闭；如果业务需要统一的关闭检查，也应在主动更新状态前执行检查。
+
+只需要阻止外部点击关闭时，使用 `disablePointerDismissal`。它不阻止 Esc 或关闭按钮；非模态下也会阻止焦点移到面板外时关闭。动画完成后的工作可以放在 `onOpenChangeComplete` 中。
+
+## 模态与焦点
+
+| `modal` | 行为 |
+| --- | --- |
+| `true`（默认） | 圈定焦点、锁定页面滚动，并阻止面板外的指针交互 |
+| `false` | 允许与页面其余部分交互 |
+| `'trap-focus'` | 圈定焦点，但不锁定页面滚动或禁用外部指针交互 |
+
+`backdrop` 独立控制可见遮罩，默认启用。`backdrop={false}` 只移除该遮罩，不会改变 `modal` 的焦点与滚动策略；当前封装也不会随 `modal={false}` 自动移除遮罩。需要可与页面交互的侧栏时，组合设置：
+
+```tsx
+<Sheet
+  modal={false}
+  backdrop={false}
+  disablePointerDismissal
+  trigger={<Button>查看参考</Button>}
+  title='参考资料'
+>
+  可在查看资料时继续操作页面。
+</Sheet>
+```
+
+上例使用 `disablePointerDismissal`，让焦点移出面板或操作页面时仍保留侧栏；仍可通过 Esc 或关闭按钮退出。
+
+打开时默认聚焦首个可聚焦元素，触屏打开时优先聚焦面板本身，避免立即唤起虚拟键盘。关闭时恢复到触发器或先前聚焦的元素；可通过 `popup.initialFocus` / `popup.finalFocus` 指定目标 ref 或回调。相关行为遵循 [Base UI Dialog](https://base-ui.com/react/components/dialog)。
+
+为面板提供 `title`，让 Base UI 自动关联可访问名称；`description` 提供可选说明。如果不展示标题，可通过 `slots={{ title: { className: 'sr-only' } }}` 在视觉上隐藏它，或通过 `popup={{ 'aria-label': '工作区设置' }}` 提供名称。模态面板应保留可见且有名称的关闭操作；设置 `close={false}` 后，在正文或底部提供替代按钮。
+
+## 内容插槽
+
+`title`、`description`、`children`、`footer` 都是 ReactNode 内容；`slots` 配置对应的容器、属性和样式，遵循共享的 [Content Slots](/docs/design/content-slots) 约定。
+
+```tsx
+<Sheet
+  trigger={<Button>编辑工作区</Button>}
+  title='工作区设置'
+  description='修改显示在工作区中的名称。'
+  footer={<BaseDialog.Close render={<Button />}>完成</BaseDialog.Close>}
   slots={{
+    header: { render: <header />, className: 'pr-16' },
     title: { render: <h3 /> },
-    content: { className: "space-y-3" },
-    footer: { render: <footer /> },
+    description: { className: 'text-momo-fg-muted' },
+    content: { render: <section />, className: 'space-y-3' },
+    footer: { render: <footer />, className: 'sm:flex-row sm:justify-end' },
   }}
 >
   面板正文
 </Sheet>
 ```
 
-内容属性遵循 [Content Slots](/docs/design/content-slots)：`title`、`description`、`children`、`footer` 都是 ReactNode；`slots.header`、`slots.title`、`slots.description`、`slots.content`、`slots.footer` 配置节点。
+| Slot | 默认内容与布局 |
+| --- | --- |
+| `header` | 标题与说明的纵向容器，默认 `p-4` |
+| `title` | Base UI Title，可访问标题 |
+| `description` | Base UI Description，可访问说明 |
+| `content` | 正文容器，默认水平内边距 `px-4`，可独立滚动 |
+| `footer` | 底部操作容器，默认 `mt-auto flex flex-col gap-2 p-4` |
 
-| Prop | 类型 | 说明 |
+省略 slot 配置时使用默认节点，也可以直接传元素或 render 回调作为简写。传 `false` 会移除该节点及其内容，`slots={{ header: false }}` 会同时移除标题与说明。内容为 `undefined`、`null` 或 `false` 时不创建对应节点；`0` 和空字符串仍是有效内容。
+
+`slots.content` 只包裹正文，不包含标题和底部操作。render 回调必须透传收到的 props，保留 `children`、ID、ref 和事件；不要把正文放进 slot 配置的 `children` 中。
+
+## 遮罩与关闭节点
+
+`backdrop` 和 `close` 使用 [SlotBaseConfig](/docs/design/slot-composition)，与内容 `slots` 的组合规则不同：
+
+| 配置 | 行为 |
+| --- | --- |
+| 省略 / `true` | 启用默认节点 |
+| `false` / `null` | 移除节点 |
+| props object | 配置内置 Base UI 节点，保留原有行为 |
+| ReactNode | 完整替换节点，不会自动添加遮罩或关闭行为 |
+
+自定义关闭按钮时，优先在 props object 内使用 `render`，以保留 Base UI Close 的交互：
+
+```tsx
+<Sheet
+  trigger={<Button>打开设置</Button>}
+  title='设置'
+  backdrop={{ className: 'bg-black/30' }}
+  close={{
+    'aria-label': '关闭设置',
+    render: <Button variant='ghost' size='sm'>关闭</Button>,
+  }}
+  slots={{ header: { className: 'pr-16' } }}
+>
+  面板正文
+</Sheet>
+```
+
+默认关闭节点位于右上角，当前只有供读屏使用的 `Close` 文本，没有可见图标。可像上例通过 `close.render` 添加可见文字或图标，并为标题区预留空间。直接写 `close={<Button>关闭</Button>}` 会完全替换内部 Close，按钮不会自动关闭面板。
+
+## Props
+
+| Prop | 类型 | 默认值 / 说明 |
 | --- | --- | --- |
-| `open` / `defaultOpen` | `boolean` | 受控 / 非受控打开状态 |
-| `onOpenChange` | Base UI callback | 状态变化，可通过 details 取消 |
-| `trigger` | Base UI render | 打开面板的元素或 render callback |
-| `side` | `"top" \| "right" \| "bottom" \| "left"` | 展开方向，默认 `"right"` |
-| `title` / `description` / `children` / `footer` | `ReactNode` | 标题、说明、正文与底部内容 |
-| `slots` | `ContentSlotsProps<SheetContentSlots>` | 内容节点配置 |
-| `popup` | Base UI Dialog Popup props | 面板属性与样式，不包含 `children` |
-| `backdrop` / `close` | `SlotBaseConfig` | 遮罩与关闭按钮配置，默认启用，`false` 可关闭 |
+| `open` | `boolean` | 受控打开状态，配合 `onOpenChange` 更新 |
+| `defaultOpen` | `boolean` | `false`，非受控初始状态 |
+| `onOpenChange` | `(open, details) => void` | Base UI 状态变化回调，可读取原因并取消 |
+| `onOpenChangeComplete` | `(open: boolean) => void` | 打开或关闭动画完成后的回调 |
+| `trigger` | `DialogTriggerProps['render']` | 打开面板的元素或 render 回调 |
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'right'`，展开方向 |
+| `title` / `description` | `ReactNode` | 标题与说明 |
+| `children` / `footer` | `ReactNode` | 正文与底部内容 |
+| `slots` | `ContentSlotsProps<SheetContentSlots>['slots']` | 配置 header、title、description、content、footer 节点 |
+| `popup` | `SheetProps['popup']` | Base UI Popup 属性及 `side`，不含 `children`，包含尺寸、样式和焦点配置 |
+| `backdrop` | `SlotBaseConfig<DialogBackdropProps>` | `true`，遮罩配置或完整替换节点 |
+| `close` | `SlotBaseConfig<DialogCloseProps>` | `true`，右上角关闭节点配置或完整替换节点 |
+| `modal` | `boolean \| 'trap-focus'` | `true`，焦点、滚动与外部交互策略 |
+| `disablePointerDismissal` | `boolean` | `false`，阻止外部点击关闭 |
 
-其余 Base UI Dialog Root 属性直接透传。应提供可访问标题；自定义 `render` 回调时透传收到的 props，保留 ID、ref 和交互处理。
+其余 Base UI Dialog Root 属性直接透传。面板样式使用 `popup.className`，各内容区域使用 `slots`；Sheet Root 自身不渲染 DOM 节点。模块导出 `Sheet`、`SheetTrigger`、`SheetProps` 和 `SheetContentSlots`；`SheetTrigger` 需要关联对应的 Base UI Dialog Root，普通用法使用 `trigger` 属性即可。

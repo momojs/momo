@@ -49,6 +49,7 @@ import {
   useHighlightTrigger,
 } from '../effects/highlight.js';
 import { useControllableValue } from '../hooks/index.js';
+import { pose, useFeel } from '../motion/index.js';
 import type {
   ControlOption,
   ControlValue,
@@ -293,6 +294,12 @@ function SelectPopup({
   render: renderProp,
   ...props
 }: SelectPopupSlotProps) {
+  const { theme, reduced, mode, transition } = useFeel('ui');
+  const hidden = {
+    opacity: 0,
+    scale: reduced ? 1 : 0.98,
+    y: reduced ? 0 : -theme.travel.hover,
+  };
   return (
     <Popup
       {...asData('select-popup')}
@@ -300,10 +307,13 @@ function SelectPopup({
       render={
         renderProp ?? (
           <motion.div
-            transition={{ duration: 0.2 }}
-            initial={{ opacity: 0, scale: 0.98, y: -2 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: -2 }}
+            transition={transition}
+            initial={hidden}
+            animate={pose(
+              { opacity: 1, scale: 1, y: 0 },
+              mode,
+            )}
+            exit={hidden}
             style={{ willChange: 'transform, opacity' }}
           />
         )
@@ -740,6 +750,7 @@ export function Select<
   T extends ControlValue,
   Multiple extends boolean | undefined = false,
 >(props: SelectProps<T, Multiple>) {
+  const { transition } = useFeel('ui');
   const {
     options = [],
     items,
@@ -925,7 +936,7 @@ export function Select<
   });
 
   return (
-    <MotionConfig reducedMotion='user'>
+    <MotionConfig transition={transition}>
       <Root
         {...rootProps}
         actionsRef={rootActionsRef}

@@ -4,7 +4,7 @@ description: 统一标签、控件、说明与校验错误的字段容器。
 icon: ListChecks
 ---
 
-`Field` 基于 Base UI Field 封装，把可访问标签、实际控件与 validity state 组合成一个字段；`stacked` 变体还会显示说明文本和校验错误。组件保留原生表单提交、受控与非受控校验、`actionsRef`、`render` 和 ref，同时使用 momo semantic token 统一视觉状态。
+`Field` 基于 Base UI Field 封装，把可访问标签、实际控件与 validity state 组合成一个字段。`cell` 通过提示按钮按需展示说明或错误，`stacked` 直接显示这些内容。Field 可以独立使用；放在 `ToastProvider` 内时，`cell` 的提示会自动使用 Toast。组件保留原生表单提交、受控与非受控校验、`actionsRef`、`render` 和 ref，同时使用 momo semantic token 统一视觉状态。
 
 <FieldPlayground />
 
@@ -28,7 +28,7 @@ import { Field } from "@momots/design/components/field";
 />
 ```
 
-`label` 始终通过 Base UI `Field.Label` 渲染。`stacked` 变体中的 `description` 通过 `Field.Description` 渲染，因此浏览器会自动建立 label 与 `aria-describedby` 关联。placeholder 只是输入提示，不能替代 `label`。
+`label` 始终通过 Base UI `Field.Label` 渲染。两种变体的说明与错误都保留在字段内部，通过 Base UI 自动关联到控件的 `aria-describedby`。placeholder 只是输入提示，不能替代 `label`。
 
 ## 组合自定义控件
 
@@ -83,7 +83,7 @@ import {
 />
 ```
 
-不传 `error` 时，`stacked` 变体中的 Error 会显示浏览器、`validate` 或 Base UI Form 提供的错误文本。高层 Field 的错误会匹配任意无效状态；需要只匹配 `tooShort` 等单个 `ValidityState` 时，请使用 `FieldError` primitive 的 `match` 属性。
+不传 `error` 时，Error 会使用浏览器、`validate` 或 Base UI Form 提供的错误文本，`cell` 的错误提示也会使用这些内容。`cell` 的错误图标由实际校验状态决定，预设 `error` 文案不会让有效字段显示错误图标。需要只匹配 `tooShort` 等单个 `ValidityState` 时，请使用 `FieldError` primitive 的 `match` 属性。
 
 ### 自定义校验
 
@@ -134,7 +134,7 @@ import {
 
 ## 视觉变体
 
-- `cell` 是默认的紧凑双列布局，仅显示标签和控件。
+- `cell` 是默认的紧凑双列布局，在标签旁提供说明或错误提示按钮。
 - `stacked` 使用 surface、边框与阴影，并显示说明和错误；聚焦和错误状态由 Base UI state 回调映射到 CVA，而不是依赖 `data-*` 选择器。
 
 ```tsx
@@ -144,6 +144,27 @@ import {
   control={{ required: true, pattern: "DELETE" }}
 />
 ```
+
+### 自动接入 Toast
+
+`cell` 的提示按钮通过 `useToast({ strict: false })` 读取最近一层 `ToastProvider`，不需要额外配置 Field：
+
+```tsx
+import { Field } from "@momots/design/components/field";
+import { ToastProvider } from "@momots/design/components/toast";
+
+<ToastProvider>
+  <Field
+    label="邮箱"
+    description="用于接收工作区通知。"
+    control={{ type: "email", required: true }}
+  />
+</ToastProvider>
+```
+
+没有 `ToastProvider` 时，Field 仍然可以正常渲染；点击提示按钮只会通过 `console.warn` 提醒缺少 Provider，不会展开内容。有 Provider 时，点击会展示 Toast。错误提示由实际校验状态决定，并优先于说明；通知不会自动随每次校验弹出。
+
+提示按钮使用原生按钮语义，支持辅助技术和键盘激活。当前提示的语义节点保留在所属 Field 内并关联到控件，Toast 只接收解析后的展示内容。`stacked` 始终使用内联反馈。
 
 ## Control slot
 
@@ -205,8 +226,8 @@ import {
 | `label` | `ReactNode` | 可访问标签；未提供时应为实际控件补充 `aria-label` 或 `aria-labelledby` |
 | `children` | `ReactNode` | 自定义实际控件；存在时替换内建 Control |
 | `size` | `"sm" \| "md" \| "lg"` | 标签和内建 Control 的视觉尺寸，默认 `"md"` |
-| `description` | `ReactNode` | `stacked` 变体中自动关联到控件的说明文本 |
-| `error` | `ReactNode` | `stacked` 变体中的错误文本；省略时使用 Base UI 生成的错误 |
+| `description` | `ReactNode` | 自动关联到控件的说明；`cell` 按需展示，`stacked` 内联显示 |
+| `error` | `ReactNode` | 校验错误内容；省略时使用 Base UI 生成的错误，`cell` 按需展示 |
 | `variant` | `"cell" \| "stacked"` | 视觉变体，默认 `"cell"` |
 | `control` | slot config | 配置、替换或移除内建 Control |
 | `validity` | `(state) => ReactNode` | 读取完整 validity state |
@@ -232,7 +253,7 @@ import {
 ## 可访问性
 
 - 不要用 placeholder 代替标签。视觉上隐藏标签时，请使用 `FieldLabel` primitive 并设置 `className="sr-only"`。
-- `stacked` 中的 `description` 与 Error 会自动登记到控件的 `aria-describedby`。
+- 两种变体的 `description` 与 Error 都会自动登记到控件的 `aria-describedby`，`cell` 收起内容或使用 Toast 时也保留此关联。
 - `disabled` 应优先传给 Field Root，让标签、说明与实际控件共享状态。
 - `stacked` 只改变布局和视觉层级，不改变校验规则或错误严重程度。
 - 动态服务端错误若需要即时播报，可通过 `FieldError` primitive 显式添加 `role="alert"` 或 `aria-live="polite"`；组件不会默认为所有按键校验强制播报。

@@ -5,14 +5,15 @@ import { useState } from 'react';
 
 import type { AccordionRootProps } from '@base-ui/react/accordion';
 import { Accordion as BaseAccordion } from '@base-ui/react/accordion';
-import { ChevronDownIcon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { ChevronDownIcon, ChevronUpIcon } from '@hugeicons/core-free-icons';
 import { asArray } from '@momots/core';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
 import { useControllableValue, usePresenceGate } from '../hooks/index.js';
+import { pose, useFeel } from '../motion/index.js';
 import type { ControlOption, ControlValue } from '../shared/index.js';
 import { cx } from '../tailwind/index.js';
+import { Icon } from './icon.js';
 
 type ItemProps = {
   value: ControlValue;
@@ -22,6 +23,8 @@ type ItemProps = {
 };
 
 function Item({ open = false, value, title, content }: ItemProps) {
+  const { reduced, mode, spatial, fade } = useFeel('ui');
+  const { transition: feedback } = useFeel('snap');
   const [hasFocus, setHasFocus] = useState(false);
   const { visible, createGate } = usePresenceGate(open);
 
@@ -42,30 +45,20 @@ function Item({ open = false, value, title, content }: ItemProps) {
           }
         >
           <span className='relative z-1 min-w-0 flex-1'>{title}</span>
-          <motion.span
-            className='relative z-1 grid size-4 shrink-0 place-items-center text-momo-fg-muted'
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ type: 'spring', bounce: 0.2, visualDuration: 0.2 }}
-          >
-            <HugeiconsIcon
-              icon={ChevronDownIcon}
-              size={16}
-              strokeWidth={1.8}
-              aria-hidden
-            />
-          </motion.span>
+          <Icon
+            className='relative z-1 size-4 shrink-0 text-momo-fg-muted'
+            icon={open ? ChevronUpIcon : ChevronDownIcon}
+            size={16}
+            aria-hidden
+          />
           {hasFocus && (
             <motion.div
-              layoutId='focus-ring'
+              layoutId={reduced ? undefined : 'focus-ring'}
               className='absolute inset-x-2 inset-y-1 rounded-momo-md bg-momo-bg-surface-muted'
               variants={{
-                pressed: { scale: 0.98 },
+                pressed: { scale: reduced ? 1 : 0.98 },
               }}
-              transition={{
-                type: 'spring',
-                visualDuration: 0.2,
-                bounce: 0.2,
-              }}
+              transition={feedback}
             />
           )}
         </BaseAccordion.Trigger>
@@ -83,35 +76,50 @@ function Item({ open = false, value, title, content }: ItemProps) {
           {open && (
             <motion.div
               variants={{
-                open: {
-                  height: 'auto',
-                  maskImage:
-                    'linear-gradient(to bottom, black 100%, transparent 100%)',
-                },
-                closed: {
-                  height: 0,
-                  maskImage:
-                    'linear-gradient(to bottom, black 50%, transparent 100%)',
-                },
+                open: pose(
+                  {
+                    height: 'auto',
+                    maskImage: reduced
+                      ? 'none'
+                      : 'linear-gradient(to bottom, black 100%, transparent 100%)',
+                  },
+                  mode,
+                ),
+                closed: pose(
+                  {
+                    height: 0,
+                    maskImage: reduced
+                      ? 'none'
+                      : 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                  },
+                  mode,
+                ),
               }}
               initial='closed'
               animate='open'
               exit='closed'
+              transition={spatial}
             >
               <motion.div
                 variants={{
-                  open: {
-                    filter: 'blur(0px)',
-                    opacity: 1,
-                  },
-                  closed: {
-                    filter: 'blur(2px)',
-                    opacity: 0,
-                  },
+                  open: pose(
+                    {
+                      filter: 'blur(0px)',
+                      opacity: 1,
+                    },
+                    mode,
+                  ),
+                  closed: pose(
+                    {
+                      filter: reduced ? 'blur(0px)' : 'blur(2px)',
+                      opacity: 0,
+                    },
+                    mode,
+                  ),
                 }}
                 transition={{
-                  filter: { type: 'tween', duration: 0.18, ease: 'easeOut' },
-                  opacity: { type: 'tween', duration: 0.14, ease: 'easeOut' },
+                  filter: fade,
+                  opacity: fade,
                 }}
               >
                 <div className='px-momo-md pb-momo-md pt-1 text-momo-body-sm text-momo-fg-muted'>
@@ -145,6 +153,7 @@ export function Accordion<T extends ControlValue>({
   onValueChange,
   ...props
 }: AccordionProps<T>) {
+  const { transition } = useFeel('ui');
   const [currents, setCurrents] = useControllableValue({
     value,
     defaultValue,
@@ -153,13 +162,7 @@ export function Accordion<T extends ControlValue>({
   const values = asArray(currents);
 
   return (
-    <MotionConfig
-      transition={{
-        type: 'spring',
-        bounce: 0.2,
-        visualDuration: 0.4,
-      }}
-    >
+    <MotionConfig transition={transition}>
       <BaseAccordion.Root
         value={currents}
         multiple={multiple}

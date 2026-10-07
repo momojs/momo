@@ -1,7 +1,7 @@
 {
   "name": "@momots/design",
   "version": "0.1.0-alpha.1",
-  "description": "React 19 interface primitives combining Base UI, Motion, and Tailwind CSS v4.",
+  "description": "React 19.2+ interface primitives combining Base UI, Motion, and Tailwind CSS v4.",
   "keywords": [
     "momots",
     "react",
@@ -55,6 +55,10 @@
       "types": "./dist/components/field.d.ts",
       "import": "./dist/components/field.js"
     },
+    "./components/icon": {
+      "types": "./dist/components/icon.d.ts",
+      "import": "./dist/components/icon.js"
+    },
     "./components/input": {
       "types": "./dist/components/input.d.ts",
       "import": "./dist/components/input.js"
@@ -75,6 +79,10 @@
       "types": "./dist/components/picker-time.d.ts",
       "import": "./dist/components/picker-time.js"
     },
+    "./components/popover": {
+      "types": "./dist/components/popover.d.ts",
+      "import": "./dist/components/popover.js"
+    },
     "./components/radio": {
       "types": "./dist/components/radio.d.ts",
       "import": "./dist/components/radio.js"
@@ -86,6 +94,10 @@
     "./components/select": {
       "types": "./dist/components/select.d.ts",
       "import": "./dist/components/select.js"
+    },
+    "./components/sheet": {
+      "types": "./dist/components/sheet.d.ts",
+      "import": "./dist/components/sheet.js"
     },
     "./components/slider": {
       "types": "./dist/components/slider.d.ts",
@@ -122,6 +134,10 @@
     "./effects": {
       "types": "./dist/effects/index.d.ts",
       "import": "./dist/effects/index.js"
+    },
+    "./motion": {
+      "types": "./dist/motion/index.d.ts",
+      "import": "./dist/motion/index.js"
     },
     "./shared": {
       "types": "./dist/shared/index.d.ts",
@@ -179,6 +195,7 @@
     "@hugeicons/react": "^1.1.9",
     "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
     "@momots/host": ">=0.1.0-alpha.0 <0.2.0",
+    "cn": "^0.4.0",
     "cva": "^1.0.0-beta.8",
     "date-fns": "^4.4.0",
     "motion": "^12.42.2",
@@ -186,11 +203,11 @@
     "react-dom": "^19.2.7",
     "remeda": "^2.32.0",
     "tailwindcss": "^4.0.0",
-    "tailwind-merge": "^3.6.0",
     "type-fest": "5.4.4"
   },
   "dependencies": {
     "@ncdai/react-wheel-picker": "^1.2.2",
+    "morphicons": "^1.7.1",
     "motion-plus": "^1.5.1"
   }
 }

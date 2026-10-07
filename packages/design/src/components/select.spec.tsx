@@ -29,10 +29,14 @@ const clearHighlight = mock(() => undefined);
 const flushHighlight = mock(() => undefined);
 const setHighlightTarget = mock(() => undefined);
 const unmountSelect = mock(() => undefined);
+let prefersReducedMotion = false;
 
 mock.module('react', () => ({
   ...react,
   useRef: <T,>(initial: T) => ({ current: initial }),
+  useContext: () => null,
+  useMemo: <T,>(factory: () => T) => factory(),
+  useSyncExternalStore: () => prefersReducedMotion,
 }));
 
 mock.module('../hooks', () => ({
@@ -70,6 +74,7 @@ const [{ Select }, { Select: BaseSelect }] = await Promise.all([
   import('./select'),
   import('@base-ui/react/select'),
 ]);
+const { defaultTheme } = await import('../motion/index.js');
 
 const baseSelectTypes = new Set<unknown>([
   BaseSelect.Root,
@@ -189,6 +194,7 @@ function getClassTokens<TState>(element: TestElement, state: TState) {
 }
 
 beforeEach(() => {
+  prefersReducedMotion = false;
   setOpen.mockClear();
   setSelected.mockClear();
   clearHighlight.mockClear();
@@ -248,13 +254,30 @@ describe('Select', () => {
     expect(popupMotion.props.initial).toEqual({
       opacity: 0,
       scale: 0.98,
-      y: -2,
+      y: -defaultTheme.travel.hover,
     });
     expect(popupMotion.props.animate).toEqual({ opacity: 1, scale: 1, y: 0 });
     expect(popupMotion.props.exit).toEqual({
       opacity: 0,
       scale: 0.98,
-      y: -2,
+      y: -defaultTheme.travel.hover,
+    });
+  });
+
+  test('keeps popup travel and scale still when reduced motion is preferred', () => {
+    prefersReducedMotion = true;
+    const root = renderSelect();
+    const popup = findElement(root, BaseSelect.Popup);
+    const popupMotion = popup.props.render as TestElement;
+
+    expect(popupMotion.props.initial).toEqual({ opacity: 0, scale: 1, y: 0 });
+    expect(popupMotion.props.exit).toEqual({ opacity: 0, scale: 1, y: 0 });
+    expect(popupMotion.props.transition).toMatchObject({
+      duration: 0,
+      opacity: {
+        type: 'tween',
+        duration: defaultTheme.transitions.ui.duration,
+      },
     });
   });
 

@@ -3,35 +3,16 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
-import { HugeiconsIcon } from '@hugeicons/react';
-
 import { Checkbox } from '../../../../../packages/design/src/components/checkbox';
 import { Input } from '../../../../../packages/design/src/components/input';
 import { Select } from '../../../../../packages/design/src/components/select';
 import type { PlaygroundThemeName } from './theme';
 import { PLAYGROUND_THEMES, usePlaygroundTheme } from './theme';
 
+export { Icon } from '../../../../../packages/design/src/components/icon';
+
 export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ');
-}
-
-export function Icon({
-  icon,
-  size = 18,
-  strokeWidth = 1.8,
-}: {
-  icon: Parameters<typeof HugeiconsIcon>[0]['icon'];
-  size?: number;
-  strokeWidth?: number;
-}) {
-  return (
-    <HugeiconsIcon
-      icon={icon}
-      size={size}
-      strokeWidth={strokeWidth}
-      aria-hidden
-    />
-  );
 }
 
 type SelectOption<T extends string> = {

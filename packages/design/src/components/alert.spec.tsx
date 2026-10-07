@@ -118,35 +118,76 @@ describe('Alert', () => {
       title: 0,
       description: '',
       action: 'Open',
-      titleSlot: { className: 'custom-title', id: 'title' },
-      descriptionSlot: false,
-      actionSlot: <a href='/activity'>Activity</a>,
-      iconSlot: <span data-custom-icon />,
+      icon: '!',
+      slots: {
+        title: { className: 'custom-title', id: 'title' },
+        description: false,
+        action: { render: <a href='/activity' /> },
+        icon: { render: <span data-custom-icon /> },
+      },
     }) as TestElement;
 
-    const customIcon = findElement(alert.props.children, 'span');
+    const customIcon = findElement(alert.props.children, AlertIcon);
     const content = findElement(alert.props.children, AlertContent);
     const contentChildren = flattenElements(content.props.children);
     const title = findElement(contentChildren, AlertTitle);
-    const replacementAction = findElement(contentChildren, 'a');
+    const replacementAction = findElement(contentChildren, AlertAction);
 
-    expect(customIcon.props['data-custom-icon']).toBe(true);
+    expect(
+      (customIcon.props.render as TestElement).props['data-custom-icon'],
+    ).toBe(true);
     expect(title.props.children).toBe(0);
     expect(title.props.className).toBe('custom-title');
     expect(title.props.id).toBe('title');
     expect(contentChildren.some((item) => item.type === AlertDescription)).toBe(
       false,
     );
-    expect(replacementAction.props.href).toBe('/activity');
+    expect((replacementAction.props.render as TestElement).props.href).toBe(
+      '/activity',
+    );
+    expect(replacementAction.props.children).toBe('Open');
   });
 
-  test('exports styled primitives for manual composition', () => {
-    expect(AlertIcon({ className: 'icon' }).props['data-slot']).toBe(
-      'alert-icon',
-    );
-    expect(AlertContent({}).props['data-slot']).toBe('alert-content');
-    expect(AlertTitle({}).props['data-slot']).toBe('alert-title');
-    expect(AlertDescription({}).props['data-slot']).toBe('alert-description');
-    expect(AlertAction({}).props['data-slot']).toBe('alert-action');
+  test.each([
+    false,
+    true,
+  ])('composes custom elements with default styles and content (shorthand: %s)', (shorthand) => {
+    // Use real React in isolation from the mocks used by other component suites.
+    const result = Bun.spawnSync({
+      cmd: [
+        process.execPath,
+        '--eval',
+        `
+        import { createElement as h } from 'react';
+        import { renderToStaticMarkup } from 'react-dom/server';
+        import { Alert } from ${JSON.stringify(new URL('./alert.tsx', import.meta.url).href)};
+        process.stdout.write(renderToStaticMarkup(h(Alert, {
+          title: 0, description: '', action: 'Open', icon: '!',
+          slots: {
+            title: ${shorthand} ? h('h3', { className: 'render-class slot-class' }) : { render: h('h3', { className: 'render-class' }), className: 'slot-class' },
+            content: ${shorthand} ? (props, state) => h('section', { ...props, 'data-state-keys': Object.keys(state).join(',') }) : undefined,
+            description: ${shorthand} ? (props) => h('p', props) : undefined,
+            icon: ${shorthand} ? h('i') : undefined,
+            action: ${shorthand} ? h('a', { href: '/activity' }) : { render: h('a', { href: '/activity' }) },
+          },
+        })));
+      `,
+      ],
+      cwd: new URL('../..', import.meta.url).pathname,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    expect(new TextDecoder().decode(result.stderr)).toBe('');
+    expect(result.exitCode).toBe(0);
+    const markup = new TextDecoder().decode(result.stdout);
+    expect(markup).toMatch(/<h3[^>]*data-slot="alert-title"[^>]*>0<\/h3>/);
+    expect(markup).toContain('font-medium');
+    expect(markup).toContain('render-class');
+    expect(markup).toContain('slot-class');
+    expect(markup).toContain('data-slot="alert-description"');
+    expect(markup).toContain('href="/activity"');
+    expect(markup).toContain('>Open</a>');
+    expect(markup).toContain('aria-hidden="true"');
+    if (shorthand) expect(markup).toContain('data-state-keys=""');
   });
 });

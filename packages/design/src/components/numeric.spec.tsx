@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -16,11 +16,17 @@ type ElementProps = Record<string, unknown> & {
 type TestElement = ReactElement<ElementProps>;
 
 const react = await import('react');
+let prefersReducedMotion = false;
 
 mock.module('react', () => ({
   ...react,
   useId: () => 'generated-numeric-id',
+  useContext: () => null,
+  useMemo: <T,>(factory: () => T) => factory(),
+  useSyncExternalStore: () => prefersReducedMotion,
 }));
+
+const { defaultTheme } = await import('../motion/index.js');
 
 const [{ Numeric }, { NumberField: BaseNumberField }] = await Promise.all([
   import('./numeric'),
@@ -92,17 +98,18 @@ function resolveDefaultSlots(root: TestElement) {
   };
 }
 
+beforeEach(() => {
+  prefersReducedMotion = false;
+});
+
 describe('Numeric', () => {
   test('renders the default accessible slot structure and size metadata', () => {
     const { root, wrapper } = renderNumeric();
     const slots = resolveDefaultSlots(root);
 
-    expect(wrapper.props.reducedMotion).toBe('user');
-    expect(wrapper.props.transition).toEqual({
-      type: 'spring',
-      stiffness: 400,
-      damping: 25,
-    });
+    expect(wrapper.props.transition).toMatchObject(
+      defaultTheme.transitions.snap,
+    );
     expect(root.type).toBe(BaseNumberField.Root);
     expect(root.props.id).toBe('generated-numeric-id');
     expect(root.props['data-slot']).toBe('numeric');
@@ -153,11 +160,29 @@ describe('Numeric', () => {
       { ...idleState, readOnly: true },
     );
 
-    expect(wrapper.props.reducedMotion).toBe('user');
+    expect(wrapper.props.transition).toMatchObject(
+      defaultTheme.transitions.snap,
+    );
     expect(decrementButton.props.whileTap).toEqual({ scale: 0.9 });
     expect(incrementButton.props.whileTap).toEqual({ scale: 0.9 });
     expect(disabledButton.props.whileTap).toBeUndefined();
     expect(readOnlyButton.props.whileTap).toBeUndefined();
+  });
+
+  test('removes stepper press scaling when reduced motion is preferred', () => {
+    prefersReducedMotion = true;
+    const { root } = renderNumeric();
+    const { decrement, increment } = resolveDefaultSlots(root);
+
+    for (const slot of [decrement, increment]) {
+      const render = slot.props.render as (
+        props: ElementProps,
+        state: NumberFieldRootState,
+      ) => TestElement;
+      const button = render({}, idleState);
+      expect(button.props.whileTap).toBeUndefined();
+      expect(button.props.transition).toMatchObject({ duration: 0 });
+    }
   });
 
   test('merges state-aware slot classes with semantic and legacy classes', () => {

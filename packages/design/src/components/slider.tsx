@@ -8,15 +8,11 @@ import {
   useState,
 } from 'react';
 
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from 'motion/react';
+import type { Transition } from 'motion/react';
+import { animate, motion, useMotionValue, useTransform } from 'motion/react';
 
 import { useControllableValue } from '../hooks/index.js';
+import { pose, useFeel } from '../motion/index.js';
 import { cva } from '../tailwind/index.js';
 
 // Drag detection & rubber band
@@ -47,7 +43,7 @@ const variants = {
     base: 'pointer-events-none absolute inset-0',
   }),
   hashMark: cva({
-    base: 'absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 rounded-momo-full transition-colors duration-200',
+    base: 'absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 rounded-momo-full transition-colors',
     variants: {
       active: {
         true: 'bg-(--elastic-slider-hash)',
@@ -109,7 +105,8 @@ function snapToDecile(value: number, min: number, max: number): number {
 interface SliderVisualPositionOptions {
   interacting: boolean;
   percentage: number;
-  reducedMotion: boolean | null;
+  reducedMotion: boolean;
+  transition: Transition;
 }
 
 /**
@@ -120,6 +117,7 @@ function useSliderVisualPosition({
   interacting,
   percentage,
   reducedMotion,
+  transition,
 }: SliderVisualPositionOptions) {
   const percent = useMotionValue(percentage);
   const animationRef = useRef<ReturnType<typeof animate> | null>(null);
@@ -147,10 +145,7 @@ function useSliderVisualPosition({
       }
 
       const animation = animate(percent, target, {
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-        mass: 0.8,
+        ...transition,
         onComplete: () => {
           if (animationRef.current === animation) {
             animationRef.current = null;
@@ -160,23 +155,23 @@ function useSliderVisualPosition({
 
       animationRef.current = animation;
     },
-    [percent, reducedMotion, stop],
+    [percent, reducedMotion, stop, transition],
   );
 
   useEffect(() => {
     if (!interacting) {
       animateTo(percentage);
     }
-  }, [animateTo, interacting, percentage]);
+    return stop;
+  }, [animateTo, interacting, percentage, stop]);
 
   useEffect(() => {
     return () => stop();
   }, [stop]);
 
-  const fillWidth = useTransform(percent, (value) => `${value}%`);
+  const fillWidth = useTransform(() => `${percent.get()}%`);
   const handleLeft = useTransform(
-    percent,
-    (value) => `max(4px, calc(${value}% - 8px))`,
+    () => `max(4px, calc(${percent.get()}% - 8px))`,
   );
 
   return { fillWidth, handleLeft, jumpTo, stop };
@@ -235,7 +230,11 @@ export function Slider({
     onChange: onValueChange,
   });
 
-  const shouldReduceMotion = useReducedMotion();
+  const { reduced: shouldReduceMotion, spatial } = useFeel('ui');
+  const feedback = useFeel('snap');
+  const colorDuration = shouldReduceMotion
+    ? '0s'
+    : `${feedback.theme.transitions.snap.duration}s`;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -270,17 +269,26 @@ export function Slider({
     interacting: isInteracting,
     percentage,
     reducedMotion: shouldReduceMotion,
+    transition: spatial,
   });
 
   // Rubber band: widens the track and pulls it left when dragged past bounds.
   const rubberStretch = useMotionValue(0);
   const rubberWidth = useTransform(
-    rubberStretch,
-    (stretch) => `calc(100% + ${Math.abs(stretch)}px)`,
+    () => `calc(100% + ${Math.abs(rubberStretch.get())}px)`,
   );
-  const rubberX = useTransform(rubberStretch, (stretch) =>
-    stretch < 0 ? stretch : 0,
-  );
+  const rubberX = useTransform(() => Math.min(rubberStretch.get(), 0));
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      rubberStretch.jump(0);
+      return;
+    }
+    if (isInteracting || rubberStretch.get() === 0) return;
+
+    const controls = animate(rubberStretch, 0, spatial);
+    return () => controls.stop();
+  }, [isInteracting, rubberStretch, shouldReduceMotion, spatial]);
 
   const positionToValue = useCallback(
     (clientX: number) => {
@@ -400,28 +408,11 @@ export function Slider({
         setValue(roundValue(snapped, step));
       }
 
-      if (!shouldReduceMotion && rubberStretch.get() !== 0) {
-        animate(rubberStretch, 0, {
-          type: 'spring',
-          visualDuration: 0.35,
-          bounce: 0.15,
-        });
-      }
-
       setIsInteracting(false);
       setIsDragging(false);
       pointerDownPos.current = null;
     },
-    [
-      isInteracting,
-      positionToValue,
-      setValue,
-      min,
-      max,
-      step,
-      rubberStretch,
-      shouldReduceMotion,
-    ],
+    [isInteracting, positionToValue, setValue, min, max, step],
   );
 
   const handleKeyDown = useCallback(
@@ -563,7 +554,10 @@ export function Slider({
             <div
               key={index}
               className={variants.hashMark({ active: isActive })}
-              style={{ left: `${hashMarkPct(index)}%` }}
+              style={{
+                left: `${hashMarkPct(index)}%`,
+                transitionDuration: colorDuration,
+              }}
             />
           ))}
         </div>
@@ -572,7 +566,7 @@ export function Slider({
           data-slot='elastic-slider-fill'
           aria-hidden='true'
           className={variants.fill({ active: isActive })}
-          style={{ width: fillWidth }}
+          style={{ width: fillWidth, transitionDuration: colorDuration }}
         />
 
         <motion.div
@@ -580,28 +574,15 @@ export function Slider({
           aria-hidden='true'
           className={variants.handle()}
           style={{ left: handleLeft, y: '-50%' }}
-          animate={{
-            opacity: handleOpacity,
-            scaleX: isActive ? 1 : 0.25,
-            scaleY: isActive && valueDodge ? 0.75 : 1,
-          }}
-          transition={
-            shouldReduceMotion
-              ? { duration: 0 }
-              : {
-                  scaleX: {
-                    type: 'spring',
-                    visualDuration: 0.25,
-                    bounce: 0.15,
-                  },
-                  scaleY: {
-                    type: 'spring',
-                    visualDuration: 0.2,
-                    bounce: 0.1,
-                  },
-                  opacity: { duration: 0.15 },
-                }
-          }
+          animate={pose(
+            {
+              opacity: handleOpacity,
+              scaleX: shouldReduceMotion || isActive ? 1 : 0.25,
+              scaleY: !shouldReduceMotion && isActive && valueDodge ? 0.75 : 1,
+            },
+            feedback.mode,
+          )}
+          transition={feedback.transition}
         />
 
         <span
@@ -609,6 +590,7 @@ export function Slider({
           data-slot='elastic-slider-label'
           aria-hidden='true'
           className={variants.label()}
+          style={{ transitionDuration: colorDuration }}
         >
           {label}
         </span>
@@ -618,6 +600,7 @@ export function Slider({
           data-slot='elastic-slider-value'
           aria-hidden='true'
           className={variants.value({ active: isActive })}
+          style={{ transitionDuration: colorDuration }}
         >
           {displayValue}
         </span>

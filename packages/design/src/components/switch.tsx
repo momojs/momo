@@ -9,7 +9,8 @@ import type { HTMLMotionProps } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { useControllableValue } from '../hooks/index.js';
-import { swap } from '../shared/motion.js';
+import { pose, useFeel } from '../motion/index.js';
+import { useSwap } from '../shared/motion.js';
 import { cva, toPixel } from '../tailwind/index.js';
 
 const variants = {
@@ -130,6 +131,8 @@ export function Switch({
   onTap,
   ...thumbProps
 }: SwitchProps) {
+  const { reduced, mode, spatial } = useFeel('snap');
+  const swap = useSwap();
   const [isPressed, setIsPressed] = useState(false);
   const [isChecked = false, setIsChecked] = useControllableValue({
     value: checked,
@@ -159,10 +162,14 @@ export function Switch({
         className={variants.thumb({ size })}
         render={
           <motion.span
-            layout='position'
+            layout={reduced ? false : 'position'}
             data-slot='switch-thumb'
-            whileTap={{ scale: 0.96 }}
-            animate={animate.thumb({ size, isPressed })}
+            whileTap={reduced ? undefined : { scale: 0.96 }}
+            animate={pose(
+              animate.thumb({ size, isPressed: !reduced && isPressed }),
+              mode,
+            )}
+            transition={spatial}
             onTapStart={(event, info) => {
               onTapStart?.(event, info);
               setIsPressed(true);
@@ -177,6 +184,11 @@ export function Switch({
               setIsPressed(false);
             }}
             {...thumbProps}
+            {...(reduced && {
+              layout: false,
+              whileTap: undefined,
+              transition: spatial,
+            })}
           />
         }
       >

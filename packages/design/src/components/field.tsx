@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment } from 'react';
+import type React from 'react';
 
 import type {
   FieldControlProps as BaseFieldControlProps,
@@ -23,8 +23,10 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { isEmptyish } from 'remeda';
 
 import type { ControlSize, SlotBaseConfig } from '../shared/index.js';
-import { asClass, asData, render } from '../shared/index.js';
+import { asClass, asData, isReactNode, render } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
+import { Button } from './button.js';
+import { useToast } from './toast.js';
 
 const {
   Error,
@@ -229,12 +231,14 @@ export function FieldControl({
 /** Props for supporting text associated with a field control. */
 export interface FieldDescriptionProps
   extends Omit<BaseFieldDescriptionProps, 'className'> {
+  label?: FieldLabelProps['children'];
   className?: BaseFieldDescriptionProps['className'];
 }
 
 /** Supporting text automatically connected through `aria-describedby`. */
 export function FieldDescription({
   className,
+  label,
   ...props
 }: FieldDescriptionProps) {
   return (
@@ -249,14 +253,60 @@ export function FieldDescription({
   );
 }
 
+export function FieldCellDescription({
+  label,
+  ...props
+}: FieldDescriptionProps) {
+  const toast = useToast({ strict: false });
+
+  return (
+    <FieldDescription
+      {...props}
+      render={(descriptionProps, { disabled }) => (
+        <>
+          <p {...descriptionProps} className='sr-only' />
+          <Button
+            {...asData('field-feedback-trigger')}
+            type='button'
+            aria-label='Show field description'
+            disabled={disabled}
+            size='inline'
+            variant='link'
+            className='text-inherit'
+            onClick={() => {
+              if (!toast) {
+                console.warn('Field feedback requires a ToastProvider.');
+                return;
+              }
+              toast.add({
+                title: label,
+                type: 'info',
+                description: descriptionProps.children,
+              });
+            }}
+          >
+            <HugeiconsIcon icon={HelpCircleIcon} aria-hidden />
+          </Button>
+        </>
+      )}
+    />
+  );
+}
+
 /** Props for a validation message associated with a field control. */
 export interface FieldErrorProps
   extends Omit<BaseFieldErrorProps, 'className'> {
+  label?: FieldLabelProps['children'];
   className?: BaseFieldErrorProps['className'];
 }
 
 /** A validation message with Base UI's transition-aware lifecycle. */
-export function FieldError({ className, ...props }: FieldErrorProps) {
+export function FieldError({
+  className,
+  label,
+  children,
+  ...props
+}: FieldErrorProps) {
   return (
     <Error
       {...asData('field-error')}
@@ -265,6 +315,45 @@ export function FieldError({ className, ...props }: FieldErrorProps) {
         className,
       )}
       {...props}
+      {...(children === undefined ? {} : { children })}
+    />
+  );
+}
+
+export function FieldCellError({ label, ...props }: FieldErrorProps) {
+  const toast = useToast({ strict: false });
+
+  return (
+    <FieldError
+      {...props}
+      render={(errorProps, { disabled }) => (
+        <>
+          <div {...errorProps} className='sr-only' />
+          <Button
+            {...asData('field-feedback-trigger')}
+            type='button'
+            aria-label='Show field error'
+            disabled={disabled}
+            className='text-momo-fg-danger'
+            size='inline'
+            variant='link'
+            onClick={() => {
+              if (!toast) {
+                console.warn('Field feedback requires a ToastProvider.');
+                return;
+              }
+              console.log(label, 'label');
+              toast.add({
+                type: 'error',
+                title: label,
+                description: errorProps.children,
+              });
+            }}
+          >
+            <HugeiconsIcon icon={AlertCircleIcon} aria-hidden />
+          </Button>
+        </>
+      )}
     />
   );
 }
@@ -342,12 +431,6 @@ export function Field({
   className,
   ...props
 }: FieldProps) {
-  const err = <FieldError>{error}</FieldError>;
-
-  const desc = <FieldDescription>{description}</FieldDescription>;
-
-  const hasError = !isEmptyish(error);
-
   const hasDesc = !isEmptyish(description);
 
   const hasControl = !isEmptyish(children);
@@ -368,23 +451,37 @@ export function Field({
       )}
       {...props}
     >
-      <FieldLabel size={size}>
-        {label}
-        {variant === 'cell' && (
-          <Fragment>
-            {hasError ? (
-              <HugeiconsIcon icon={AlertCircleIcon} className='inline ml-1' />
-            ) : (
-              hasDesc && (
-                <HugeiconsIcon icon={HelpCircleIcon} className='inline ml-1' />
+      {variant === 'cell' ? (
+        <div className='flex items-center gap-momo-xxs'>
+          <FieldLabel size={size}>{label}</FieldLabel>
+          <FieldValidity>
+            {({ validity }) =>
+              validity.valid === false ? (
+                <FieldCellError match label={label}>
+                  {error}
+                </FieldCellError>
+              ) : (
+                hasDesc && (
+                  <FieldCellDescription label={label}>
+                    {description}
+                  </FieldCellDescription>
+                )
               )
-            )}
-          </Fragment>
-        )}
-      </FieldLabel>
-      {hasControl ? children : render(FieldControl, control, { size })}
-      {variant === 'stacked' && desc}
-      {variant === 'stacked' && err}
+            }
+          </FieldValidity>
+        </div>
+      ) : (
+        <FieldLabel size={size}>{label}</FieldLabel>
+      )}
+      {hasControl
+        ? children
+        : render(FieldControl, control, {
+            size: isReactNode(control) ? size : (control.size ?? size),
+          })}
+      {variant === 'stacked' && (
+        <FieldDescription>{description}</FieldDescription>
+      )}
+      {variant === 'stacked' && <FieldError>{error}</FieldError>}
       {validity && <FieldValidity>{validity}</FieldValidity>}
     </Root>
   );

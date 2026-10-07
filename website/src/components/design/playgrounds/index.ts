@@ -19,6 +19,7 @@ export { PickerTimePlayground } from './picker-time';
 export { PopoverPlayground } from './popover';
 export { RatingPlayground } from './rating';
 export { SelectPlayground } from './select';
+export { SheetPlayground } from './sheet';
 export { SliderPlayground } from './slider';
 export { SlotCompositionPlayground } from './slot-composition';
 export { SwitchPlayground } from './switch';

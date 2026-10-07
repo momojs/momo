@@ -30,6 +30,7 @@ import type { VariantProps } from 'cva';
 import type { HTMLMotionProps } from 'motion/react';
 import { MotionConfig, motion } from 'motion/react';
 
+import { useFeel } from '../motion/index.js';
 import type { SlotBaseConfig, SlotBaseProps } from '../shared/index.js';
 import { asClass, asData, isReactNode, render } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
@@ -249,6 +250,7 @@ function NumericDecrement({
   size,
   ...props
 }: NumericDecrementProps) {
+  const { reduced, transition } = useFeel('snap');
   return (
     <Decrement
       {...asData('numeric-decrement')}
@@ -262,8 +264,11 @@ function NumericDecrement({
         ((buttonProps, state) => (
           <motion.button
             {...(buttonProps as HTMLMotionProps<'button'>)}
+            transition={transition}
             whileTap={
-              state.disabled || state.readOnly ? undefined : { scale: 0.9 }
+              reduced || state.disabled || state.readOnly
+                ? undefined
+                : { scale: 0.9 }
             }
           />
         ))
@@ -298,6 +303,7 @@ function NumericIncrement({
   size,
   ...props
 }: NumericIncrementProps) {
+  const { reduced, transition } = useFeel('snap');
   return (
     <Increment
       {...asData('numeric-increment')}
@@ -311,8 +317,11 @@ function NumericIncrement({
         ((buttonProps, state) => (
           <motion.button
             {...(buttonProps as HTMLMotionProps<'button'>)}
+            transition={transition}
             whileTap={
-              state.disabled || state.readOnly ? undefined : { scale: 0.9 }
+              reduced || state.disabled || state.readOnly
+                ? undefined
+                : { scale: 0.9 }
             }
           />
         ))
@@ -411,6 +420,7 @@ export interface NumericProps
  * ```
  */
 export function Numeric(props: NumericProps) {
+  const { transition } = useFeel('snap');
   const generatedId = useId();
   const {
     id: providedId,
@@ -439,10 +449,7 @@ export function Numeric(props: NumericProps) {
   const resolvedSize: NonNullable<NumericSize> = size ?? 'md';
 
   return (
-    <MotionConfig
-      reducedMotion='user'
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-    >
+    <MotionConfig transition={transition}>
       <Root
         {...rootProps}
         {...asData('numeric')}

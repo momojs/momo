@@ -13,22 +13,23 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from 'react';
 
+import { useRender } from '@base-ui/react/use-render';
 import {
   Alert01Icon,
   AlertCircleIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
   InformationCircleIcon,
-  Loading03Icon,
   Notification02Icon,
 } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { eliminate } from '@momots/core';
 import type {
   DragControls,
   HTMLMotionProps,
@@ -39,17 +40,21 @@ import type {
 } from 'motion/react';
 import {
   AnimatePresence,
-  MotionConfig,
   motion,
   useDragControls,
   useIsPresent,
-  useReducedMotion,
+  useMotionValue,
 } from 'motion/react';
 import { createPortal } from 'react-dom';
+import { isNullish } from 'remeda';
 
-import type { SlotBaseConfig } from '../shared/index.js';
-import { render } from '../shared/index.js';
+import { useAutoSize } from '../effects/auto-size.js';
+import { pose, useFeel } from '../motion/index.js';
+import type { ContentProps, ContentSlotsProps } from '../shared/index.js';
+import { asContentSlots, hasContent } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
+import { Icon } from './icon.js';
+import { Spinner } from './spinner.js';
 
 const variants = {
   viewport: cva({
@@ -169,11 +174,10 @@ export interface ToastActionOptions
   children?: ReactNode;
 }
 
-export interface ToastOptions<Data extends object = Record<string, unknown>> {
+export interface ToastOptions<Data extends object = Record<string, unknown>>
+  extends Pick<ContentProps, 'title' | 'description'> {
   id?: string;
-  title?: ReactNode;
-  description?: ReactNode;
-  type?: string;
+  type?: ToastType;
   priority?: ToastPriority;
   timeout?: number;
   actionProps?: ToastActionOptions;
@@ -318,7 +322,7 @@ export function createToastManager<
         const failure = resolvePromiseOptions(options.error, error);
         manager.update(id, {
           ...failure,
-          type: failure.type ?? 'error',
+          type: failure.type ?? 'danger',
           timeout: failure.timeout,
         });
         throw error;
@@ -346,26 +350,51 @@ function useToastManagerInstance<Data extends object>() {
   return manager as unknown as ToastManager<Data>;
 }
 
-/** Returns the nearest provider's reactive toast manager. */
+const emptyToasts: readonly never[] = [];
+const getEmptyToasts = () => emptyToasts;
+const subscribeToNothing = () => () => undefined;
+
+/** Returns the nearest provider's controller; non-strict consumers receive null without a provider. */
 export function useToast<
   Data extends object = Record<string, unknown>,
->(): ToastController<Data> {
-  const manager = useToastManagerInstance<Data>();
+>(options?: { strict?: true }): ToastController<Data>;
+export function useToast<
+  Data extends object = Record<string, unknown>,
+>(options: { strict: boolean }): ToastController<Data> | null;
+export function useToast<Data extends object = Record<string, unknown>>({
+  strict = true,
+}: {
+  strict?: boolean;
+} = {}): ToastController<Data> | null {
+  const manager = useContext(ToastManagerContext) as ToastManager<Data> | null;
   const toasts = useSyncExternalStore(
-    manager.subscribe,
-    manager.getSnapshot,
-    manager.getSnapshot,
+    manager?.subscribe ?? subscribeToNothing,
+    manager?.getSnapshot ?? getEmptyToasts,
+    manager?.getSnapshot ?? getEmptyToasts,
   );
-  return useMemo(
-    () => ({
-      add: manager.add,
-      close: manager.close,
-      promise: manager.promise,
-      toasts,
-      update: manager.update,
-    }),
+  const controller = useMemo(
+    () =>
+      eliminate(
+        manager && {
+          toasts,
+          add: manager.add,
+          close: manager.close,
+          update: manager.update,
+          promise: manager.promise,
+        },
+        false,
+        null,
+      ),
     [manager, toasts],
   );
+  if (strict) {
+    if (isNullish(controller)) {
+      throw new Error(
+        'Toast components must be rendered inside ToastProvider.',
+      );
+    }
+  }
+  return controller;
 }
 
 type StateClassName<State> = string | ((state: State) => string | undefined);
@@ -379,10 +408,6 @@ function resolveClassName<State>(
     base,
     typeof className === 'function' ? className(state) : className,
   );
-}
-
-function hasContent(value: ReactNode) {
-  return value !== undefined && value !== null && value !== false;
 }
 
 function setRef<Value>(ref: Ref<Value> | undefined, value: Value | null) {
@@ -674,16 +699,17 @@ function getEntryTarget(
   placement: ToastPlacement,
   stackTarget: ReturnType<typeof getStackTarget>,
   reducedMotion: boolean,
+  travel: number,
 ) {
   if (reducedMotion) return { ...stackTarget, opacity: 0 };
   if (placement.endsWith('right')) {
-    return { ...stackTarget, opacity: 0, scale: 0.85, x: 60 };
+    return { ...stackTarget, opacity: 0, scale: 0.85, x: travel };
   }
   return {
     ...stackTarget,
     opacity: 0,
     scale: 0.85,
-    y: stackTarget.y + (isTopPlacement(placement) ? -60 : 60),
+    y: stackTarget.y + (isTopPlacement(placement) ? -travel : travel),
   };
 }
 
@@ -692,12 +718,15 @@ function getExitTarget(
   stackTarget: ReturnType<typeof getStackTarget>,
   gesture: ToastDismissGesture | null,
   reducedMotion: boolean,
+  transition: Transition,
+  fade: Transition,
+  travel: number,
 ): TargetAndTransition {
   if (reducedMotion) {
     return {
       ...stackTarget,
       opacity: 0,
-      transition: { duration: 0.14, ease: 'easeOut' },
+      transition,
     };
   }
 
@@ -708,20 +737,15 @@ function getExitTarget(
     const y = horizontal
       ? stackTarget.y
       : stackTarget.y + (gesture.direction === 'up' ? -180 : 180);
-    const spring = {
-      type: 'spring',
-      stiffness: 520,
-      damping: 40,
-      mass: 0.8,
-    } as const;
+    const spring = { ...transition, delay: 0 };
     return {
       opacity: 0,
       scale: 0.92,
       x,
       y,
       transition: {
-        opacity: { duration: 0.22, ease: 'easeIn' },
-        scale: { duration: 0.2, ease: 'easeOut' },
+        opacity: fade,
+        scale: spring,
         x: { ...spring, velocity: gesture.velocity.x },
         y: { ...spring, velocity: gesture.velocity.y },
       },
@@ -733,22 +757,24 @@ function getExitTarget(
       ...stackTarget,
       opacity: 0,
       scale: 0.88,
-      x: 60,
-      transition: { duration: 0.2, ease: 'easeIn' },
+      x: travel,
+      transition,
     };
   }
   return {
     ...stackTarget,
     opacity: 0,
     scale: 0.8,
-    y: stackTarget.y + (isTopPlacement(placement) ? -20 : 20),
-    transition: { duration: 0.2, ease: 'easeIn' },
+    y: stackTarget.y + (isTopPlacement(placement) ? -travel : travel),
+    transition,
   };
 }
 
 export interface ToastRootProps<Data extends object = Record<string, unknown>>
   extends Omit<
     HTMLMotionProps<'div'>,
+    | 'aria-labelledby'
+    | 'aria-describedby'
     | 'animate'
     | 'className'
     | 'drag'
@@ -767,6 +793,10 @@ export interface ToastRootProps<Data extends object = Record<string, unknown>>
     | 'style'
     | 'transition'
   > {
+  /** Pass null to disable the automatic title association. */
+  'aria-labelledby'?: string | null;
+  /** Pass null to disable the automatic description association. */
+  'aria-describedby'?: string | null;
   className?: StateClassName<ToastRootState>;
   index?: number;
   interactive?: boolean;
@@ -801,19 +831,23 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
   stackOffsetY = 10,
   stackOpacity = 0.2,
   stackScale = 0.06,
-  staggerInterval = 0.02,
+  staggerInterval,
   swipeDirection,
   tabIndex,
   toast,
-  toastSpring = { stiffness: 400, damping: 30 },
+  toastSpring,
   visible = true,
   ...props
 }: ToastRootProps<Data>) {
   const manager = useToastManagerInstance<Data>();
   const runtime = useContext(ToastRuntimeContext);
-  const reducedMotion = Boolean(useReducedMotion());
+  const preset = useFeel('ui');
+  const { activate, register, height } = useAutoSize();
+  const reducedMotion = preset.reduced;
   const isPresent = useIsPresent();
   const dragControls = useDragControls();
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const [swiping, setSwiping] = useState(false);
   const dismissGestureRef = useRef<ToastDismissGesture | null>(null);
   const removedRef = useRef(false);
@@ -833,7 +867,25 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
     stackScale,
     stackOpacity,
   );
-  const initial = getEntryTarget(placement, stackTarget, reducedMotion);
+  const initial = getEntryTarget(
+    placement,
+    stackTarget,
+    reducedMotion,
+    preset.theme.travel.section,
+  );
+  const delay =
+    Math.min(motionIndex, 4) * (staggerInterval ?? preset.theme.stagger.tight);
+  const transition: Transition = reducedMotion
+    ? preset.transition
+    : {
+        ...preset.transition,
+        ...toastSpring,
+        delay,
+        opacity: { ...preset.fade, delay },
+      };
+  const exitTransition: Transition = reducedMotion
+    ? preset.transition
+    : { ...preset.transition, ...toastSpring };
   const exitVariants: Variants = {
     exit: () =>
       getExitTarget(
@@ -841,15 +893,11 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
         stackTarget,
         dismissGestureRef.current,
         reducedMotion,
+        exitTransition,
+        preset.fade,
+        preset.theme.travel.enter,
       ),
   };
-  const transition: Transition = reducedMotion
-    ? { duration: 0, opacity: { duration: 0.14, ease: 'easeOut' } }
-    : {
-        type: 'spring',
-        ...toastSpring,
-        delay: Math.min(motionIndex, 4) * staggerInterval,
-      };
   const state: ToastRootState = {
     expanded: false,
     index,
@@ -866,6 +914,10 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
     [descriptionId, index, titleId, toast, visible],
   );
 
+  useLayoutEffect(() => {
+    activate('content');
+  }, [activate]);
+
   return (
     <ToastItemContext.Provider value={itemContext}>
       <motion.div
@@ -881,11 +933,16 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
         aria-hidden={interactive ? undefined : true}
         aria-label={ariaLabel}
         aria-labelledby={
-          ariaLabelledBy ?? (hasContent(toast.title) ? titleId : undefined)
+          ariaLabelledBy === null
+            ? undefined
+            : (ariaLabelledBy ??
+              (!ariaLabel && hasContent(toast.title) ? titleId : undefined))
         }
         aria-describedby={
-          ariaDescribedBy ??
-          (hasContent(toast.description) ? descriptionId : undefined)
+          ariaDescribedBy === null
+            ? undefined
+            : (ariaDescribedBy ??
+              (hasContent(toast.description) ? descriptionId : undefined))
         }
         inert={interactive ? undefined : true}
         tabIndex={interactive ? (tabIndex ?? 0) : -1}
@@ -901,11 +958,13 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
           state,
         )}
         style={{
+          x,
+          y,
           pointerEvents: interactive ? 'auto' : 'none',
           zIndex: Math.max(0, 1000 - index),
         }}
         initial={initial}
-        animate={stackTarget}
+        animate={pose(stackTarget, preset.mode)}
         variants={exitVariants}
         exit='exit'
         transition={transition}
@@ -918,7 +977,12 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
         dragElastic={getDragElastic(directions)}
         dragListener={false}
         dragMomentum={false}
-        dragTransition={{ bounceStiffness: 420, bounceDamping: 36 }}
+        dragTransition={{
+          bounceStiffness:
+            toastSpring?.stiffness ?? preset.theme.transitions.snap.stiffness,
+          bounceDamping:
+            toastSpring?.damping ?? preset.theme.transitions.snap.damping,
+        }}
         onPointerDown={(event) => {
           onPointerDown?.(event);
           if (dragEnabled) startDrag(event, dragControls);
@@ -939,6 +1003,12 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
           dismissGestureRef.current = direction
             ? { direction, velocity: info.velocity }
             : null;
+          // Drag rebound uses Motion's inertia path, outside transition props.
+          // Stop that animation explicitly when only direct dragging is wanted.
+          if (reducedMotion) {
+            x.jump(stackTarget.x);
+            y.jump(stackTarget.y);
+          }
           if (direction) manager.close(toast.id, 'swipe');
         }}
         onKeyDown={(event) => {
@@ -974,31 +1044,55 @@ export function ToastRoot<Data extends object = Record<string, unknown>>({
           }
         }}
       >
-        {children}
+        <motion.div
+          data-slot='toast-height'
+          className='overflow-hidden rounded-[inherit]'
+          initial={false}
+          animate={pose({ height }, preset.mode)}
+          transition={preset.spatial}
+        >
+          <motion.div
+            ref={register('content')}
+            className='flow-root rounded-[inherit]'
+            inherit={false}
+          >
+            {children}
+          </motion.div>
+        </motion.div>
       </motion.div>
     </ToastItemContext.Provider>
   );
 }
 
 export interface ToastContentProps
-  extends Omit<ComponentProps<'div'>, 'className'> {
+  extends Omit<
+    useRender.ComponentProps<'div', ToastContentState>,
+    'className'
+  > {
   className?: StateClassName<ToastContentState>;
 }
 
-export function ToastContent({ className, ...props }: ToastContentProps) {
+export function ToastContent({
+  className,
+  render,
+  ...props
+}: ToastContentProps) {
   const item = useToastItem();
   const state: ToastContentState = {
     behind: (item?.index ?? 0) > 0,
     expanded: false,
     index: item?.index ?? 0,
   };
-  return (
-    <div
-      data-slot='toast-content'
-      className={resolveClassName(variants.content(), className, state)}
-      {...props}
-    />
-  );
+  return useRender({
+    defaultTagName: 'div',
+    render,
+    state: { ...state },
+    props: {
+      ...props,
+      'data-slot': 'toast-content',
+      className: resolveClassName(variants.content(), className, state),
+    },
+  });
 }
 
 const icons = {
@@ -1007,7 +1101,6 @@ const icons = {
   success: CheckmarkCircle02Icon,
   warning: Alert01Icon,
   danger: AlertCircleIcon,
-  loading: Loading03Icon,
 } as const;
 
 export interface ToastIconProps
@@ -1024,8 +1117,6 @@ export function ToastIcon({
 }: ToastIconProps) {
   const item = useToastItem();
   const resolvedType = resolveType(type ?? item?.toast.type);
-  const reducedMotion = Boolean(useReducedMotion());
-  const loading = resolvedType === 'loading';
   return (
     <motion.span
       {...props}
@@ -1033,76 +1124,80 @@ export function ToastIcon({
       aria-hidden
       className={variants.icon({ type: resolvedType, className })}
       initial={false}
-      animate={loading && !reducedMotion ? { rotate: 360 } : undefined}
-      transition={
-        loading && !reducedMotion
-          ? { duration: 0.9, ease: 'linear', repeat: Number.POSITIVE_INFINITY }
-          : undefined
-      }
     >
       {children ?? (
-        <HugeiconsIcon icon={icons[resolvedType]} size={18} strokeWidth={1.8} />
+        <Spinner
+          icon={resolvedType === 'loading' ? undefined : icons[resolvedType]}
+          initial={false}
+          aria-hidden
+        />
       )}
     </motion.span>
   );
 }
 
-export type ToastTextProps = ComponentProps<'div'>;
+export type ToastTextProps = useRender.ComponentProps<'div'>;
 
-export function ToastText({ className, ...props }: ToastTextProps) {
-  return (
-    <div
-      data-slot='toast-text'
-      className={variants.text({ className })}
-      {...props}
-    />
-  );
+export function ToastText({ className, render, ...props }: ToastTextProps) {
+  return useRender({
+    defaultTagName: 'div',
+    render,
+    props: {
+      ...props,
+      'data-slot': 'toast-text',
+      className: variants.text({ className }),
+    },
+  });
 }
 
-export type ToastTitleProps = ComponentProps<'h2'>;
+export type ToastTitleProps = useRender.ComponentProps<'h2'>;
 
 export function ToastTitle({
   children,
   className,
   id,
+  render,
   ...props
 }: ToastTitleProps) {
   const item = useToastItem();
   const content = children ?? item?.toast.title;
-  if (!hasContent(content)) return null;
-  return (
-    <h2
-      {...props}
-      id={id ?? item?.titleId}
-      data-slot='toast-title'
-      className={variants.title({ className })}
-    >
-      {content}
-    </h2>
-  );
+  const element = useRender({
+    defaultTagName: 'h2',
+    render,
+    props: {
+      ...props,
+      id: id ?? item?.titleId,
+      'data-slot': 'toast-title',
+      className: variants.title({ className }),
+      children: content,
+    },
+  });
+  return hasContent(content) ? element : null;
 }
 
-export type ToastDescriptionProps = ComponentProps<'p'>;
+export type ToastDescriptionProps = useRender.ComponentProps<'div'>;
 
 export function ToastDescription({
   children,
   className,
   id,
+  render,
   ...props
 }: ToastDescriptionProps) {
   const item = useToastItem();
   const content = children ?? item?.toast.description;
-  if (!hasContent(content)) return null;
-  return (
-    <p
-      {...props}
-      id={id ?? item?.descriptionId}
-      data-slot='toast-description'
-      className={variants.description({ className })}
-    >
-      {content}
-    </p>
-  );
+  const element = useRender({
+    defaultTagName: 'div',
+    render,
+    props: {
+      ...props,
+      id: id ?? item?.descriptionId,
+      'data-slot': 'toast-description',
+      className: variants.description({ className }),
+      children: content,
+    },
+  });
+  return hasContent(content) ? element : null;
 }
 
 export interface ToastActionProps
@@ -1118,7 +1213,8 @@ export function ToastAction({
   ...props
 }: ToastActionProps) {
   const item = useToastItem();
-  const reducedMotion = Boolean(useReducedMotion());
+  const preset = useFeel('snap');
+  const reducedMotion = preset.reduced;
   const managedProps = item?.toast.actionProps;
   const content = children ?? managedProps?.children;
   if (!hasContent(content)) return null;
@@ -1132,7 +1228,16 @@ export function ToastAction({
       className={variants.action({
         className: cx(managedProps?.className, className),
       })}
-      whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+      whileTap={
+        reducedMotion
+          ? undefined
+          : 'whileTap' in props
+            ? props.whileTap
+            : { scale: 0.96 }
+      }
+      transition={
+        reducedMotion ? preset.spatial : (props.transition ?? preset.spatial)
+      }
       onClick={(event) => {
         managedOnClick?.(event as ReactMouseEvent<HTMLButtonElement>);
         if (!event.defaultPrevented) onClick?.(event);
@@ -1160,7 +1265,8 @@ export function ToastClose({
 }: ToastCloseProps) {
   const item = useToastItem();
   const manager = useToastManagerInstance();
-  const reducedMotion = Boolean(useReducedMotion());
+  const preset = useFeel('snap');
+  const reducedMotion = preset.reduced;
   return (
     <motion.button
       {...props}
@@ -1168,7 +1274,16 @@ export function ToastClose({
       type={type}
       aria-label={ariaLabel ?? label}
       className={variants.close({ className })}
-      whileTap={reducedMotion ? undefined : { scale: 0.92 }}
+      whileTap={
+        reducedMotion
+          ? undefined
+          : 'whileTap' in props
+            ? props.whileTap
+            : { scale: 0.92 }
+      }
+      transition={
+        reducedMotion ? preset.spatial : (props.transition ?? preset.spatial)
+      }
       onClick={(event) => {
         onClick?.(event);
         if (!event.defaultPrevented && item) {
@@ -1177,12 +1292,7 @@ export function ToastClose({
       }}
     >
       {children ?? (
-        <HugeiconsIcon
-          icon={Cancel01Icon}
-          size={16}
-          strokeWidth={1.8}
-          aria-hidden
-        />
+        <Icon icon={Cancel01Icon} size={16} strokeWidth={1.8} aria-hidden />
       )}
     </motion.button>
   );
@@ -1230,12 +1340,18 @@ function useToastTimer<Data extends object>(
   }, [manager, paused, timeout, toast.id, toast.updateKey, visible]);
 }
 
-export interface ToastListProps<Data extends object = Record<string, unknown>> {
-  action?: SlotBaseConfig<ToastActionProps>;
-  close?: SlotBaseConfig<ToastCloseProps>;
-  content?: Omit<ToastContentProps, 'children'>;
-  description?: SlotBaseConfig<ToastDescriptionProps>;
-  icon?: SlotBaseConfig<ToastIconProps>;
+export interface ToastContentSlots {
+  action: ToastActionProps;
+  close: ToastCloseProps;
+  content: ToastContentProps;
+  description: ToastDescriptionProps;
+  icon: ToastIconProps;
+  text: ToastTextProps;
+  title: ToastTitleProps;
+}
+
+export interface ToastListProps<Data extends object = Record<string, unknown>>
+  extends ContentSlotsProps<ToastContentSlots> {
   limit?: number;
   paused?: boolean;
   placement?: ToastPlacement;
@@ -1254,9 +1370,7 @@ export interface ToastListProps<Data extends object = Record<string, unknown>> {
   stackScale?: number;
   staggerInterval?: number;
   swipeDirection?: ToastSwipeDirection | readonly ToastSwipeDirection[];
-  text?: SlotBaseConfig<ToastTextProps>;
   timeout?: number;
-  title?: SlotBaseConfig<ToastTitleProps>;
   toastSpring?: ToastSpring;
 }
 
@@ -1265,11 +1379,7 @@ interface ToastItemsProps<Data extends object> extends ToastListProps<Data> {
 }
 
 function ToastItem<Data extends object>({
-  action,
-  close,
-  content,
-  description,
-  icon,
+  slots: slotConfig,
   index,
   limit = 4,
   paused = false,
@@ -1278,28 +1388,34 @@ function ToastItem<Data extends object>({
   stackOffsetY = 10,
   stackOpacity = 0.2,
   stackScale = 0.06,
-  staggerInterval = 0.02,
+  staggerInterval,
   swipeDirection,
-  text,
   timeout = 5000,
-  title,
   toast,
-  toastSpring = { stiffness: 400, damping: 30 },
+  toastSpring,
 }: Omit<ToastItemsProps<Data>, 'toasts'> & {
   index: number;
   toast: ToastObject<Data>;
 }) {
+  const slots = asContentSlots<ToastContentSlots>(slotConfig);
   const visible = index < limit;
   const interactive = index === 0;
   useToastTimer(toast, toast.timeout ?? timeout, paused, visible);
-  const textContent = (
-    <>
-      {render(ToastTitle, title ?? true)}
-      {render(ToastDescription, description ?? true)}
-    </>
-  );
+  const showText = slots.content !== false && slots.text !== false;
+  const titleSlot = slots.title;
+  const descriptionSlot = slots.description;
   return (
     <ToastRoot
+      aria-labelledby={
+        showText && titleSlot !== false && hasContent(toast.title)
+          ? titleSlot?.id
+          : null
+      }
+      aria-describedby={
+        showText && descriptionSlot !== false && hasContent(toast.description)
+          ? descriptionSlot?.id
+          : null
+      }
       {...root}
       toast={toast}
       index={index}
@@ -1314,24 +1430,29 @@ function ToastItem<Data extends object>({
       staggerInterval={staggerInterval}
       toastSpring={toastSpring}
     >
-      <ToastContent {...content}>
-        {render(ToastIcon, icon ?? true)}
-        {render(ToastText, text ?? true, textContent)}
-        <ToastActions>
-          {render(ToastAction, action ?? true)}
-          {render(ToastClose, close ?? true)}
-        </ToastActions>
-      </ToastContent>
+      {slots.content !== false && (
+        <ToastContent {...slots.content}>
+          {slots.icon !== false && <ToastIcon {...slots.icon} />}
+          {slots.text !== false && (
+            <ToastText {...slots.text}>
+              {titleSlot !== false && <ToastTitle {...titleSlot} />}
+              {descriptionSlot !== false && (
+                <ToastDescription {...descriptionSlot} />
+              )}
+            </ToastText>
+          )}
+          <ToastActions>
+            {slots.action !== false && <ToastAction {...slots.action} />}
+            {slots.close !== false && <ToastClose {...slots.close} />}
+          </ToastActions>
+        </ToastContent>
+      )}
     </ToastRoot>
   );
 }
 
 function ToastItems<Data extends object>({
-  action,
-  close,
-  content,
-  description,
-  icon,
+  slots = {},
   limit = 4,
   paused = false,
   placement = 'bottom-right',
@@ -1339,12 +1460,10 @@ function ToastItems<Data extends object>({
   stackOffsetY = 10,
   stackOpacity = 0.2,
   stackScale = 0.06,
-  staggerInterval = 0.02,
+  staggerInterval,
   swipeDirection,
-  text,
   timeout = 5000,
-  title,
-  toastSpring = { stiffness: 400, damping: 30 },
+  toastSpring,
   toasts,
 }: ToastItemsProps<Data>) {
   const resolvedLimit = Math.max(1, limit);
@@ -1366,13 +1485,7 @@ function ToastItems<Data extends object>({
           staggerInterval={staggerInterval}
           toastSpring={toastSpring}
           root={root}
-          content={content}
-          icon={icon}
-          text={text}
-          title={title}
-          description={description}
-          action={action}
-          close={close}
+          slots={slots}
         />
       ))}
     </AnimatePresence>
@@ -1399,11 +1512,7 @@ export interface ToastProviderProps<
 }
 
 function ToastHost<Data extends object>({
-  action,
-  close,
-  content,
-  description,
-  icon,
+  slots = {},
   limit = 4,
   placement = 'bottom-right',
   portal,
@@ -1411,12 +1520,10 @@ function ToastHost<Data extends object>({
   stackOffsetY = 10,
   stackOpacity = 0.2,
   stackScale = 0.06,
-  staggerInterval = 0.02,
+  staggerInterval,
   swipeDirection,
-  text,
   timeout = 5000,
-  title,
-  toastSpring = { stiffness: 400, damping: 30 },
+  toastSpring,
   viewport,
 }: Omit<ToastProviderProps<Data>, 'children' | 'toastManager'>) {
   const { toasts } = useToast<Data>();
@@ -1506,26 +1613,16 @@ function ToastHost<Data extends object>({
           staggerInterval={staggerInterval}
           toastSpring={toastSpring}
           root={root}
-          content={content}
-          icon={icon}
-          text={text}
-          title={title}
-          description={description}
-          action={action}
-          close={close}
+          slots={slots}
         />
       </ToastViewport>
     </ToastRuntimeContext.Provider>
   );
 
-  return (
-    <MotionConfig reducedMotion='user'>
-      {portal === false ? (
-        viewportElement
-      ) : (
-        <ToastPortal {...portal}>{viewportElement}</ToastPortal>
-      )}
-    </MotionConfig>
+  return portal === false ? (
+    viewportElement
+  ) : (
+    <ToastPortal {...portal}>{viewportElement}</ToastPortal>
   );
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { ReactElement, ReactNode } from 'react';
-import { Children, isValidElement } from 'react';
+import { Children, Fragment, isValidElement } from 'react';
 
 import type {
   FieldControlState,
@@ -36,8 +36,34 @@ const idleState: FieldRootState = {
   valid: null,
 };
 
-function elements(node: ReactNode) {
-  return Children.toArray(node).filter(isValidElement) as TestElement[];
+function elements(node: ReactNode): TestElement[] {
+  return (
+    Children.toArray(node).filter(isValidElement) as TestElement[]
+  ).flatMap((element) =>
+    element.type === Fragment ? elements(element.props.children) : [element],
+  );
+}
+
+function renderFieldScenario(source: string) {
+  const result = Bun.spawnSync({
+    cmd: [
+      process.execPath,
+      '--eval',
+      `
+      import { createElement } from 'react';
+      import { renderToStaticMarkup } from 'react-dom/server';
+      import { Field } from ${JSON.stringify(new URL('./field.tsx', import.meta.url).href)};
+      ${source}
+    `,
+    ],
+    cwd: new URL('../..', import.meta.url).pathname,
+    stderr: 'pipe',
+    stdout: 'pipe',
+  });
+  const stderr = new TextDecoder().decode(result.stderr);
+  if (result.exitCode !== 0) throw new Error(stderr);
+  expect(stderr).toBe('');
+  return new TextDecoder().decode(result.stdout);
 }
 
 function findElement(node: ReactNode, type: unknown) {
@@ -74,15 +100,19 @@ describe('Field', () => {
     expect(root.props.validationMode).toBe('onBlur');
     expect(root.props.validate).toBe(validate);
 
-    const label = findElement(root.props.children, FieldLabel);
-    const control = findElement(root.props.children, FieldControl);
-    expect(label.props.children).toBe('Email');
-    expect(control.props).not.toHaveProperty('children');
-    expect(elements(root.props.children)).toHaveLength(2);
+    const markup = renderFieldScenario(`
+      process.stdout.write(renderToStaticMarkup(createElement(Field, {
+        name: 'email', label: 'Email',
+      })));
+    `);
+    expect(markup).toContain('data-slot="field-label"');
+    expect(markup).toContain('>Email</label>');
+    expect(markup).toContain('name="email"');
+    expect(markup).not.toContain('data-slot="field-description"');
+    expect(markup).not.toContain('data-slot="field-error"');
+    expect(markup).not.toContain('data-slot="field-feedback-trigger"');
 
-    const baseControl = FieldControl(
-      control.props as Parameters<typeof FieldControl>[0],
-    ) as TestElement;
+    const baseControl = FieldControl({}) as TestElement;
     expect(baseControl.type).toBe(BaseField.Control);
     expect(baseControl.props['data-slot']).toBe('field-control');
     expect(baseControl.props['data-size']).toBe('md');
@@ -92,18 +122,6 @@ describe('Field', () => {
   });
 
   test('places a custom control directly in the root instead of inside an input', () => {
-    const customControl = <button type='button'>Choose a region</button>;
-    const root = Field({
-      label: 'Region',
-      children: customControl,
-    }) as TestElement;
-    const children = elements(root.props.children);
-
-    expect(findElement(children, 'button').props.children).toBe(
-      'Choose a region',
-    );
-    expect(children.some((child) => child.type === FieldControl)).toBe(false);
-
     const fieldModule = new URL('./field.tsx', import.meta.url).href;
     const inputModule = new URL('./input.tsx', import.meta.url).href;
     const result = Bun.spawnSync({
@@ -139,6 +157,41 @@ describe('Field', () => {
     expect(result.exitCode).toBe(0);
     expect(markup).toContain('<input');
     expect(markup).toContain('placeholder="name@example.com"');
+    expect(markup).not.toContain('data-slot="field-control"');
+  });
+
+  test('renders standalone cell feedback from actual validity and keeps semantic messages local', () => {
+    const markup = renderFieldScenario(`
+      process.stdout.write(renderToStaticMarkup(createElement(Field, {
+        label: 'Email', description: 'Used for notifications.',
+        error: 'Enter a valid email address.',
+      })));
+    `);
+    expect(markup).toContain('Show field description');
+    expect(markup).not.toContain('Show field error');
+    expect(markup).not.toContain('aria-expanded');
+    expect(markup).toContain('data-slot="field-description"');
+    expect(markup).not.toContain('data-slot="field-error"');
+
+    const invalid = renderFieldScenario(`
+      process.stdout.write(renderToStaticMarkup(createElement(Field, {
+        label: 'Email', invalid: true, error: 'Enter a valid email address.',
+      })));
+    `);
+    expect(invalid).toContain('Show field error');
+    expect(invalid).toContain('data-slot="field-error"');
+    expect(invalid).toContain('Enter a valid email address.');
+    expect(invalid).toContain('type="button"');
+  });
+
+  test('renders stacked fields without a feedback provider', () => {
+    const markup = renderFieldScenario(`
+      process.stdout.write(renderToStaticMarkup(createElement(Field, {
+        variant: 'stacked', label: 'Email', description: 'Used for notifications.',
+      })));
+    `);
+    expect(markup).toContain('data-slot="field-description"');
+    expect(markup).not.toContain('data-slot="field-feedback-trigger"');
   });
 
   test('configures the built-in control and stacked supporting content', () => {
@@ -189,6 +242,14 @@ describe('Field', () => {
     expect((validityElement.props as { children?: unknown }).children).toBe(
       validity,
     );
+    const markup = renderFieldScenario(`
+      process.stdout.write(renderToStaticMarkup(createElement(Field, {
+        label: 'Optional field', control: false,
+        validity: () => createElement('span', null, 'Validity'),
+      })));
+    `);
+    expect(markup).not.toContain('<input');
+    expect(markup).toContain('<span>Validity</span>');
   });
 
   test('maps Base UI state into cva variants and merges state classes', () => {

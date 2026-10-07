@@ -9,6 +9,7 @@ import { AnimatePresence, motion, resize } from 'motion/react';
 import { isNullish } from 'remeda';
 
 import { useIsMobile } from '../hooks/use-is-mobile.js';
+import { pose, useFeel } from '../motion/index.js';
 import type { ControlValue } from '../shared/index.js';
 import { cx } from '../tailwind/index.js';
 
@@ -321,6 +322,30 @@ export function Highlight({
   ...props
 }: HighlightProps) {
   const visible = active || !!highlightStyle;
+  const preset = useFeel('snap');
+  const resolvedTransition = preset.reduced
+    ? preset.transition
+    : (transition ?? preset.transition);
+  const opacityTransition =
+    'opacity' in resolvedTransition ? resolvedTransition.opacity : undefined;
+
+  const exitTransition = {
+    ...resolvedTransition,
+    delay:
+      preset.mode === 'off'
+        ? 0
+        : (resolvedTransition.delay ?? 0) + exitDelay / 1000,
+    ...(opacityTransition && {
+      opacity: {
+        ...opacityTransition,
+        delay:
+          preset.mode === 'off'
+            ? 0
+            : (opacityTransition.delay ?? resolvedTransition.delay ?? 0) +
+              exitDelay / 1000,
+      },
+    }),
+  };
 
   return (
     <AnimatePresence initial={false}>
@@ -332,24 +357,24 @@ export function Highlight({
             className,
           )}
           initial={{
-            scale: 0,
+            scale: preset.reduced ? 1 : 0,
             opacity: 0,
             ...highlightStyle,
           }}
-          animate={{
-            scale: 1,
-            opacity: 1,
-            ...highlightStyle,
-          }}
-          transition={transition}
-          exit={{
-            scale: 0,
-            opacity: 0,
-            ...highlightStyle,
-            transition: {
-              ...transition,
-              delay: (transition?.delay ?? 0) + exitDelay / 1000,
+          animate={pose(
+            {
+              scale: 1,
+              opacity: 1,
+              ...highlightStyle,
             },
+            preset.mode,
+          )}
+          transition={resolvedTransition}
+          exit={{
+            scale: preset.reduced ? 1 : 0,
+            opacity: 0,
+            ...highlightStyle,
+            transition: exitTransition,
           }}
           {...props}
         />

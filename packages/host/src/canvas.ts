@@ -1,35 +1,58 @@
-import type { PartialPick } from '@momots/core';
-import { compact, singleton } from '@momots/core';
+import { compact } from '@momots/core';
 import { isString } from 'remeda';
 
-type MeasureFontProps = PartialPick<
-  CSSStyleDeclaration,
-  'fontStyle' | 'fontWeight' | 'fontSize' | 'fontFamily'
->;
+import { isSSR } from './guard';
+import { ctx } from './shared/canvas-context';
 
-const getContext = () => {
-  const { document } = globalThis;
-  if (typeof document === 'undefined') return null;
-  return singleton(Symbol.for('@momots/canvas-context'), () =>
-    document.createElement('canvas').getContext('2d'),
-  );
-};
+export function toFontStyleString(el: HTMLElement) {
+  const cs = window.getComputedStyle(el);
+  return compact([
+    cs?.fontStyle,
+    cs?.fontWeight,
+    cs?.fontSize ?? '10px',
+    cs?.fontFamily ?? 'sans-serif',
+  ]).join(' ');
+}
 
-export const measureText = (
+export function toTextMetrics(
+  text: string,
+  font: string,
+  context: CanvasRenderingContext2D,
+) {
+  context.font = font;
+  return context.measureText(text);
+}
+
+interface TextWidthComputeParams {
+  compensate?: number;
+}
+
+export function toTextWidth(
+  text: string,
+  font: string,
+  params?: TextWidthComputeParams,
+): number;
+export function toTextWidth(
+  text?: undefined,
+  font?: undefined,
+  params?: TextWidthComputeParams,
+): undefined;
+export function toTextWidth(
   text?: string,
-  font?: MeasureFontProps,
-): number | undefined => {
-  const context = getContext();
-  if (context && isString(text)) {
-    context.font = compact([
-      font?.fontStyle,
-      font?.fontWeight,
-      font?.fontSize ?? '10px',
-      font?.fontFamily ?? 'sans-serif',
-    ]).join(' ');
-    // 经验补偿
-    const compensate = context.measureText('x').width / 4;
-    return context.measureText(text).width + compensate;
+  font?: string,
+  params?: TextWidthComputeParams,
+): number | undefined;
+export function toTextWidth(
+  text?: string,
+  font?: string,
+  params?: TextWidthComputeParams,
+): number | undefined {
+  if (isSSR()) return 0;
+  if (ctx === null) return 0;
+  if (isString(text) && isString(font)) {
+    const {
+      compensate = toTextMetrics('x', font, ctx).width / 4, //
+    } = params ?? {};
+    return toTextMetrics(text, font, ctx).width + compensate;
   }
-  return undefined;
-};
+}

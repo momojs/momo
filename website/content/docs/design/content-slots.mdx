@@ -45,11 +45,33 @@ interface ContentProps {
 | --- | --- |
 | 省略 / `undefined` | 有对应内容时使用默认节点 |
 | props object | 配置节点属性、ref、事件和样式 |
-| `{ render: <section /> }` | 使用指定元素，合并默认属性、样式、事件和 ref |
-| `{ render: (props, state) => … }` | 自行渲染节点；必须透传 `props`，可用状态以该 slot 的类型为准 |
+| `<section />` 或 `{ render: <section /> }` | 使用指定元素，合并默认属性、样式、事件和 ref |
+| `(props, state) => …` 或 `{ render: (props, state) => … }` | 自行渲染节点；必须透传 `props`，可用状态以该 slot 的类型为准 |
 | `false` | 移除该节点及其子树 |
 
-slot 配置不接受 `children`，内容统一放在顶层属性中。`render` 元素也应保持无内容，或由回调透传 `props.children`。`0` 和空字符串是有效内容；`undefined`、`null`、`false` 不创建对应内容节点。
+直接传元素或回调是 `{ render }` 的简写，内部会先转换成对象，再走相同的节点组合流程。三种形式可混合使用：
+
+```tsx
+<Popover
+  title="工作区设置"
+  footer={<Button>保存</Button>}
+  slots={{
+    header: <header />,
+    title: <h3 id="workspace-title" />,
+    content: {
+      className: "space-y-3",
+      render: (props, state) => <section {...props} />,
+    },
+    footer: (props, state) => <footer {...props} />,
+  }}
+>
+  <SettingsForm />
+</Popover>
+```
+
+回调的 `props` 和 `state` 从具体节点推导。普通容器的 `state` 为空对象；Toast 的 `content` 则包含 `index`、`behind`、`expanded`。简写只对已有 `render` 能力的节点开放。
+
+slot 配置不接受 `children`、字符串、数字、`true` 或 `null`，内容统一放在顶层属性中。直接传入的元素和对象中的 `render` 元素都应保持无内容，或由回调透传 `props.children`。`0` 和空字符串是有效内容；`undefined`、`null`、`false` 不创建对应内容节点。
 
 标题与说明继续使用各组件自己的语义节点。更改标签时保留组件提供的 ID 和 ARIA 属性；需要自定义 ID 时可放在 slot props 或 render 元素上。关闭 `slots.header` 会同时移除标题与说明；如果浮层仍需显示，应通过其 popup 属性提供 `aria-label` 等可访问名称。
 

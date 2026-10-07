@@ -18,6 +18,7 @@ import {
 import type { RippleRef } from '../effects/ripples.js';
 import { Ripples } from '../effects/ripples.js';
 import { useControllableValue } from '../hooks/use-controllable-value.js';
+import { pose, useFeel } from '../motion/index.js';
 import type { ControlOption } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 
@@ -122,6 +123,7 @@ function Toggle({
   size = 'md',
   ...rest
 }: ToggleProps) {
+  const { reduced, mode, transition, spatial } = useFeel('snap');
   const root = useRef<HTMLButtonElement>(null!);
 
   useImperativeHandle(ref, () => root.current, [ref]);
@@ -142,7 +144,12 @@ function Toggle({
         <motion.button
           ref={root}
           disabled={disabled}
-          whileTap={{ scale: variant === 'segmented' ? 0.97 : 0.9 }}
+          whileTap={
+            reduced
+              ? undefined
+              : { scale: variant === 'segmented' ? 0.97 : 0.9 }
+          }
+          transition={transition}
           whileFocus={eliminate(
             variant === 'button' && { boxShadow: FOCUS_BOX_SHADOW },
           )}
@@ -150,6 +157,7 @@ function Toggle({
           style={style}
           onTap={onTap}
           {...rest}
+          {...(reduced && { whileTap: undefined, transition })}
         >
           {icon && <span className='relative z-9'>{icon}</span>}
           <motion.span
@@ -157,9 +165,15 @@ function Toggle({
             initial={{
               fontSize: variant === 'tabbar' ? '0em' : '1em',
             }}
-            animate={eliminate(
-              variant === 'tabbar' && { fontSize: active ? '1em' : '0em' },
-            )}
+            animate={
+              variant === 'tabbar'
+                ? pose(
+                    { fontSize: active ? '1em' : '0em' },
+                    mode,
+                  )
+                : undefined
+            }
+            transition={spatial}
           >
             {children}
           </motion.span>

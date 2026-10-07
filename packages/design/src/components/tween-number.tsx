@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { animate, motion, useMotionValue, useTransform } from 'motion/react';
 import type { AnimateNumberProps } from 'motion-plus/react';
 
+import { useFeel } from '../motion/index.js';
+
 const toFinite = (value: unknown) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : 0;
@@ -24,12 +26,13 @@ export function TweenNumber({
   value,
   format,
   transition,
-  duration = 0.6,
+  duration,
   locales = 'zh-CN',
   className,
   ...props
 }: TweenNumberProps) {
   const count = useMotionValue(toFinite(value));
+  const { reduced, spatial } = useFeel('lively');
 
   const rounded = useTransform(() => {
     const current = count.get();
@@ -44,16 +47,26 @@ export function TweenNumber({
   useEffect(() => {
     const num = toFinite(value);
     if (count.get() === num) return;
-    const controls = animate(count, num, {
-      duration,
-      type: 'tween',
-      ease: 'easeOut',
-      ...transition,
-    });
+    if (reduced) {
+      count.jump(num);
+      return;
+    }
+    // An explicit duration/transition keeps the component's tween API. Do not
+    // carry theme stiffness/damping into it: physics would ignore duration.
+    const options =
+      duration === undefined && transition === undefined
+        ? spatial
+        : {
+            type: 'tween' as const,
+            duration: duration ?? spatial.duration,
+            ease: spatial.ease,
+            ...transition,
+          };
+    const controls = animate(count, num, options);
     return () => {
       controls?.stop();
     };
-  }, [value]);
+  }, [count, duration, reduced, spatial, transition, value]);
 
   return (
     <motion.span className='font-mono text-inherit' {...props}>

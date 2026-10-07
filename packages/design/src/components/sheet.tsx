@@ -1,7 +1,5 @@
 'use client';
 
-import { Fragment } from 'react';
-
 import type {
   DialogBackdropProps,
   DialogCloseProps,
@@ -14,8 +12,20 @@ import type {
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import type { VariantProps } from 'cva';
 
-import type { SlotBaseConfig } from '../shared/index.js';
-import { asClass, asData, render } from '../shared/index.js';
+import type {
+  ContentContainerProps,
+  ContentProps,
+  ContentSlotsProps,
+  SlotBaseConfig,
+} from '../shared/index.js';
+import {
+  asClass,
+  asContentSlots,
+  asData,
+  useContentRender as ContentContainer,
+  hasContent,
+  render,
+} from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 import { Button } from './button.js';
 
@@ -71,30 +81,6 @@ const variants = {
     },
   }),
 };
-
-interface SheetHeaderProps extends React.ComponentProps<'div'> {}
-
-function SheetHeader({ className, ...props }: SheetHeaderProps) {
-  return (
-    <div
-      data-slot='sheet-header'
-      className={cx('flex flex-col gap-0.5 p-4', className)}
-      {...props}
-    />
-  );
-}
-
-interface SheetFooterProps extends React.ComponentProps<'div'> {}
-
-function SheetFooter({ className, ...props }: SheetFooterProps) {
-  return (
-    <div
-      data-slot='sheet-footer'
-      className={cx('mt-auto flex flex-col gap-2 p-4', className)}
-      {...props}
-    />
-  );
-}
 
 interface SheetBackdropProps extends DialogBackdropProps {}
 
@@ -191,52 +177,92 @@ export function SheetTrigger({ ...props }: DialogTriggerProps) {
   return <Trigger data-slot='sheet-trigger' {...props} />;
 }
 
-export interface SheetProps extends DialogRootProps {
-  trigger?: React.ReactNode;
+export interface SheetContentSlots {
+  header: ContentContainerProps;
+  title: DialogTitleProps;
+  description: DialogDescriptionProps;
+  content: ContentContainerProps;
+  footer: ContentContainerProps;
+}
+
+export interface SheetProps
+  extends ContentProps,
+    ContentSlotsProps<SheetContentSlots>,
+    Omit<DialogRootProps, 'children'> {
+  trigger?: DialogTriggerProps['render'];
   side?: 'top' | 'right' | 'bottom' | 'left';
-  popup?: SheetPopupProps;
-  title?: SheetTitleProps['render'];
+  popup?: Omit<SheetPopupProps, 'children'>;
   close?: SlotBaseConfig<DialogCloseProps>;
-  header?: SlotBaseConfig<SheetHeaderProps>;
-  footer?: SlotBaseConfig<SheetFooterProps>;
   backdrop?: SlotBaseConfig<DialogBackdropProps>;
-  description?: DialogDescriptionProps['render'];
 }
 
 export function Sheet({
   side,
   title,
   description,
-  popup: popupConfig,
-  close: closeConfig,
-  header: headerConfig,
-  footer: footerConfig,
-  trigger: triggerConfig,
-  backdrop: backdropConfig,
+  children,
+  footer,
+  slots: slotConfig,
+  popup,
+  close = true,
+  trigger,
+  backdrop = true,
   ...props
 }: SheetProps) {
+  const slots = asContentSlots<SheetContentSlots>(slotConfig);
   return (
     <Root {...props}>
-      {render(SheetTrigger, triggerConfig)}
+      {trigger && <SheetTrigger render={trigger} />}
       <Portal data-slot='sheet-portal'>
-        {render(SheetBackdrop, backdropConfig)}
-        {render(SheetPopup, popupConfig, {
-          side,
-          children: (
-            <Fragment>
-              {render(
-                SheetHeader,
-                headerConfig,
-                <Fragment>
-                  {title && <SheetTitle render={title} />}
-                  {description && <SheetDescription render={description} />}
-                </Fragment>,
+        {render(SheetBackdrop, backdrop)}
+        <SheetPopup side={side} {...popup}>
+          {slots.header !== false &&
+            ((hasContent(title) && slots.title !== false) ||
+              (hasContent(description) && slots.description !== false)) && (
+              <ContentContainer
+                {...slots.header}
+                data-slot='sheet-header'
+                className={cx(
+                  'flex flex-col gap-0.5 p-4',
+                  slots.header?.className,
+                )}
+              >
+                {hasContent(title) && slots.title !== false && (
+                  <SheetTitle {...slots.title}>{title}</SheetTitle>
+                )}
+                {hasContent(description) && slots.description !== false && (
+                  <SheetDescription {...slots.description}>
+                    {description}
+                  </SheetDescription>
+                )}
+              </ContentContainer>
+            )}
+          {hasContent(children) && slots.content !== false && (
+            <ContentContainer
+              {...slots.content}
+              data-slot='sheet-content'
+              className={cx(
+                'min-h-0 flex-1 overflow-y-auto px-4',
+                slots.content?.className,
               )}
-              {render(SheetFooter, footerConfig)}
-              {render(SheetClose, closeConfig)}
-            </Fragment>
-          ),
-        })}
+            >
+              {children}
+            </ContentContainer>
+          )}
+          {hasContent(footer) && slots.footer !== false && (
+            <ContentContainer
+              {...slots.footer}
+              data-slot='sheet-footer'
+              className={cx(
+                'mt-auto flex flex-col gap-2 p-4',
+                slots.footer?.className,
+              )}
+            >
+              {footer}
+            </ContentContainer>
+          )}
+          {render(SheetClose, close)}
+        </SheetPopup>
       </Portal>
     </Root>
   );

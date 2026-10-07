@@ -1,20 +1,14 @@
 'use client';
 
-import { Fragment } from 'react';
-
 import type {
   DrawerContentProps as BaseDrawerContentProps,
-  DrawerDescriptionState,
-  DrawerTitleState,
   DrawerTriggerState,
   HTMLProps,
 } from '@base-ui/react';
-import { mergeProps, useRender } from '@base-ui/react';
 import type {
   DrawerBackdropProps as BaseDrawerBackdropProps,
   DrawerCloseProps,
   DrawerDescriptionProps,
-  DrawerPopupProps,
   DrawerPopupState,
   DrawerRootProps,
   DrawerTitleProps,
@@ -24,10 +18,16 @@ import { cardinality } from '@momots/core';
 
 import type {
   BaseRender,
-  ControlAxis,
-  SlotBaseConfig,
+  ContentContainerProps,
+  ContentProps,
+  ContentSlotsProps,
 } from '../shared/index.js';
-import { asAxis, asClass, asData, render } from '../shared/index.js';
+import {
+  asAxis,
+  asClass,
+  asContentSlots,
+  hasContent,
+} from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 
 const {
@@ -234,36 +234,6 @@ function DrawerSwipe({ state, className, ...props }: DrawerSwipeProps) {
   );
 }
 
-interface DrawerHeaderProps extends React.ComponentProps<'div'> {
-  axis?: ControlAxis;
-}
-
-function DrawerHeader({ axis, className, ...props }: DrawerHeaderProps) {
-  return (
-    <div
-      data-slot='drawer-header'
-      className={cx(variants.header({ axis }), className)}
-      {...props}
-    />
-  );
-}
-
-interface DrawerFooterProps extends useRender.ComponentProps<'div', never> {}
-
-function DrawerFooter({ className, render, ...props }: DrawerFooterProps) {
-  return useRender({
-    defaultTagName: 'div',
-    props: mergeProps<'div'>(
-      {
-        ...asData('drawer-footer'),
-        className: 'flex shrink-0 gap-2',
-      },
-      props,
-    ),
-    render,
-  });
-}
-
 function DrawerTitle({ className, ...props }: DrawerTitleProps) {
   return (
     <Title
@@ -294,7 +264,7 @@ interface DrawerContentProps extends BaseDrawerContentProps {
 function DrawerContent({ className, state, ...props }: DrawerContentProps) {
   return (
     <Content
-      data-slot='drawer-content'
+      data-slot='drawer-frame'
       className={asClass(variants.content(state), className)}
       {...props}
     />
@@ -307,16 +277,21 @@ export function DrawerClose(props: DrawerCloseProps) {
   return <Close data-slot='drawer-close' {...props} />;
 }
 
+export interface DrawerContentSlots {
+  header: ContentContainerProps;
+  title: DrawerTitleProps;
+  description: DrawerDescriptionProps;
+  content: ContentContainerProps;
+  footer: ContentContainerProps;
+}
+
 export interface DrawerProps
-  extends Pick<DrawerPopupProps, 'children'>,
+  extends ContentProps,
+    ContentSlotsProps<DrawerContentSlots>,
     Omit<DrawerRootProps, 'children' | 'swipeDirection'> {
   swipe?: boolean;
   direction?: DrawerRootProps['swipeDirection'];
-  content?: SlotBaseConfig<DrawerContentProps>;
-  description?: BaseRender<DrawerDescriptionProps, DrawerDescriptionState>;
-  title?: BaseRender<DrawerTitleProps, DrawerTitleState>;
   trigger?: BaseRender<HTMLProps, DrawerTriggerState>;
-  footer?: BaseRender<DrawerFooterProps, never>;
 }
 
 export function Drawer({
@@ -328,10 +303,11 @@ export function Drawer({
   description,
   swipe = true,
   modal = true,
-  content: contentConfig = true,
+  slots: slotConfig,
   direction = 'down',
   ...props
 }: DrawerProps) {
+  const slots = asContentSlots<DrawerContentSlots>(slotConfig);
   const axis = asAxis(direction);
 
   const hasSnapPoints = cardinality(snapPoints) > 0;
@@ -362,24 +338,56 @@ export function Drawer({
             )}
             render={(props, state) => (
               <div data-slot='drawer-popup' {...props}>
-                {render(DrawerContent, contentConfig, {
-                  state,
-                  children: (
-                    <Fragment>
-                      {swipe && <DrawerSwipe state={state} />}
-                      {(title || description) && (
-                        <DrawerHeader axis={axis}>
-                          {title && <DrawerTitle render={title} />}
-                          {description && (
-                            <DrawerDescription render={description} />
+                <DrawerContent state={state}>
+                  {swipe && <DrawerSwipe state={state} />}
+                  {slots.header !== false &&
+                    ((hasContent(title) && slots.title !== false) ||
+                      (hasContent(description) &&
+                        slots.description !== false)) && (
+                      <useContentRender
+                        {...slots.header}
+                        data-slot='drawer-header'
+                        className={cx(
+                          variants.header({ axis }),
+                          slots.header?.className,
+                        )}
+                      >
+                        {hasContent(title) && slots.title !== false && (
+                          <DrawerTitle {...slots.title}>{title}</DrawerTitle>
+                        )}
+                        {hasContent(description) &&
+                          slots.description !== false && (
+                            <DrawerDescription {...slots.description}>
+                              {description}
+                            </DrawerDescription>
                           )}
-                        </DrawerHeader>
+                      </useContentRender>
+                    )}
+                  {hasContent(children) && slots.content !== false && (
+                    <useContentRender
+                      {...slots.content}
+                      data-slot='drawer-content'
+                      className={cx(
+                        'flex min-h-0 flex-1 flex-col',
+                        slots.content?.className,
                       )}
+                    >
                       {children}
-                      {footer && <DrawerFooter render={footer} />}
-                    </Fragment>
-                  ),
-                })}
+                    </useContentRender>
+                  )}
+                  {hasContent(footer) && slots.footer !== false && (
+                    <useContentRender
+                      {...slots.footer}
+                      data-slot='drawer-footer'
+                      className={cx(
+                        'flex shrink-0 gap-2',
+                        slots.footer?.className,
+                      )}
+                    >
+                      {footer}
+                    </useContentRender>
+                  )}
+                </DrawerContent>
               </div>
             )}
           />

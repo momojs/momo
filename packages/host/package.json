@@ -55,6 +55,10 @@
     "./storage": {
       "types": "./dist/storage.d.ts",
       "import": "./dist/storage.js"
+    },
+    "./truncated": {
+      "types": "./dist/truncated.d.ts",
+      "import": "./dist/truncated.js"
     }
   },
   "files": [

@@ -4,6 +4,7 @@ import type { VariantProps } from 'cva';
 import type { HTMLMotionProps } from 'motion/react';
 import { motion } from 'motion/react';
 
+import { useFeel } from '../motion/index.js';
 import { cva, cx } from '../tailwind/index.js';
 
 const variants = cva({
@@ -24,6 +25,7 @@ const variants = cva({
     },
     size: {
       default: 'h-9 px-4 py-2 has-[>svg]:px-3',
+      inline: 'w-[unset] h-[unset]',
       xs: 'h-7 rounded-md gap-1.5 px-2.5 has-[>svg]:px-2',
       sm: 'h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
       lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
@@ -45,14 +47,17 @@ export interface ButtonProps
     VariantProps<typeof variants> {}
 
 export function Button({ size, variant, className, ...props }: ButtonProps) {
+  const { reduced, transition } = useFeel('snap');
   return (
     <motion.button
-      whileTap={{ scale: 0.95 }}
+      whileTap={reduced ? undefined : { scale: 0.95 }}
+      transition={transition}
       className={cx(
         "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[box-shadow,_color,_background-color,_border-color,_outline-color,_text-decoration-color,_fill,_stroke] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-momo-ring-focus focus-visible:ring-momo-ring-focus/50 focus-visible:ring-[3px] aria-invalid:ring-momo-fg-danger/20 aria-invalid:border-momo-border-danger",
         variants({ variant, size, className }),
       )}
       {...props}
+      {...(reduced && { whileTap: undefined, transition })}
     />
   );
 }

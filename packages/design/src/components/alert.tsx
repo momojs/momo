@@ -2,8 +2,10 @@
 
 import type { ComponentProps, ReactNode } from 'react';
 
-import type { SlotBaseConfig } from '../shared/index.js';
-import { render } from '../shared/index.js';
+import { useRender } from '@base-ui/react/use-render';
+
+import type { ContentProps, ContentSlotsProps } from '../shared/index.js';
+import { asContentSlots, hasContent } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
 
 const variants = {
@@ -78,111 +80,112 @@ export function AlertRoot({
 }
 
 /** Props for the decorative alert icon wrapper. */
-export interface AlertIconProps extends ComponentProps<'span'> {}
+export interface AlertIconProps extends useRender.ComponentProps<'span'> {}
 
 /** Keeps an alert icon aligned with the first line and hidden from assistive technology. */
-export function AlertIcon({ className, ...props }: AlertIconProps) {
-  return (
-    <span
-      data-slot='alert-icon'
-      aria-hidden
-      className={variants.icon({ className })}
-      {...props}
-    />
-  );
+export function AlertIcon({ className, render, ...props }: AlertIconProps) {
+  return useRender({
+    defaultTagName: 'span',
+    render,
+    props: {
+      'aria-hidden': true,
+      ...props,
+      'data-slot': 'alert-icon',
+      className: variants.icon({ className }),
+    },
+  });
 }
 
 /** Props for the alert text and action group. */
-export interface AlertContentProps extends ComponentProps<'div'> {}
+export interface AlertContentProps extends useRender.ComponentProps<'div'> {}
 
 /** Groups the title, description, and optional actions. */
-export function AlertContent({ className, ...props }: AlertContentProps) {
-  return (
-    <div
-      data-slot='alert-content'
-      className={variants.content({ className })}
-      {...props}
-    />
-  );
+export function AlertContent({
+  className,
+  render,
+  ...props
+}: AlertContentProps) {
+  return useRender({
+    defaultTagName: 'div',
+    render,
+    props: {
+      ...props,
+      'data-slot': 'alert-content',
+      className: variants.content({ className }),
+    },
+  });
 }
 
 /** Props for the alert heading. */
-export interface AlertTitleProps extends ComponentProps<'div'> {}
+export interface AlertTitleProps extends useRender.ComponentProps<'div'> {}
 
 /** A concise heading that identifies the alert. */
-export function AlertTitle({ className, ...props }: AlertTitleProps) {
-  return (
-    <div
-      data-slot='alert-title'
-      className={variants.title({ className })}
-      {...props}
-    />
-  );
+export function AlertTitle({ className, render, ...props }: AlertTitleProps) {
+  return useRender({
+    defaultTagName: 'div',
+    render,
+    props: {
+      ...props,
+      'data-slot': 'alert-title',
+      className: variants.title({ className }),
+    },
+  });
 }
 
 /** Props for supporting alert content. */
-export interface AlertDescriptionProps extends ComponentProps<'div'> {}
+export interface AlertDescriptionProps
+  extends useRender.ComponentProps<'div'> {}
 
 /** Supporting details and guidance for the alert. */
 export function AlertDescription({
   className,
+  render,
   ...props
 }: AlertDescriptionProps) {
-  return (
-    <div
-      data-slot='alert-description'
-      className={variants.description({ className })}
-      {...props}
-    />
-  );
+  return useRender({
+    defaultTagName: 'div',
+    render,
+    props: {
+      ...props,
+      'data-slot': 'alert-description',
+      className: variants.description({ className }),
+    },
+  });
 }
 
 /** Props for the alert action group. */
-export interface AlertActionProps extends ComponentProps<'div'> {}
+export interface AlertActionProps extends useRender.ComponentProps<'div'> {}
 
 /** Groups links or buttons that respond to the alert. */
-export function AlertAction({ className, ...props }: AlertActionProps) {
-  return (
-    <div
-      data-slot='alert-action'
-      className={variants.action({ className })}
-      {...props}
-    />
-  );
+export function AlertAction({ className, render, ...props }: AlertActionProps) {
+  return useRender({
+    defaultTagName: 'div',
+    render,
+    props: {
+      ...props,
+      'data-slot': 'alert-action',
+      className: variants.action({ className }),
+    },
+  });
+}
+
+export interface AlertContentSlots {
+  icon: AlertIconProps;
+  content: AlertContentProps;
+  title: AlertTitleProps;
+  description: AlertDescriptionProps;
+  action: AlertActionProps;
 }
 
 /** Props for a composed momo alert. */
-export interface AlertProps extends Omit<AlertRootProps, 'children'> {
+export interface AlertProps
+  extends Omit<AlertRootProps, 'children'>,
+    Pick<ContentProps, 'title' | 'description'>,
+    ContentSlotsProps<AlertContentSlots> {
   /** Optional decorative icon. */
   icon?: ReactNode;
-  /** Concise message heading. */
-  title?: ReactNode;
-  /** Supporting details or guidance. */
-  description?: ReactNode;
   /** Optional links or buttons. */
   action?: ReactNode;
-  /** Configures, replaces, or removes the icon wrapper. */
-  iconSlot?: SlotBaseConfig<AlertIconProps>;
-  /** Configures or replaces the content wrapper. */
-  contentSlot?: SlotBaseConfig<AlertContentProps>;
-  /** Configures, replaces, or removes the title. */
-  titleSlot?: SlotBaseConfig<AlertTitleProps>;
-  /** Configures, replaces, or removes the description. */
-  descriptionSlot?: SlotBaseConfig<AlertDescriptionProps>;
-  /** Configures, replaces, or removes the action group. */
-  actionSlot?: SlotBaseConfig<AlertActionProps>;
-}
-
-function hasContent(value: ReactNode) {
-  return value !== undefined && value !== null && value !== false;
-}
-
-function resolveSlot<TProps extends { children?: ReactNode }>(
-  config: SlotBaseConfig<TProps> | undefined,
-  content: ReactNode,
-): SlotBaseConfig<TProps> {
-  if (config !== undefined) return config;
-  return hasContent(content);
 }
 
 /**
@@ -195,43 +198,35 @@ export function Alert({
   title,
   description,
   action,
-  iconSlot,
-  contentSlot,
-  titleSlot,
-  descriptionSlot,
-  actionSlot,
+  slots: slotConfig,
   ...props
 }: AlertProps) {
-  const titleElement = render(AlertTitle, resolveSlot(titleSlot, title), title);
-  const descriptionElement = render(
-    AlertDescription,
-    resolveSlot(descriptionSlot, description),
-    description,
-  );
-  const actionElement = render(
-    AlertAction,
-    resolveSlot(actionSlot, action),
-    action,
-  );
-  const content = (
-    <>
-      {titleElement}
-      {descriptionElement}
-      {actionElement}
-    </>
-  );
-
+  const slots = asContentSlots<AlertContentSlots>(slotConfig);
+  const showTitle = hasContent(title) && slots.title !== false;
+  const showDescription =
+    hasContent(description) && slots.description !== false;
+  const showAction = hasContent(action) && slots.action !== false;
   return (
     <AlertRoot {...props}>
-      {render(AlertIcon, resolveSlot(iconSlot, icon), icon)}
-      {render(
-        AlertContent,
-        contentSlot ??
-          (hasContent(titleElement) ||
-            hasContent(descriptionElement) ||
-            hasContent(actionElement)),
-        content,
+      {hasContent(icon) && slots.icon !== false && (
+        <AlertIcon {...slots.icon}>{icon}</AlertIcon>
       )}
+      {slots.content !== false &&
+        (showTitle || showDescription || showAction) && (
+          <AlertContent {...slots.content}>
+            {showTitle && slots.title !== false && (
+              <AlertTitle {...slots.title}>{title}</AlertTitle>
+            )}
+            {showDescription && slots.description !== false && (
+              <AlertDescription {...slots.description}>
+                {description}
+              </AlertDescription>
+            )}
+            {showAction && slots.action !== false && (
+              <AlertAction {...slots.action}>{action}</AlertAction>
+            )}
+          </AlertContent>
+        )}
     </AlertRoot>
   );
 }
