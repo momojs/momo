@@ -94,12 +94,6 @@ export function PopoverPlayground() {
           <TextControl label='Title' value={title} onChange={setTitle} />
         </>
       }
-      state={
-        <code>
-          open: {String(open)}; size: {size}; side: {side}; align: {align};
-          arrow: {String(showArrow)}
-        </code>
-      }
     >
       <Popover
         open={open}

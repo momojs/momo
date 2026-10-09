@@ -142,7 +142,7 @@ describe('createToastManager', () => {
     expect(manager.toasts[0]).toMatchObject({
       id: 'retry',
       title: 'Still offline',
-      type: 'error',
+      type: 'danger',
       updateKey: 1,
     });
   });
@@ -318,6 +318,31 @@ describe('ToastProvider', () => {
     expect(markup).not.toContain('data-slot="toast-description"');
     expect(markup).not.toContain('data-slot="toast-close"');
     expect(markup).toContain('data-slot="toast-title"');
+  });
+
+  test('keeps list configuration authoritative over root options', () => {
+    const markup = renderToastScenario(`
+      const manager = createToastManager();
+      manager.add({ title: 'First' });
+      manager.add({ title: 'Second' });
+      process.stdout.write(renderToStaticMarkup(createElement(ToastProvider, {
+        toastManager: manager, portal: false,
+        placement: 'top-center', paused: true,
+        stackOffsetY: 17, stackScale: 0.1, stackOpacity: 0.3,
+        swipeDirection: [],
+        root: {
+          stackOffsetY: 99, stackScale: 0.2, stackOpacity: 0.1,
+          swipeDirection: 'right',
+          className: (state) => 'layer-' + state.index,
+        },
+      })));
+    `);
+    expect(markup).toContain('data-paused=""');
+    expect(markup.match(/data-placement="top-center"/g)).toHaveLength(3);
+    expect(markup.match(/data-swipe-directions=""/g)).toHaveLength(2);
+    expect(markup).toContain('layer-1');
+    expect(markup).toContain('opacity:0.7');
+    expect(markup).toContain('translateY(17px) scale(0.9)');
   });
 
   test('links custom semantic IDs and removes references to hidden text', () => {

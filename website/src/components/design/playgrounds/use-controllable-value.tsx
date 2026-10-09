@@ -137,20 +137,6 @@ function ScenarioPlayground({
           </p>
         </>
       }
-      state={
-        <div className='grid gap-2'>
-          <p>状态所有者：{isControlled ? '父组件' : 'Hook 内部'}</p>
-          <p>
-            {isControlled ? '父组件 value' : '初始 defaultValue'}：
-            <code>{isControlled ? String(source) : '1'}</code>
-          </p>
-          {scenario === 'confirm' && (
-            <p>
-              待确认：<code>{pending ?? '暂无请求'}</code>
-            </p>
-          )}
-        </div>
-      }
     >
       <div className='grid w-full max-w-xl gap-momo-md'>
         <div className='grid gap-momo-xxs'>

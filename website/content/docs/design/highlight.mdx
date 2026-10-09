@@ -4,21 +4,21 @@ description: 用 Motion 在多个目标之间移动、切换和退出高亮层�
 icon: Sparkles
 ---
 
-Highlight effects 将 DOM 测量、目标注册、交互事件和 Motion 渲染拆成四个可组合 API。它适合 tabs、segmented control、菜单 hover 与可移动选中背景。
+Highlight 将 DOM 测量、目标注册、交互事件和 Motion 渲染拆成四个可组合 API。它适合 tabs、segmented control、菜单 hover 与可移动选中背景。
 
 <HighlightPlayground />
 
 ## 导入
 
-Effects 当前从包根入口导出：
+`Highlight` 组件从组件子路径导入，测量、注册和交互 Hook 从 `hooks` 导入：
 
 ```tsx
+import { Highlight } from "@momots/design/components/highlight";
 import {
-  Highlight,
   useHighlightLayer,
   useHighlightRegistrar,
   useHighlightTrigger,
-} from "@momots/design";
+} from "@momots/design/hooks";
 ```
 
 ## 工作方式

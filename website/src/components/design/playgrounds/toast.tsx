@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Button } from '../../../../../packages/design/src/components/button';
 import type {
@@ -48,8 +48,6 @@ interface ToastDemoProps {
   description: string;
   persistent: boolean;
   showAction: boolean;
-  onCountChange: (count: number) => void;
-  onLatestIdChange: (id: string | null) => void;
 }
 
 function ToastDemo({
@@ -59,29 +57,18 @@ function ToastDemo({
   description,
   persistent,
   showAction,
-  onCountChange,
-  onLatestIdChange,
 }: ToastDemoProps) {
   const toast = useToast();
-  const latestId = useRef<string | null>(null);
+  const [latestId, setLatestId] = useState<string | null>(null);
   const sequence = useRef(0);
-
-  useEffect(() => {
-    onCountChange(toast.toasts.length);
-  }, [onCountChange, toast.toasts.length]);
 
   function nextId(prefix = 'toast') {
     sequence.current += 1;
     return `toast-playground-${prefix}-${sequence.current}`;
   }
 
-  function syncState(id: string | null) {
-    latestId.current = id;
-    onLatestIdChange(id);
-  }
-
   function clearLatest(id: string) {
-    if (latestId.current === id) syncState(null);
+    setLatestId((current) => (current === id ? null : current));
   }
 
   function addToast() {
@@ -107,7 +94,7 @@ function ToastDemo({
           }
         : undefined,
     });
-    syncState(id);
+    setLatestId(id);
   }
 
   function burst() {
@@ -124,7 +111,7 @@ function ToastDemo({
         onRemove: () => clearLatest(toastId),
       });
     }
-    syncState(id);
+    setLatestId(id);
   }
 
   function runPromise() {
@@ -141,15 +128,15 @@ function ToastDemo({
       }),
       error: {
         title: 'Publish failed',
-        type: 'error',
+        type: 'danger',
         priority: 'high',
       },
     });
   }
 
   function updateLatest() {
-    if (!latestId.current) return;
-    toast.update(latestId.current, {
+    if (!latestId) return;
+    toast.update(latestId, {
       type: 'success',
       title: 'Notification updated',
       description: 'The existing toast was updated in place.',
@@ -173,11 +160,11 @@ function ToastDemo({
       <Button
         variant='ghost'
         size='sm'
-        disabled={!latestId.current}
+        disabled={!latestId}
         onClick={() => {
-          if (!latestId.current) return;
-          toast.close(latestId.current);
-          syncState(null);
+          if (!latestId) return;
+          toast.close(latestId);
+          setLatestId(null);
         }}
       >
         Close latest
@@ -187,7 +174,7 @@ function ToastDemo({
         size='sm'
         onClick={() => {
           toast.close();
-          syncState(null);
+          setLatestId(null);
         }}
       >
         Close all
@@ -208,8 +195,6 @@ export function ToastPlayground() {
   const [limit, setLimit] = useState(4);
   const [persistent, setPersistent] = useState(false);
   const [showAction, setShowAction] = useState(true);
-  const [count, setCount] = useState(0);
-  const [latestId, setLatestId] = useState<string | null>(null);
 
   return (
     <ToastProvider placement={placement} timeout={timeout} limit={limit}>
@@ -267,12 +252,6 @@ export function ToastPlayground() {
             />
           </>
         }
-        state={
-          <code>
-            type: {type}; placement: {placement}; priority: {priority}; managed:{' '}
-            {count}; latest: {latestId ? 'yes' : 'none'}
-          </code>
-        }
       >
         <ToastDemo
           type={type}
@@ -281,8 +260,6 @@ export function ToastPlayground() {
           description={description}
           persistent={persistent}
           showAction={showAction}
-          onCountChange={setCount}
-          onLatestIdChange={setLatestId}
         />
       </PlaygroundFrame>
     </ToastProvider>

@@ -25,8 +25,13 @@ import type {
   ContentContainerProps,
   ContentProps,
   ContentSlotsProps,
-} from '../shared/index.js';
-import { asClass, asContentSlots, hasContent } from '../shared/index.js';
+} from '../shared/content.js';
+import {
+  asContentSlots,
+  ContentContainer,
+  hasContent,
+} from '../shared/content.js';
+import { asClass } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 
 const variants = {
@@ -300,7 +305,7 @@ export function Dialog(props: DialogProps) {
                       ((hasContent(title) && slots.title !== false) ||
                         (hasContent(description) &&
                           slots.description !== false)) && (
-                        <useContentRender
+                        <ContentContainer
                           {...slots.header}
                           data-slot='dialog-header'
                           className={cx(
@@ -333,10 +338,10 @@ export function Dialog(props: DialogProps) {
                                 {description}
                               </BaseDialog.Description>
                             )}
-                        </useContentRender>
+                        </ContentContainer>
                       )}
                     {hasContent(children) && slots.content !== false && (
-                      <useContentRender
+                      <ContentContainer
                         {...slots.content}
                         data-slot='dialog-content'
                         className={cx(
@@ -345,10 +350,10 @@ export function Dialog(props: DialogProps) {
                         )}
                       >
                         {children}
-                      </useContentRender>
+                      </ContentContainer>
                     )}
                     {hasContent(footer) && slots.footer !== false && (
-                      <useContentRender
+                      <ContentContainer
                         {...slots.footer}
                         data-slot='dialog-footer'
                         className={cx(
@@ -357,7 +362,7 @@ export function Dialog(props: DialogProps) {
                         )}
                       >
                         {footer}
-                      </useContentRender>
+                      </ContentContainer>
                     )}
                     {showCloseButton && (
                       <DialogClose

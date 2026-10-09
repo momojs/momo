@@ -74,13 +74,6 @@ export function BadgePlayground() {
           />
         </>
       }
-      state={
-        <code>
-          label: {label || 'empty'}; variant: {variant}; size: {size}; render:{' '}
-          {interactive ? 'anchor' : 'span'}; disabled: {String(disabled)};
-          invalid: {String(invalid)}
-        </code>
-      }
     >
       <Badge
         id='badge-playground'

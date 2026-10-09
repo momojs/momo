@@ -17,17 +17,17 @@ import { Drawer as BaseDrawer } from '@base-ui/react/drawer';
 import { cardinality } from '@momots/core';
 
 import type {
-  BaseRender,
   ContentContainerProps,
   ContentProps,
   ContentSlotsProps,
-} from '../shared/index.js';
+} from '../shared/content.js';
 import {
-  asAxis,
-  asClass,
   asContentSlots,
+  ContentContainer,
   hasContent,
-} from '../shared/index.js';
+} from '../shared/content.js';
+import type { BaseRender } from '../shared/index.js';
+import { asAxis, asClass } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 
 const {
@@ -344,7 +344,7 @@ export function Drawer({
                     ((hasContent(title) && slots.title !== false) ||
                       (hasContent(description) &&
                         slots.description !== false)) && (
-                      <useContentRender
+                      <ContentContainer
                         {...slots.header}
                         data-slot='drawer-header'
                         className={cx(
@@ -361,10 +361,10 @@ export function Drawer({
                               {description}
                             </DrawerDescription>
                           )}
-                      </useContentRender>
+                      </ContentContainer>
                     )}
                   {hasContent(children) && slots.content !== false && (
-                    <useContentRender
+                    <ContentContainer
                       {...slots.content}
                       data-slot='drawer-content'
                       className={cx(
@@ -373,10 +373,10 @@ export function Drawer({
                       )}
                     >
                       {children}
-                    </useContentRender>
+                    </ContentContainer>
                   )}
                   {hasContent(footer) && slots.footer !== false && (
-                    <useContentRender
+                    <ContentContainer
                       {...slots.footer}
                       data-slot='drawer-footer'
                       className={cx(
@@ -385,7 +385,7 @@ export function Drawer({
                       )}
                     >
                       {footer}
-                    </useContentRender>
+                    </ContentContainer>
                   )}
                 </DrawerContent>
               </div>

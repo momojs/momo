@@ -165,16 +165,6 @@ export function NumericPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value ?? 'null'}; size: {size}; disabled: {String(disabled)};
-          readOnly: {String(readOnly)}; required: {String(required)}; min: {min}
-          ; invalid: {String(invalid)}; max: {max}; step: {step}; smallStep:{' '}
-          {smallStep}; largeStep: {largeStep}; format: {formatPreset}; locale:{' '}
-          {locale}; allowOutOfRange: {String(allowOutOfRange)}; allowWheelScrub:{' '}
-          {String(allowWheelScrub)}; snapOnStep: {String(snapOnStep)}
-        </code>
-      }
     >
       <Field.Root
         name='numeric-playground-amount'

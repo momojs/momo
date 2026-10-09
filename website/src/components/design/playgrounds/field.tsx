@@ -78,13 +78,6 @@ export function FieldPlayground() {
             />
           </>
         }
-        state={
-          <code>
-            value: {value || 'empty'}; variant: {variant}; disabled:{' '}
-            {String(disabled)}; required: {String(required)}; invalid:{' '}
-            {String(effectiveInvalid)}
-          </code>
-        }
       >
         <Field
           name='workspace-email'

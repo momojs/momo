@@ -86,13 +86,6 @@ export function InputPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value || 'empty'}; size: {size}; type: {type}; disabled:{' '}
-          {String(disabled)}; readOnly: {String(readOnly)}; required:{' '}
-          {String(required)}; invalid: {String(invalid)}; maxLength: {maxLength}
-        </code>
-      }
     >
       <div className='grid w-full max-w-sm gap-momo-xxs text-left'>
         <label

@@ -4,8 +4,8 @@ import type { ComponentProps, ReactNode } from 'react';
 
 import { useRender } from '@base-ui/react/use-render';
 
-import type { ContentProps, ContentSlotsProps } from '../shared/index.js';
-import { asContentSlots, hasContent } from '../shared/index.js';
+import type { ContentProps, ContentSlotsProps } from '../shared/content.js';
+import { asContentSlots, hasContent } from '../shared/content.js';
 import { cva } from '../tailwind/index.js';
 
 const variants = {

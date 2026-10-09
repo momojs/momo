@@ -1,0 +1,164 @@
+---
+title: useStoragefy
+description: 把 Storagefy 存储项订阅为 React 值，明确空值、更新、同步、过期和 SSR 行为。
+icon: Database
+---
+
+`useStoragefy` 是同步 [Storagefy](/docs/host/guide) 存储项的 React 适配器。存储是唯一的数据来源；Hook 返回存储值或 `null`，并在收到变更通知时更新组件。
+
+## Playground
+
+两个订阅者使用不同的 `Storagefy` 实例，共享同一内存存储和 key。操作任一订阅者，另一个都会同步更新；切换 key 可以观察各存储项如何分别保留自己的值。
+
+<UseStoragefyPlayground />
+
+| 操作 | 观察结果 |
+| --- | --- |
+| 初始状态，或删除记录 | 存储值为 `null`，界面显示配置的回退值 |
+| 连续 +1 两次 | 两次更新依次读取最新值；默认从展示回退值 `10` 更新到 `12` |
+| 切到另一个 key，再切回来 | 两个 key 的值彼此独立，原值仍可读取 |
+| 有效秒数设为 `3` 后写入，等待 3 秒，再重新读取快照 | 下一次读取才发现过期，返回 `null`；没有自动到期通知 |
+
+演示为每次挂载创建独立的 `MemoryStorage`，刷新页面后清空。浏览器持久化与跨文档同步的使用方式见下文。
+
+## 读取和更新
+
+把存储实例声明在组件外，或通过 `useMemo` 按逻辑 key 创建。每次渲染都创建新实例会造成不必要的重新订阅。
+
+```tsx
+import { Storagefy } from "@momots/host/storage";
+import { useStoragefy } from "@momots/design/hooks";
+
+const counter = new Storagefy<number>("counter");
+
+function Counter() {
+  const [storedCount, setStoredCount] = useStoragefy(counter);
+  const count = storedCount ?? 10;
+
+  return (
+    <div>
+      <output>{count}</output>
+      <button
+        type="button"
+        onClick={() => setStoredCount((previous) => (previous ?? 10) + 1)}
+      >
+        加一
+      </button>
+      <button type="button" onClick={() => setStoredCount(null)}>
+        删除记录
+      </button>
+    </div>
+  );
+}
+```
+
+也可以从 `@momots/design/hooks/use-storagefy` 独立导入。
+
+这个例子中的 `10` 是展示回退值，Hook 不会自动把它写入存储。删除后返回值是 `null`，界面通过 `?? 10` 再次显示 `10`。`0`、`false` 和空字符串都是有效值，不应使用 `value || fallback` 判断是否缺失。
+
+| 操作 | 行为 |
+| --- | --- |
+| 读取不存在的条目 | 返回 `null` |
+| `setValue(value)` | 同步写入值，通知订阅者 |
+| `setValue(previous => next)` | 从写入时最新的存储值计算，`previous` 为 `T \| null` |
+| `setValue(null)` 或 updater 返回 `null` | 删除条目，订阅者读到 `null` |
+| 多次连续更新 | 每次都读取前一次已写入的结果 |
+| 读写被拒绝或写入失败 | 错误向调用方传播，不静默切换到其他存储 |
+
+setter 可以从点击事件等普通回调中调用。存储实例和 `expires` 引用未变时，setter 引用保持稳定；参数变化时会返回绑定新参数的 setter。
+
+函数式更新是同步的读取后写入，不能提供多个浏览器标签页之间的原子事务。值需要满足底层 JSON 序列化约定；函数值不能作为持久化数据。
+
+## 同步范围
+
+共享**相同底层存储实例与相同 key** 的 `Storagefy` 实例会收到相同变更。同一个 key 放在 `localStorage`、`sessionStorage` 或不同 `MemoryStorage` 中时，相互独立。
+
+- 当前页面中，通过 `Storagefy.set()`、`remove()`、`expire()` 或 `Storagefy.clear()` 修改数据，会同步通知订阅者，内存存储也适用。
+- 浏览器原生 `storage` 事件用于接收其他文档的变化，并按 `storageArea` 和 key 过滤。`key === null` 的原生 `clear()` 事件也会重新读取当前项。
+- 原生 `localStorage` 事件适用于共享存储的其他同源文档；`sessionStorage` 的传播范围由浏览器会话与顶层浏览上下文决定。
+- 直接在当前页面调用原生 `setItem()`、`removeItem()` 或 `clear()` 不会主动通知当前页面。通过 `Storagefy` 修改，或在修改后调用 `Storagefy.dispatch(key, newValue, oldValue, storageArea)` 明确通知。
+
+不要在渲染期间写入存储。订阅负责反映已发生的存储变化，不负责保存待提交的 React 业务状态。
+
+## 切换存储项
+
+```tsx
+import { useMemo } from "react";
+import { Storagefy } from "@momots/host/storage";
+import { useStoragefy } from "@momots/design/hooks";
+
+function Draft({ documentId }: { documentId: string }) {
+  const cell = useMemo(
+    () => new Storagefy<string>(`draft:${documentId}`),
+    [documentId],
+  );
+  const [draft, setDraft] = useStoragefy(cell);
+
+  return (
+    <textarea
+      aria-label="草稿"
+      value={draft ?? ""}
+      onChange={(event) => setDraft(event.target.value)}
+    />
+  );
+}
+```
+
+传入新的实例会在本次渲染读取它的快照，并在提交时替换旧订阅。卸载时取消订阅。若使用 `() => Storage` resolver，应在一个实例的订阅期间保持底层存储不变；需要切换区域时创建新 `Storagefy` 实例。
+
+## 对象快照与过期
+
+原始存储内容未变时，对象快照保持相同引用，避免重复 JSON 解码导致 React 持续重渲染。快照应视为只读，更新对象时返回新对象并调用 setter。
+
+```tsx
+const [value, setValue] = useStoragefy(counter, {
+  expires: 300,
+});
+
+// 每次写入都重新设置为从写入时刻起 300 秒后过期。
+const increment = () => setValue((previous) => (previous ?? 0) + 1);
+```
+
+`expires` 单位为秒，也可以传入每次写入时求值的函数。省略或传入 `0` 表示不过期；负数会使值在下一次读取时被视为过期。改变 Hook 的 `expires` 配置不会修改已存储条目，修改现有期限使用 `cell.expire(seconds)`。
+
+Hook **没有到期计时器**：到期不会单独触发重渲染，在下一次读取快照时才返回 `null`。组件重渲染或收到存储通知都会重新检查。快照读取不删除过期或损坏条目；`Storagefy.get()` 保留原有的读取时清理行为，setter 在更新前也会调用它。
+
+## SSR 与 hydration
+
+服务端渲染和客户端首次 hydration 使用 Hook 挂载期间独立的空 `MemoryStorage`，返回 `null`。这期间不会解析传入实例的浏览器存储 resolver，也不会访问 `localStorage`。
+
+客户端接管后读取传入实例的真实值，并订阅变化。纯客户端挂载时直接读取真实值。内存快照不会被写回浏览器，不会覆盖已保存的数据，也不会在服务端请求之间共享。
+
+该约定不把传入实例中预填充的服务端数据当作 hydration 初值。需要展示服务端业务数据时，由页面通过 props 等方式传入并单独管理。
+
+## 从旧版迁移
+
+`initial` 选项及第二个默认值泛型已移除。旧实现只在首次读取时使用 `initial`，函数式更新却读取原始存储值，容易产生“显示 10，更新从 null 开始”的差异。现在展示回退值与更新基准都由调用方明确表达：
+
+```tsx
+const [stored, setStored] = useStoragefy(counter);
+const displayed = stored ?? 10;
+const increment = () => setStored((previous) => (previous ?? 10) + 1);
+```
+
+## API
+
+```ts
+interface UseStoragefyOptions {
+  expires?: number | (() => number);
+}
+
+type StoragefyUpdater<T> =
+  | T
+  | null
+  | ((previous: T | null) => T | null);
+
+type StoragefySetter<T> = (value: StoragefyUpdater<T>) => void;
+
+function useStoragefy<T>(
+  storage: Storagefy<T>,
+  options?: UseStoragefyOptions,
+): readonly [T | null, StoragefySetter<T>];
+```
+
+这里只接受同步 `Storagefy`，不接受 `StoragefyAsync`。

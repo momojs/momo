@@ -1,0 +1,67 @@
+---
+title: toPixel
+description: 将根节点上的 rem 间距变量换算为 JavaScript 使用的像素值。
+icon: Ruler
+---
+
+`toPixel` 用于需要数值尺寸的 JavaScript API。它读取根节点的 CSS 间距变量，按根字号换算为像素，再乘以指定倍数。
+
+## 导入与计算
+
+```tsx
+import { toPixel } from "@momots/design/tailwind";
+
+// 浏览器中，根字号为 16px、--spacing 为 0.25rem 时：
+toPixel(4);   // 16
+toPixel(1.5); // 6
+toPixel(-2);  // -8
+```
+
+计算方式为：`size × 根字号的 px 数值 × CSS 变量的 rem 数值`。默认变量为 Tailwind 的 `--spacing`，也可以传入另一个以 `rem` 表示的根节点变量。
+
+```ts
+function toPixel(size: number, property?: string): number;
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `size` | 间距倍数，可为小数或负数 |
+| `property` | CSS 变量名称，默认为 `"--spacing"` |
+
+## 支持范围
+
+当前实现使用 `parseFloat` 取得变量数值，并始终按 `rem` 计算，调用方需要保证单位正确：
+
+| 情况 | 当前行为 |
+| --- | --- |
+| 变量为 `0.25rem`，根字号为 `16px` | 每个间距单位换算为 `4px` |
+| 变量为 `4px` 或其他非 rem 单位 | 仍乘以根字号，结果不能作为正确的单位换算 |
+| 变量缺失、为空或保留为 `calc(...)` 表达式 | 无法正确解析，可能返回 `NaN` |
+| 变量只定义在某个局部容器 | 不会读取局部值，始终查询 `document.documentElement` |
+| 根字号或主题变量随后改变 | 已取得的结果不会自动更新，需要重新调用 |
+
+因此，`toPixel` 适合读取已经加载的、以 `rem` 表示的根级间距 token。普通布局优先使用 Tailwind 类名或 CSS 变量；需要支持任意 CSS 长度时，应另行测量元素的实际尺寸。
+
+## SSR 与首次渲染
+
+服务端无法读取计算样式，函数会直接返回原始 `size`，该值尚未转换为像素。例如 `toPixel(4)` 在服务端返回 `4`，在上面的浏览器环境中返回 `16`。
+
+需要将结果用于服务端渲染页面时，可以在挂载后读取样式，保持服务端与客户端首次渲染使用同一个初始值：
+
+```tsx
+import { useEffect, useState } from "react";
+import { toPixel } from "@momots/design/tailwind";
+
+function MeasuredSpacing() {
+  const [pixels, setPixels] = useState<number | null>(null);
+
+  useEffect(() => {
+    const value = toPixel(4);
+    if (Number.isFinite(value)) setPixels(value);
+  }, []);
+
+  return <output>{pixels === null ? "尚未测量" : `${pixels}px`}</output>;
+}
+```
+
+此示例假设样式表在挂载前已加载。异步加载主题或切换根级变量时，由调用方在变更完成后重新计算。

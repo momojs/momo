@@ -40,7 +40,7 @@ export function SelectControl<T extends string>({
 }) {
   return (
     <div className='flex w-full items-center justify-between gap-3 text-xs font-medium text-fd-muted-foreground'>
-      <span>{label}</span>
+      <span className='shrink-0'>{label}</span>
       <Select<T>
         size='sm'
         value={value}
@@ -155,11 +155,9 @@ export function NumberControl({
 export function PlaygroundFrame({
   children,
   controls,
-  state,
 }: {
   children: ReactNode;
   controls?: ReactNode;
-  state?: ReactNode;
 }) {
   const [theme, setTheme] = usePlaygroundTheme();
 
@@ -183,11 +181,6 @@ export function PlaygroundFrame({
           </div>
           {controls && (
             <div className='grid gap-2 overflow-y-auto p-3'>{controls}</div>
-          )}
-          {state && (
-            <div className='mt-auto border-t border-momo-border-default bg-momo-bg-surface-muted p-3 text-xs break-words text-momo-fg-muted'>
-              {state}
-            </div>
           )}
         </aside>
       </div>

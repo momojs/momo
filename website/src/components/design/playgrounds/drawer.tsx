@@ -65,12 +65,6 @@ export function DrawerPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          open: {String(open)}; direction: {direction}; modal: {modal}; swipe
-          handle: {String(swipe)}; snap points: {String(hasSnapPoints)}
-        </code>
-      }
     >
       <Drawer
         open={open}

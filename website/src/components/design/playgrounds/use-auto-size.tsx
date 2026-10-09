@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from 'motion/react';
 
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Select } from '../../../../../packages/design/src/components/select';
-import { useAutoSize } from '../../../../../packages/design/src/effects/auto-size';
+import { useAutoSize } from '../../../../../packages/design/src/hooks/use-auto-size';
 import { CheckboxControl, PlaygroundFrame } from './shared';
 
 const scenarios = [
@@ -40,9 +40,6 @@ const scenarios = [
 
 type Scenario = (typeof scenarios)[number]['value'];
 type Panel = 'summary' | 'details';
-
-const formatSize = (value: number | 'auto') =>
-  value === 'auto' ? value : `${Math.round(value * 100) / 100} px`;
 
 function Description({ expanded = false }: { expanded?: boolean }) {
   return (
@@ -96,13 +93,12 @@ function SizeScenario({
   onScenarioChange: (scenario: Scenario) => void;
   onReset: () => void;
 }) {
-  const { register, activate, clear, state, width, height } = useAutoSize();
+  const { register, activate, clear, width, height } = useAutoSize();
   const prefersReducedMotion = useReducedMotion();
   const [staticSize, setStaticSize] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const [panel, setPanel] = useState<Panel>('summary');
-  const [requestedPanel, setRequestedPanel] = useState<Panel>();
   const [reject, setReject] = useState(false);
   const [target, setTarget] = useState('initial');
   const [mounted, setMounted] = useState(false);
@@ -186,49 +182,6 @@ function SizeScenario({
           </Button>
         </>
       }
-      state={
-        <div className='grid gap-2'>
-          <p>
-            测量状态：<output aria-label='测量状态'>{state.status}</output>
-          </p>
-          <p>
-            激活目标：
-            <output aria-label='激活目标'>
-              {state.status === 'idle' ? '无' : String(state.value)}
-            </output>
-          </p>
-          <p>
-            当前测量宽度：
-            <output aria-label='当前测量宽度'>
-              {state.rect ? formatSize(state.rect.width) : '尚无有效测量'}
-            </output>
-          </p>
-          <p>
-            当前测量高度：
-            <output aria-label='当前测量高度'>
-              {state.rect ? formatSize(state.rect.height) : '尚无有效测量'}
-            </output>
-          </p>
-          {scenario === 'size' && (
-            <p>
-              动画目标宽度：
-              <output aria-label='动画目标宽度'>{formatSize(width)}</output>
-            </p>
-          )}
-          <p>
-            动画目标高度：
-            <output aria-label='动画目标高度'>{formatSize(height)}</output>
-          </p>
-          {scenario === 'panels' && (
-            <p>
-              最近切换请求：
-              <output aria-label='最近切换请求'>
-                {requestedPanel ?? '暂无请求'}
-              </output>
-            </p>
-          )}
-        </div>
-      }
     >
       <div className='grid w-full min-w-0 max-w-xl gap-momo-md'>
         <div className='grid gap-momo-xs'>
@@ -276,7 +229,6 @@ function SizeScenario({
                   variant='outline'
                   aria-pressed={panel === next}
                   onClick={() => {
-                    setRequestedPanel(next);
                     if (!reject) setPanel(next);
                   }}
                 >

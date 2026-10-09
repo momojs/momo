@@ -55,6 +55,10 @@
       "types": "./dist/components/field.d.ts",
       "import": "./dist/components/field.js"
     },
+    "./components/highlight": {
+      "types": "./dist/components/highlight.d.ts",
+      "import": "./dist/components/highlight.js"
+    },
     "./components/icon": {
       "types": "./dist/components/icon.d.ts",
       "import": "./dist/components/icon.js"
@@ -91,6 +95,10 @@
       "types": "./dist/components/rating.d.ts",
       "import": "./dist/components/rating.js"
     },
+    "./components/ripples": {
+      "types": "./dist/components/ripples.d.ts",
+      "import": "./dist/components/ripples.js"
+    },
     "./components/select": {
       "types": "./dist/components/select.d.ts",
       "import": "./dist/components/select.js"
@@ -123,6 +131,10 @@
       "types": "./dist/components/toggle-group.d.ts",
       "import": "./dist/components/toggle-group.js"
     },
+    "./components/tooltip": {
+      "types": "./dist/components/tooltip.d.ts",
+      "import": "./dist/components/tooltip.js"
+    },
     "./components/tween-number": {
       "types": "./dist/components/tween-number.d.ts",
       "import": "./dist/components/tween-number.js"
@@ -131,9 +143,17 @@
       "types": "./dist/hooks/index.d.ts",
       "import": "./dist/hooks/index.js"
     },
-    "./effects": {
-      "types": "./dist/effects/index.d.ts",
-      "import": "./dist/effects/index.js"
+    "./hooks/use-is-breakpoint": {
+      "types": "./dist/hooks/use-is-breakpoint.d.ts",
+      "import": "./dist/hooks/use-is-breakpoint.js"
+    },
+    "./hooks/use-merged-refs": {
+      "types": "./dist/hooks/use-merged-refs.d.ts",
+      "import": "./dist/hooks/use-merged-refs.js"
+    },
+    "./hooks/use-storagefy": {
+      "types": "./dist/hooks/use-storagefy.d.ts",
+      "import": "./dist/hooks/use-storagefy.js"
     },
     "./motion": {
       "types": "./dist/motion/index.d.ts",
@@ -174,13 +194,14 @@
   },
   "scripts": {
     "build": "momo build",
-    "test": "bun test src",
+    "test": "bun run typecheck:spec && bun run test:unit && bun run test:browser",
+    "test:unit": "bun test src",
     "test:browser": "bun test browser-tests",
     "format": "biome format --write .",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "types": "tsc --project tsconfig.build.json",
-    "prepack": "bun run build && bun run test && bun run typecheck:spec"
+    "prepack": "bun run build && bun run test"
   },
   "devDependencies": {
     "@momots/cli": "workspace:*",

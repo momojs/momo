@@ -61,10 +61,10 @@ function SaveButton() {
 | `info`             | 新信息或非阻塞更新 |
 | `success`          | 操作完成           |
 | `warning`          | 需要关注的情况     |
-| `danger` / `error` | 失败或风险         |
+| `danger`           | 失败或风险         |
 | `loading`          | Promise 进行中     |
 
-自定义 `type` 会原样保留，未内建的类型使用中性视觉样式。消息必须通过标题或说明表达含义，不能只依赖颜色和图标。
+`type` 使用上述内建类型。消息必须通过标题或说明表达含义，不能只依赖颜色和图标。
 
 ## 动作与关闭
 
@@ -121,23 +121,23 @@ try {
 }
 ```
 
-Promise 的 loading 通知默认不会自动关闭。失败若会阻塞流程，还应在页面内保留可恢复的错误状态，不能只依赖短暂通知。
+Promise 的 loading 通知默认不会自动关闭；成功和失败分别默认使用 `success` 与 `danger` 类型，并恢复 Provider 的默认关闭时间。`success` 与 `error` 也支持接收结果或异常的函数；如果这些函数本身抛错，组件会关闭对应通知并把异常交给调用方，成功结果的处理异常不会再调用 `error`。失败若会阻塞流程，还应在页面内保留可恢复的错误状态，不能只依赖短暂通知。
 
 ## 队列与 Motion
 
 这套实现以一个 manager 数组作为唯一状态源，队列增删后由 `AnimatePresence` 和同一组 Motion targets 完成卸载与重排，没有第二套 CSS transition 或组件库生命周期参与动画。
 
 - 新通知从空间来源进入；右侧 placement 默认沿 x 轴进入，居中 placement 沿 y 轴进入。
-- 紧凑堆叠默认每层偏移 `10px`、缩小 `0.06`、降低 `0.2` opacity，并以 `0.02s` 的短间隔响应。
-- 进场与队列重排使用 `stiffness: 400`、`damping: 30` 的 Motion spring；普通退出使用短 tween。
+- 紧凑堆叠默认每层偏移 `10px`、缩小 `0.06`、降低 `0.2` opacity；响应间隔沿用主题的 `stagger.tight`。
+- 进场、退出与队列重排沿用 `useFeel('ui')` 的主题 spring，透明度使用主题的淡入淡出配置；拖动回弹沿用 `snap` spring。
 - 默认保留四层可见队列，只有最前面的通知可交互和被辅助技术访问。DOM 只保留可见层与两条透明缓冲项，长队列不会让所有通知同时参与每一帧动画；关闭前项后，后项通过 spring 连续接位。
 - `stackOffsetY`、`stackScale`、`stackOpacity`、`staggerInterval` 和 `toastSpring` 可调整整套堆叠手感。
 
 Motion drag 以 1:1 比例跟随 Pointer。右侧通知默认向右滑动关闭；顶部居中的通知向上关闭，底部居中的通知向下关闭。释放时会同时考虑位移和速度，达到阈值后把速度交给退场 spring，否则从当前位置回弹。
 
-鼠标停留、键盘焦点、页面失焦或切到后台时，自动关闭计时器会暂停。按 `F6` 可在当前焦点与通知区域之间切换；聚焦通知后按 `Escape` 将其关闭。
+鼠标停留、键盘焦点、页面失焦或切到后台时，自动关闭计时器会暂停；也可通过 `paused` 手动暂停。所有暂停原因都解除后，计时器才从剩余时间继续；更新通知会刷新完整计时。按 `F6` 可在当前焦点与通知区域之间切换；聚焦通知后按 `Escape` 将其关闭。
 
-系统开启 reduced motion 时，自动进出场和重排不再使用位移、缩放与 spring，仅保留短 opacity 反馈。用户直接拖动仍保持 Pointer 1:1 跟随。
+系统开启 reduced motion 或使用 `calm` 模式时，自动进出场和重排不再使用位移、缩放与 spring，仅保留短 opacity 反馈；`off` 模式立即更新。用户直接拖动仍保持 Pointer 1:1 跟随。
 
 ## Priority 与可访问性
 
@@ -187,6 +187,7 @@ Viewport 提供命名的通知区域，Root 自动关联标题和说明；后方
 | --------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------- |
 | `children`                              | `ReactNode`                                                        | 使用 controller 的业务组件                          |
 | `timeout`                               | `number`                                                           | 默认 `5000`；`0` 表示不自动关闭                     |
+| `paused`                                | `boolean`                                                          | 手动暂停自动关闭，默认 `false`                      |
 | `limit`                                 | `number`                                                           | 可见堆叠层数，默认 `4`                              |
 | `toastManager`                          | `ToastManager`                                                     | 可选的外部独立 manager                              |
 | `placement`                             | `"top-right" \| "top-center" \| "bottom-right" \| "bottom-center"` | 位置，默认 `"bottom-right"`                         |
@@ -194,8 +195,8 @@ Viewport 提供命名的通知区域，Root 自动关联标题和说明；后方
 | `stackOffsetY`                          | `number`                                                           | 每层 y 偏移，默认 `10`                              |
 | `stackScale`                            | `number`                                                           | 每层缩放差，默认 `0.06`                             |
 | `stackOpacity`                          | `number`                                                           | 每层透明度差，默认 `0.2`                            |
-| `staggerInterval`                       | `number`                                                           | 队列响应间隔，默认 `0.02` 秒                        |
-| `toastSpring`                           | `{ stiffness; damping }`                                           | 重排 spring，默认 `{ stiffness: 400, damping: 30 }` |
+| `staggerInterval`                       | `number`                                                           | 队列响应间隔（秒），默认取主题的 `stagger.tight`      |
+| `toastSpring`                           | `{ stiffness; damping; mass? }`                                    | 覆盖进出场与重排 spring；刚度和阻尼也用于回弹         |
 | `portal`、`viewport`、`root` | primitive config                                                   | 配置结构层                                          |
 | `slots`                        | slot config                                                        | 配置内容节点或移除可选节点                            |
 

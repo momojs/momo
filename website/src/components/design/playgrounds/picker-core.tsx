@@ -81,7 +81,6 @@ export function PickerCorePlayground() {
           />
         </>
       }
-      state={<code>value: [{value.join(', ')}]</code>}
     >
       <div className='grid gap-4 text-center'>
         <div>

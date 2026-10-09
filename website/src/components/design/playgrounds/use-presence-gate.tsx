@@ -13,7 +13,7 @@ const scenarios = [
   {
     value: 'nested',
     label: '内容先退出，外层再退出',
-    description: '关闭后观察 open 与 visible：子级仍在退出时，父级保持挂载。',
+    description: '关闭后观察退出顺序：子级仍在退出时，父级保持挂载。',
   },
   {
     value: 'multiple',
@@ -62,7 +62,6 @@ function PresenceScenario({
   const [showExtra, setShowExtra] = useState(true);
   const [slow, setSlow] = useState(false);
   const [instant, setInstant] = useState(false);
-  const [rootExited, setRootExited] = useState(false);
   const [events, setEvents] = useState<string[]>([]);
   const reduced = useReducedMotion();
   const { visible, createGate } = usePresenceGate(open);
@@ -95,7 +94,6 @@ function PresenceScenario({
     } else {
       record(visible ? '退出途中重新打开' : '重新打开');
       setShowExtra(true);
-      setRootExited(false);
       setOpen(true);
     }
   }
@@ -137,29 +135,6 @@ function PresenceScenario({
           </Button>
         </>
       }
-      state={
-        <div className='grid gap-2'>
-          <p>
-            业务 open：<output aria-label='业务 open'>{String(open)}</output>
-          </p>
-          <p>
-            保留父级 visible：
-            <output aria-label='保留父级 visible'>{String(visible)}</output>
-          </p>
-          <p>
-            阶段：
-            <output aria-label='退出阶段'>
-              {open
-                ? '已打开'
-                : visible
-                  ? '等待子级退出'
-                  : rootExited
-                    ? '父级已卸载'
-                    : '父级退出中'}
-            </output>
-          </p>
-        </div>
-      }
     >
       <div className='grid w-full max-w-xl gap-momo-md'>
         <div className='grid gap-momo-xs'>
@@ -190,7 +165,6 @@ function PresenceScenario({
           <AnimatePresence
             initial={false}
             onExitComplete={() => {
-              setRootExited(true);
               record('父级退出完成，已卸载');
             }}
           >

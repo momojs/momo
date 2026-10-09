@@ -98,6 +98,15 @@ import { Numeric } from "@momots/design/components/numeric";
 
 `scrubArea`、`scrubAreaCursor`、`group`、`input`、`decrement` 与 `increment` 都接受 slot 配置。传入 props object 会配置默认 Base UI slot，并保留其状态属性、键盘交互与可访问语义。Base UI slot 的 `className` 也可以使用 state callback；`input.nativeSize` 可设置原生字符宽度提示。
 
+| 配置 | 行为 |
+| --- | --- |
+| 省略 / `true` | 启用默认节点 |
+| `false` / `null` | 移除节点及其子树 |
+| props object | 配置默认节点；组件管理的尺寸、容器子内容等同名属性优先 |
+| ReactNode | 完整替换节点，不会自动合并默认属性、事件或 ref |
+
+移除或替换 `group` 会同时影响输入框与加减按钮；移除或替换 `scrubArea` 会同时影响标签与拖拽 cursor。
+
 ```tsx
 <Numeric
   label="Seats"
@@ -137,9 +146,9 @@ import { Numeric } from "@momots/design/components/numeric";
 | `onChange` | `(value: number \| null) => void` | 未取消的值变化简化回调 |
 | `onValueChange` | `(value: number \| null, details) => void` | 完整值变化回调，包含变化原因并支持取消 |
 | `onValueCommitted` | `(value: number \| null, details) => void` | 编辑提交回调；输入失焦、指针释放、键盘或滚轮操作时触发 |
-| `scrubArea` / `scrubAreaCursor` | `SlotBaseConfig` | 配置或替换拖拽区域与拖拽 cursor |
-| `group` / `input` | `SlotBaseConfig` | 配置或替换输入组合与可见输入框；input 额外支持 `nativeSize` |
-| `decrement` / `increment` | `SlotBaseConfig` | 配置或替换减少、增加按钮 |
+| `scrubArea` / `scrubAreaCursor` | `NumericProps['scrubArea']` / `NumericProps['scrubAreaCursor']` | 配置或替换拖拽区域与拖拽 cursor |
+| `group` / `input` | `NumericProps['group']` / `NumericProps['input']` | 配置或替换输入组合与可见输入框；input 额外支持 `nativeSize` |
+| `decrement` / `increment` | `NumericProps['decrement']` / `NumericProps['increment']` | 配置或替换减少、增加按钮 |
 | `className` | `string \| ((state) => string)` | 根容器追加样式，可读取 Number Field state |
 | `scrubAreaClassName` / `labelClassName` | `string` | 兼容的拖拽区域与标签样式；新代码优先使用 slot / `labelProps` |
 | `scrubAreaCursorClassName` | `string` | 兼容的拖拽 cursor 样式；新代码优先使用 `scrubAreaCursor` |

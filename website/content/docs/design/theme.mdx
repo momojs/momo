@@ -213,3 +213,33 @@ function Panel() {
 本次主题覆盖 momo 自有的 Motion 动画。Drawer/Sheet 的 Base UI 手势与 CSS
 transition、Field.Error 以及颜色/边框等 CSS 反馈继续使用现有实现。
 `themeToCssVars` / `cssVarsToStyleString` 可按需生成主题变量，Provider 不会自动注入 CSS。
+
+### 导出主题到 CSS
+
+下面的工具均从 `@momots/design/motion` 导入，用于让自定义 CSS 与同一份动效主题共享参数：
+
+| 方法 | 输入与返回值 |
+| --- | --- |
+| `themeToCssVars(theme)` | 接收完整主题，返回以 `--motion-ui-` 开头的 CSS 变量对象 |
+| `cssVarsToStyleString(theme)` | 接收完整主题，返回包含这些变量的 `:root { ... }` CSS 文本 |
+| `transitionToLinear(token)` | 接收 transition token，返回 `{ easing, duration }`；easing 是 CSS `linear(...)` 字符串，duration 单位为秒 |
+
+`themeToCssVars` 导出 transition 的缓动、时长和弹簧参数生成的曲线，以及 stagger 与 travel；不包含 `inView` 和减少动态效果策略。每个 transition 同时提供普通缓动变量与带 `-spring`、`-spring-duration` 后缀的弹簧变量。
+
+`transitionToLinear` 只根据 token 的 `stiffness` 与 `damping` 生成弹簧曲线和对应时长，不使用淡入淡出通道的 `duration` 与 `ease`。
+
+```ts
+import {
+  cssVarsToStyleString,
+  defineTheme,
+  themeToCssVars,
+  transitionToLinear,
+} from "@momots/design/motion";
+
+const theme = defineTheme();
+const variables = themeToCssVars(theme);
+const stylesheet = cssVarsToStyleString(theme);
+const { easing, duration } = transitionToLinear(theme.transitions.snap);
+```
+
+这些函数只返回数据或文本，不会注入样式或监听系统偏好。应用负责写入样式表，并在自定义 CSS 中处理 `prefers-reduced-motion`；无需为每次组件渲染重复生成整份主题 CSS。

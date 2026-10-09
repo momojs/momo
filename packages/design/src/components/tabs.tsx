@@ -6,17 +6,17 @@ import { useLayoutEffect, useRef } from 'react';
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 import { motion } from 'motion/react';
 
-import { useAutoSize } from '../effects/auto-size.js';
+import { useAutoSize } from '../hooks/use-auto-size.js';
+import { useControllableValue } from '../hooks/use-controllable-value.js';
 import {
-  Highlight,
   useHighlightLayer,
   useHighlightRegistrar,
   useHighlightTrigger,
-} from '../effects/highlight.js';
-import { useControllableValue } from '../hooks/use-controllable-value.js';
+} from '../hooks/use-highlight.js';
 import { pose, useFeel } from '../motion/index.js';
 import type { ControlOption } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
+import { Highlight } from './highlight.js';
 
 const {
   Root,

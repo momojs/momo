@@ -73,7 +73,7 @@ Alert 本身不会消失，也不会渲染关闭按钮。需要可关闭提示�
 
 ## Slots
 
-Alert 共享 `ContentProps` 的 `title` 与 `description`。`slots.icon`、`slots.content`、`slots.title`、`slots.description`、`slots.action` 遵循 [Content Slots](/docs/design/content-slots) 约定：省略时按内容渲染默认节点，props object 配置节点，`render` 更改标签，`false` 移除节点。
+Alert 的 `title` 与 `description` 提供标题和说明内容。`slots.icon`、`slots.content`、`slots.title`、`slots.description`、`slots.action` 遵循 [Content Slots](/docs/design/content-slots) 约定：省略时按内容渲染默认节点，props object 配置节点，`render` 更改标签，`false` 移除节点。
 
 ```tsx
 <Alert
@@ -120,7 +120,7 @@ Alert 共享 `ContentProps` 的 `title` 与 `description`。`slots.icon`、`slot
 | `description` | `ReactNode` | 补充说明或处理建议 |
 | `action` | `ReactNode` | 可选按钮或链接 |
 | `role` | `AriaRole \| null` | 默认 `"alert"`；`null` 移除 live-region role |
-| `slots` | `ContentSlotsProps<AlertContentSlots>` | 配置内容节点，支持 `render` 或 `false` |
+| `slots` | `AlertProps['slots']` | 配置内容节点，支持 `render` 或 `false` |
 | `className` | `string` | 追加根容器样式 |
 | `...props` | `React.ComponentProps<"div">` | 其余原生 div 属性 |
 

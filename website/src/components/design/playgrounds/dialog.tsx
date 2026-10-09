@@ -88,14 +88,6 @@ export function DialogPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          open: {String(open)}; size: {size}; modal: {modal}; prevent outside
-          close: {String(disablePointerDismissal)}; closeButton:{' '}
-          {String(showCloseButton)}; description: {String(showDescription)};
-          content: {String(showContent)}; footer: {String(showFooter)}
-        </code>
-      }
     >
       <Dialog
         open={open}

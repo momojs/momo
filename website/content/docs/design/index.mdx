@@ -54,8 +54,14 @@ bun add cn cva date-fns motion remeda tailwindcss type-fest
   <Card title="Drawer" href="/docs/design/drawer">
     支持拖拽、方向与吸附点的手势抽屉。
   </Card>
+  <Card title="Tooltip" href="/docs/design/tooltip">
+    支持悬停延迟、键盘焦点与共享分组的简短提示。
+  </Card>
   <Card title="Field" href="/docs/design/field">
     统一标签、控件、说明与校验错误的字段容器。
+  </Card>
+  <Card title="Highlight" href="/docs/design/highlight">
+    可复用的 Motion 移动高亮层与触发器 Hooks。
   </Card>
   <Card title="Icon" href="/docs/design/icon">
     改变图标数据即可平滑变形，统一尺寸、描边与动效主题。
@@ -101,25 +107,54 @@ bun add cn cva date-fns motion remeda tailwindcss type-fest
 ## Hooks
 
 <Cards>
+  <Card title="useAutoSize" href="/docs/design/use-auto-size">
+    测量当前内容，为容器提供稳定的宽高动画目标。
+  </Card>
   <Card title="useControllableValue" href="/docs/design/use-controllable-value">
     为组件统一受控、非受控状态与函数式更新语义。
   </Card>
+  <Card title="useIsBreakpoint" href="/docs/design/use-is-breakpoint">
+    订阅视口宽度断点，并保持 SSR 与 hydration 的初始值一致。
+  </Card>
+  <Card title="useMergedRefs" href="/docs/design/use-merged-refs">
+    合并内部与外部 refs，保留回调 ref 的清理行为。
+  </Card>
   <Card title="usePresenceGate" href="/docs/design/use-presence-gate">
     协调多层 AnimatePresence 的退出完成时机。
+  </Card>
+  <Card title="usePrevious" href="/docs/design/use-previous">
+    读取最近一次 Effect 记录的值，比较相邻提交。
+  </Card>
+  <Card title="useResize" href="/docs/design/use-resize">
+    监听元素布局边框盒尺寸，支持目标替换与逻辑绑定重置。
+  </Card>
+  <Card title="useStoragefy" href="/docs/design/use-storagefy">
+    订阅存储项的真实值，统一更新、空值、同步与 SSR 行为。
+  </Card>
+</Cards>
+
+## 通用约定
+
+<Cards>
+  <Card title="Content Slots" href="/docs/design/content-slots">
+    通过内容属性与 slots 配置组件的内容节点。
   </Card>
 </Cards>
 
 ## Utils
 
 <Cards>
+  <Card title="类名与样式变体" href="/docs/design/class-utilities">
+    用 cx、cva 与 asClass 组合条件类名、组件变体和状态样式。
+  </Card>
   <Card title="Control types" href="/docs/design/control-types">
     组件间共享的值、尺寸、方向与选项类型。
   </Card>
-  <Card title="Slot composition" href="/docs/design/slot-composition">
-    momo 组件封装所使用的 slot 配置与渲染工具。
+  <Card title="Substitute" href="/docs/design/substitute">
+    将文本占位符替换为字符串或 React 节点，支持默认文本。
   </Card>
-  <Card title="Highlight" href="/docs/design/highlight">
-    可复用的 Motion 移动高亮层与触发器 Hooks。
+  <Card title="toPixel" href="/docs/design/to-pixel">
+    将根节点上的 rem 间距变量换算为 JavaScript 使用的像素值。
   </Card>
 </Cards>
 

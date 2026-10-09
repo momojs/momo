@@ -59,12 +59,6 @@ export function ControlTypesPlayground() {
           }}
         />
       }
-      state={
-        <code>
-          value: {value}; meta.seats: {selected?.meta?.seats}; extra/href:{' '}
-          caller-owned
-        </code>
-      }
     >
       <div className='grid w-full max-w-md gap-5'>
         <ToggleGroup

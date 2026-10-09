@@ -42,13 +42,12 @@ import type { VariantProps } from 'cva';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { isString } from 'remeda';
 
-import type { HighlightTrigger } from '../effects/highlight.js';
+import { useControllableValue } from '../hooks/index.js';
+import type { HighlightTrigger } from '../hooks/use-highlight.js';
 import {
-  Highlight,
   useHighlightLayer,
   useHighlightTrigger,
-} from '../effects/highlight.js';
-import { useControllableValue } from '../hooks/index.js';
+} from '../hooks/use-highlight.js';
 import { pose, useFeel } from '../motion/index.js';
 import type {
   ControlOption,
@@ -58,6 +57,7 @@ import type {
 } from '../shared/index.js';
 import { asClass, asData, isReactNode, render } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
+import { Highlight } from './highlight.js';
 
 const {
   Icon,

@@ -35,6 +35,14 @@ Storage uses memory only when `localStorage` is absent. If the browser denies
 access to `localStorage`, `Storagefy` and `StoragefyAsync` propagate the error;
 pass `MemoryStorage` explicitly when memory storage is intended.
 
+Synchronous `Storagefy` items expose a read-only `snapshot` getter for cached,
+side-effect-free reads and `subscribe(listener)` for changes to the same key and
+backing storage.
+Local subscriptions work with `MemoryStorage` without browser event APIs;
+browser subscriptions also handle other documents' storage events, including
+`clear()`. Snapshot reads return `null` for expired data without deleting it;
+`get()` keeps its cleanup behavior. Neither API schedules expiration timers.
+
 | Entry | Browser | Bun service | Bun behavior |
 | --- | --- | --- | --- |
 | `buffer` | Full | Full | Uses Web Platform `Blob`, Base64, and typed arrays |

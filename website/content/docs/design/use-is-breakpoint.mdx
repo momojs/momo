@@ -1,0 +1,105 @@
+---
+title: useIsBreakpoint
+description: 订阅视口宽度断点，并为服务端渲染与 hydration 提供一致的初始值。
+icon: Monitor
+---
+
+`useIsBreakpoint` 判断当前视口宽度是否满足指定断点，并在匹配结果变化时更新组件。它适合需要根据可用空间改变交互或渲染结构的场景；只改变间距、排列或显示样式时，优先使用 CSS 媒体查询。
+
+## Playground
+
+调整断点或浏览器窗口宽度，观察查询结果。点击“设为当前视口宽度”可验证包含边界的语义：同一断点的 `min` 和 `max` 都返回 `true`。
+
+<UseIsBreakpointPlayground />
+
+预览使用真实的浏览器视口。切换查询模式只改变上方的主结果，下方始终同时显示两种查询，便于比较。
+
+## 基本用法
+
+```tsx
+import { useIsBreakpoint } from "@momots/design/hooks";
+
+function Navigation() {
+  const compact = useIsBreakpoint("max", 768);
+
+  return compact ? (
+    <details>
+      <summary>导航</summary>
+      <nav aria-label="主导航">
+        <a href="/docs/core">基础工具</a>
+        <a href="/docs/design">组件</a>
+      </nav>
+    </details>
+  ) : (
+    <nav aria-label="主导航">
+      <a href="/docs/core">基础工具</a>
+      <a href="/docs/design">组件</a>
+    </nav>
+  );
+}
+```
+
+也可以从独立子路径导入：
+
+```ts
+import { useIsBreakpoint } from "@momots/design/hooks/use-is-breakpoint";
+```
+
+切换渲染结构可能卸载子组件，丢失其局部状态或焦点。需要跨断点保留的状态应放在共同父组件中。
+
+## 断点包含哪一侧
+
+断点单位是 **CSS 像素**，测量对象是视口，不是组件容器。`min` / `max` 与原生 CSS 的 `min-width` / `max-width` 同义，均包含断点：
+
+| 调用 | 条件 | 宽度 767.5 | 宽度 768 | 宽度 768.5 |
+| --- | --- | --- | --- | --- |
+| `useIsBreakpoint("max", 768)` | `width <= 768px` | `true` | `true` | `false` |
+| `useIsBreakpoint("min", 768)` | `width >= 768px` | `false` | `true` | `true` |
+
+实现直接查询 `(min-width: 768px)` 或 `(max-width: 768px)`，支持小数宽度，不会减去一个像素。在断点处两个条件都为 `true`，因此它们不是互补条件。需要互补分支时，只调用一次 Hook，再通过 `!matches` 推导另一侧。
+
+这与 Tailwind 的 `max-*` 排他上界不同；Hook 也不会读取 Tailwind 的断点配置或自动把 `rem` 转成 `px`。
+
+宽度断点不能判断设备类型、触摸输入或 hover 能力。不要把匹配结果当成“用户正在使用手机”。
+
+## 服务端渲染与 hydration
+
+服务端没有实际视口宽度，因此默认返回 `false`。客户端接管服务端 HTML 的首次渲染称为 **hydration**；该阶段也返回同一个默认值，随后更新为浏览器的真实匹配结果。仅在客户端挂载时，首次渲染就读取真实匹配结果。
+
+如果服务端页面希望先展示紧凑导航，可以指定 `serverMatches`：
+
+```tsx
+const compact = useIsBreakpoint("max", 768, {
+  serverMatches: true,
+});
+```
+
+服务端和客户端必须传入相同的 `serverMatches`。它是渲染回退值，不会锁定实际匹配结果；浏览器测量后仍可能切换布局。不支持 `matchMedia` 的环境持续使用这个回退值。
+
+默认情况下，同时调用 `min` 和 `max` 在 SSR 时都会得到 `false`，因为这时尚未测量视口。如果两个分支必须互补，使用一次查询，再通过 `!matches` 推导另一分支。
+
+## API
+
+```ts
+type BreakpointMode = "min" | "max";
+
+interface UseIsBreakpointOptions {
+  serverMatches?: boolean;
+}
+
+function useIsBreakpoint(
+  mode?: BreakpointMode,
+  breakpoint?: number,
+  options?: UseIsBreakpointOptions,
+): boolean;
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `mode` | `"max"` | 对应原生 `min-width` / `max-width`，两者均包含断点 |
+| `breakpoint` | `768` | 有限、非负的 CSS 像素数，可以带小数；无效值抛出 `RangeError` |
+| `options.serverMatches` | `false` | SSR、首次 hydration 和缺少 `matchMedia` 时的回退值 |
+
+`mode` 或 `breakpoint` 变化时，会读取新查询并替换监听；组件卸载时移除监听。
+
+需要测量元素容器时，使用 [useResize](/docs/design/use-resize)。

@@ -40,7 +40,6 @@ type ButtonVariant = (typeof buttonVariantOptions)[number]['value'];
 type ButtonSize = (typeof buttonSizeOptions)[number]['value'];
 
 export function ButtonPlayground() {
-  const [clicks, setClicks] = useState(0);
   const [variant, setVariant] = useState<ButtonVariant>('default');
   const [size, setSize] = useState<ButtonSize>('default');
   const [disabled, setDisabled] = useState(false);
@@ -83,13 +82,6 @@ export function ButtonPlayground() {
           <TextControl label='Label' value={label} onChange={setLabel} />
         </>
       }
-      state={
-        <code>
-          variant: {variant}; size: {size}; disabled: {String(disabled)};
-          invalid: {String(invalid)}; icon: {String(showIcon || iconOnly)};
-          clicks: {clicks}
-        </code>
-      }
     >
       <Button
         size={size}
@@ -97,9 +89,6 @@ export function ButtonPlayground() {
         disabled={disabled}
         aria-invalid={invalid || undefined}
         aria-label={iconOnly ? label || 'Open settings' : undefined}
-        onClick={() => {
-          setClicks((count) => count + 1);
-        }}
       >
         {(iconOnly || showIcon) && <Icon icon={Settings02Icon} />}
         {!iconOnly && (label || 'Button')}

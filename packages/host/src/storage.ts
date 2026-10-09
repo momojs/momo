@@ -68,6 +68,11 @@ const entry = {
   },
 };
 
+const subscriptions = new WeakMap<Storage, Map<string, Set<() => void>>>();
+// Local mutations notify directly, including MemoryStorage without browser APIs.
+// Their compatibility StorageEvent must not notify the same subscriber twice.
+const localEvents = new WeakSet<Event>();
+
 const store = {
   key: (namespace: string, key: string) => `${namespace}:${key}`,
   keys: (storage: Storage, namespace: string) => {
@@ -90,21 +95,23 @@ const store = {
     type: StorageEvent['type'] = 'storage',
   ) => {
     if (
-      typeof globalThis.dispatchEvent !== 'function' ||
-      typeof StorageEvent === 'undefined'
+      typeof globalThis.dispatchEvent === 'function' &&
+      typeof StorageEvent !== 'undefined'
     ) {
-      return;
-    }
-
-    globalThis.dispatchEvent(
-      new StorageEvent(type, {
+      const event = new StorageEvent(type, {
         key,
         newValue,
         oldValue,
         url: globalThis.location?.href ?? '',
         storageArea: isStorage(storageArea) ? storageArea : null,
-      }),
-    );
+      });
+      localEvents.add(event);
+      globalThis.dispatchEvent(event);
+    }
+    if (type === 'storage') {
+      const listeners = subscriptions.get(storageArea)?.get(key);
+      for (const notify of [...(listeners ?? [])]) notify();
+    }
   },
   resolve: (storage?: Realizable<Storage>): Storage => {
     if (storage) return realize(storage);
@@ -190,6 +197,12 @@ export class Storagefy<T> {
 
   private target?: Realizable<Storage>;
 
+  private snapshotCache?: {
+    storage: Storage;
+    raw: string | null;
+    data: StoragefyValue<T> | null;
+  };
+
   static has(key: string, storage: Storage = store.resolve()): boolean {
     const val = storage.getItem(key);
     return val !== null;
@@ -229,6 +242,86 @@ export class Storagefy<T> {
    */
   public get storage(): Storage {
     return store.resolve(this.target);
+  }
+
+  /**
+   * 读取无副作用的快照，原始内容不变时复用已解码对象的引用。
+   * 过期、缺失或无法解析时返回 null，不删除条目或派发事件。
+   * 返回的对象应视为只读；需要清理无效条目时使用 get()。
+   *
+   * @returns 当前值或 null；不包含主动过期计时器。
+   * @example
+   * const snapshot = cell.snapshot;
+   */
+  public get snapshot(): T | null {
+    const storage = this.storage;
+    const raw = storage.getItem(this.key);
+    if (
+      !this.snapshotCache ||
+      this.snapshotCache.storage !== storage ||
+      this.snapshotCache.raw !== raw
+    ) {
+      let data: StoragefyValue<T> | null = null;
+      if (raw !== null) {
+        try {
+          data = entry.unpack<T>(raw);
+        } catch {
+          // Snapshot reads stay pure; get() retains logging and cleanup.
+        }
+      }
+      this.snapshotCache = { storage, raw, data };
+    }
+    const { data } = this.snapshotCache;
+    return data === null || entry.expired(data) ? null : (data.value ?? null);
+  }
+
+  /**
+   * 订阅当前底层存储实例与 key 的变更；订阅时不立即通知。
+   * Storagefy 写入在当前运行时同步通知；浏览器还接收其他文档的
+   * 同存储区域事件，包括 key 为 null 的原生 clear() 事件。
+   * 自定义 storage resolver 在一次订阅期间应保持相同实例。
+   *
+   * @param listener 收到变更后重新读取快照的函数。
+   * @returns 取消本次订阅并清理浏览器监听器的函数。
+   * @example
+   * const unsubscribe = cell.subscribe(() => console.log(cell.snapshot));
+   */
+  public subscribe(listener: () => void): () => void {
+    const storage = this.storage;
+    const { key } = this;
+    let keys = subscriptions.get(storage);
+    if (!keys) {
+      keys = new Map();
+      subscriptions.set(storage, keys);
+    }
+    let listeners = keys.get(key);
+    if (!listeners) {
+      listeners = new Set();
+      keys.set(key, listeners);
+    }
+    // Each subscription has its own identity, even for the same callback.
+    let active = true;
+    const notify = () => {
+      if (active) listener();
+    };
+    listeners.add(notify);
+    const onStorage = (event: StorageEvent) => {
+      if (
+        !localEvents.has(event) &&
+        event.storageArea === storage &&
+        (event.key === null || event.key === key)
+      ) {
+        notify();
+      }
+    };
+    globalThis.addEventListener?.('storage', onStorage);
+    return () => {
+      if (!active) return;
+      active = false;
+      globalThis.removeEventListener?.('storage', onStorage);
+      listeners.delete(notify);
+      if (listeners.size === 0 && keys.get(key) === listeners) keys.delete(key);
+    };
   }
 
   private dispatch = (

@@ -62,13 +62,6 @@ export function SwitchPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          checked: {String(enabled)}; size: {size}; disabled: {String(disabled)}
-          ; readOnly: {String(readOnly)}; required: {String(required)}; icons:{' '}
-          {String(showIcons)}
-        </code>
-      }
     >
       <div className='inline-flex items-start gap-3'>
         <Switch

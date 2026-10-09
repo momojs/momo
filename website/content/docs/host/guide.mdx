@@ -551,10 +551,12 @@ class Storagefy<T> {
 
   readonly key: string;
   readonly storage: Storage;
+  get snapshot(): T | null;
 
   set(arg: Realizable<T, [T | null]>, expires?: number): void;
   expire(arg: Realizable<number, [T | null]>): void;
   get(): T | null;
+  subscribe(listener: () => void): () => void;
   remove(): void;
 
   static readonly namespace: 'Storagefy';
@@ -572,6 +574,7 @@ class Storagefy<T> {
 | `set(arg, expires?)` | 写入值或函数式更新；更新函数接收已解码的当前值，`expires` 为过期秒数 |
 | `expire(arg)` | 更新现有值的过期秒数但不改变值；可根据已解码的当前值计算秒数，键不存在时不写入 |
 | `get()` | 读取值；过期或解析失败时自动删除并返回 `null` |
+| `subscribe(listener)` | 订阅同底层存储实例、同 key 的变化；返回取消订阅函数，不立即通知 |
 | `remove()` | 删除键并派发 `StorageEvent` |
 
 `Storagefy.isNativeStorage` 与 `StoragefyAsync.isNativeStorage` 均为 `isStorage` 的别名。
@@ -581,6 +584,7 @@ class Storagefy<T> {
 | --- | --- |
 | `key` | 带 `Storagefy:` 命名空间的实际存储键 |
 | `storage` | 当前解析得到的底层 `Storage` 实例 |
+| `snapshot` | 只读访问器，读取无副作用的快照；原始内容未变时复用对象引用，过期或无法解析时返回 `null`，不删除条目 |
 
 | 静态方法 | 说明 |
 | --- | --- |
@@ -589,7 +593,7 @@ class Storagefy<T> {
 | `used()` | 命名空间已用空间（KB） |
 | `clear()` | 清除命名空间下所有数据 |
 
-读到过期项、JSON 解析失败时会自动删除并返回 `null`；`set` 超配额会抛错。
+`get()` 读到过期项、JSON 解析失败时会自动删除并返回 `null`；`set` 超配额会抛错。
 
 ```ts
 import { Storagefy } from '@momots/host/storage';
@@ -600,9 +604,28 @@ cache.expire(600); // 保留当前值，将过期时间刷新为 10 分钟后
 cache.get(); // => { name: 'Momo' } | null
 ```
 
+需要连接 UI 或其他外部订阅系统时，可配合 `snapshot` 与 `subscribe()`。
+快照对象应视为只读。读取 `snapshot` 不执行 `get()` 的日志和删除操作，也不启动
+过期计时器；过期状态在下一次读取快照时检查。
+
+```ts
+const unsubscribe = cache.subscribe(() => {
+  console.log(cache.snapshot);
+});
+// 不再需要监听时：unsubscribe();
+```
+
+订阅绑定的是底层 `Storage` 实例与完整 key，不要求使用同一个 `Storagefy` 对象。
+通过 `set()`、`remove()`、`expire()` 和 `Storagefy.clear()` 修改时，同运行时的
+订阅者会同步收到通知，包括没有浏览器事件 API 的 `MemoryStorage`。
+浏览器还会监听其他文档的同存储区域事件，包括原生 `clear()` 的空 key 事件。
+当前页面直接调用底层 `Storage` 方法不会主动通知，需通过 `Storagefy` 写入，
+或随后调用 `Storagefy.dispatch()`。
+使用存储 resolver 时，一次订阅期间应保持底层实例不变；切换实例需重新订阅。
+
 ### StoragefyAsync&lt;T&gt;
 
-与 `Storagefy` 语义一致，但支持可插拔的**异步** encode/decode。默认用 `JSON.parse` / `JSON.stringify`；提供 `static createAES<T>(hexKey)` 构造 AES-GCM 编解码器。`hexKey` 必须是 AES 支持的 16、24 或 32 字节 key 的十六进制字符串（分别对应 32、48 或 64 个 hex 字符）。
+读写与过期语义与 `Storagefy` 一致，但支持可插拔的**异步** encode/decode，不提供同步 `snapshot` / `subscribe()` 接口。默认用 `JSON.parse` / `JSON.stringify`；提供 `static createAES<T>(hexKey)` 构造 AES-GCM 编解码器。`hexKey` 必须是 AES 支持的 16、24 或 32 字节 key 的十六进制字符串（分别对应 32、48 或 64 个 hex 字符）。
 
 **社区对照：** [localForage](https://github.com/localForage/localForage) 和 [idb-keyval](https://github.com/jakearchibald/idb-keyval) 用异步 API 访问底层存储。`StoragefyAsync` 的异步部分用于编解码，例如 AES-GCM 加解密；底层仍要求同步 `Storage` 接口，不能直接传入这些库的异步存储实例。
 

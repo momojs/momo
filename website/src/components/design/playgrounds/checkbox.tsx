@@ -62,13 +62,6 @@ export function CheckboxPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          checked: {String(checked)}; indeterminate: {String(indeterminate)};
-          disabled: {String(disabled)}; readOnly: {String(readOnly)}; size:{' '}
-          {size}; required: {String(required)}; invalid: {String(invalid)}
-        </code>
-      }
     >
       <label className='inline-flex max-w-sm items-start gap-3 text-left'>
         <Checkbox

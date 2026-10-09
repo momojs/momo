@@ -41,13 +41,6 @@ export function AccordionPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          open: {value.join(', ') || 'none'}; multiple: {String(multiple)};
-          disabled: {String(disabled)}; keepMounted: {String(keepMounted)};
-          hiddenUntilFound: {String(hiddenUntilFound)}
-        </code>
-      }
     >
       <Accordion
         value={value}

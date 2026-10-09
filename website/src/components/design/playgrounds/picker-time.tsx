@@ -55,11 +55,6 @@ export function PickerTimePlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value.toISOString()}; disabled: {String(disabled)}
-        </code>
-      }
     >
       <div className='grid gap-4 text-center'>
         <div className='inline-flex items-center justify-center gap-2 text-sm font-medium text-momo-fg-default'>

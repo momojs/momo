@@ -40,7 +40,6 @@ export function SheetPlayground() {
   const [showDescription, setShowDescription] = useState(true);
   const [longContent, setLongContent] = useState(false);
   const [title, setTitle] = useState('Workspace settings');
-  const [lastReason, setLastReason] = useState('none');
   const isVertical = side === 'top' || side === 'bottom';
 
   return (
@@ -91,12 +90,6 @@ export function SheetPlayground() {
           <TextControl label='Title' value={title} onChange={setTitle} />
         </>
       }
-      state={
-        <code>
-          open: {String(open)}; side: {side}; modal: {modal}; backdrop:{' '}
-          {String(backdrop)}; reason: {lastReason}
-        </code>
-      }
     >
       <Sheet
         open={open}
@@ -133,10 +126,7 @@ export function SheetPlayground() {
             Done
           </BaseDialog.Close>
         }
-        onOpenChange={(nextOpen, details) => {
-          setOpen(nextOpen);
-          setLastReason(details.reason);
-        }}
+        onOpenChange={setOpen}
       >
         <label className='grid gap-2 font-medium'>
           Workspace name

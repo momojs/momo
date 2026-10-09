@@ -97,12 +97,6 @@ export function TweenNumberPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value}; duration: {duration}; format: {formatPreset}; locale:{' '}
-          {locale}; easing: {easing}; grouping: {String(useGrouping)}
-        </code>
-      }
     >
       <div className='grid gap-6 text-center'>
         <TweenNumber

@@ -2,13 +2,13 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import type { HighlightTriggerType } from '../../../../../packages/design/src/effects/highlight';
+import { Highlight } from '../../../../../packages/design/src/components/highlight';
+import type { HighlightTriggerType } from '../../../../../packages/design/src/hooks/use-highlight';
 import {
-  Highlight,
   useHighlightLayer,
   useHighlightRegistrar,
   useHighlightTrigger,
-} from '../../../../../packages/design/src/effects/highlight';
+} from '../../../../../packages/design/src/hooks/use-highlight';
 import { CheckboxControl, PlaygroundFrame, SelectControl } from './shared';
 
 const triggerOptions = [
@@ -72,11 +72,6 @@ export function HighlightPlayground() {
             onChange={setEnabled}
           />
         </>
-      }
-      state={
-        <code>
-          selected: {selected}; trigger: {trigger}; preview: {String(enabled)}
-        </code>
       }
     >
       <div

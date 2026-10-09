@@ -16,16 +16,14 @@ import type {
   ContentContainerProps,
   ContentProps,
   ContentSlotsProps,
-  SlotBaseConfig,
-} from '../shared/index.js';
+} from '../shared/content.js';
 import {
-  asClass,
   asContentSlots,
-  asData,
-  useContentRender as ContentContainer,
+  ContentContainer,
   hasContent,
-  render,
-} from '../shared/index.js';
+} from '../shared/content.js';
+import type { SlotBaseConfig } from '../shared/index.js';
+import { asClass, asData, render } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 import { Button } from './button.js';
 

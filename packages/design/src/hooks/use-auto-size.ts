@@ -2,10 +2,10 @@
 
 import { useCallback, useReducer, useRef, useState } from 'react';
 
-import { useMemoize } from '../hooks/use-memoize.js';
-import type { ElementSize } from '../hooks/use-resize.js';
-import { EMPTY_SIZE, useResize } from '../hooks/use-resize.js';
 import type { ControlValue } from '../shared/index.js';
+import { useMemoize } from './use-memoize.js';
+import type { ElementSize } from './use-resize.js';
+import { EMPTY_SIZE, useResize } from './use-resize.js';
 
 const getControlValueKey = (value: ControlValue) => value;
 const sameKey = (left: unknown, right: unknown) =>

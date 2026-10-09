@@ -1,7 +1,7 @@
 'use client';
 
 import type { Key, ReactNode } from 'react';
-import { isValidElement } from 'react';
+import { createElement, isValidElement } from 'react';
 
 import { useRender } from '@base-ui/react/use-render';
 
@@ -43,7 +43,8 @@ export interface ContentContainerProps extends useRender.ComponentProps<'div'> {
   'data-slot'?: string;
 }
 
-export function useContentRender({ render, ...props }: ContentContainerProps) {
+/** Renders a div or composes a custom element with the container's props. */
+export function ContentContainer({ render, ...props }: ContentContainerProps) {
   return useRender({ defaultTagName: 'div', render, props });
 }
 
@@ -63,11 +64,20 @@ function asContentSlot<Props extends ContentNodeProps>(
       ? { render: slot }
       : { ...slot }
   ) as ContentSlotProps<Props>;
-  const id = isValidElement<{ id?: string }>(props.render)
-    ? (props.render.props.id ?? props.id)
-    : props.id;
-  if (id === undefined) delete props.id;
-  else props.id = id;
+  if (isValidElement<{ id?: string }>(props.render)) {
+    const element = props.render;
+    const { id, ...elementProps } = element.props;
+    if (id !== undefined && id !== null) props.id = id;
+    else if ('id' in element.props) {
+      // Base UI merges render props last, so a nullish ID would erase the
+      // slot's explicit ID or the semantic node's generated ID.
+      props.render = createElement(element.type, {
+        ...elementProps,
+        key: element.key,
+      });
+    }
+  }
+  if (props.id === undefined) delete props.id;
   return props;
 }
 

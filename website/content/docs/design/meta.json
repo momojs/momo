@@ -14,8 +14,10 @@
     "dialog",
     "drawer",
     "popover",
+    "tooltip",
     "sheet",
     "field",
+    "highlight",
     "icon",
     "input",
     "numeric",
@@ -32,11 +34,18 @@
     "---Hooks---",
     "use-auto-size",
     "use-controllable-value",
+    "use-is-breakpoint",
+    "use-merged-refs",
     "use-presence-gate",
-    "---Utils---",
-    "control-types",
+    "use-previous",
+    "use-resize",
+    "use-storagefy",
+    "---通用约定---",
     "content-slots",
-    "slot-composition",
-    "highlight"
+    "---Utils---",
+    "class-utilities",
+    "control-types",
+    "substitute",
+    "to-pixel"
   ]
 }

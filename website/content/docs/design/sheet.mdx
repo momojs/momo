@@ -215,7 +215,7 @@ Sheet 直接沿用 Base UI 的 `onOpenChange(nextOpen, details)`，没有额外�
 
 ## 遮罩与关闭节点
 
-`backdrop` 和 `close` 使用 [SlotBaseConfig](/docs/design/slot-composition)，与内容 `slots` 的组合规则不同：
+`backdrop` 和 `close` 支持配置默认节点或完整替换节点，遵循以下规则：
 
 | 配置 | 行为 |
 | --- | --- |
@@ -255,10 +255,10 @@ Sheet 直接沿用 Base UI 的 `onOpenChange(nextOpen, details)`，没有额外�
 | `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'right'`，展开方向 |
 | `title` / `description` | `ReactNode` | 标题与说明 |
 | `children` / `footer` | `ReactNode` | 正文与底部内容 |
-| `slots` | `ContentSlotsProps<SheetContentSlots>['slots']` | 配置 header、title、description、content、footer 节点 |
+| `slots` | `SheetProps['slots']` | 配置 header、title、description、content、footer 节点 |
 | `popup` | `SheetProps['popup']` | Base UI Popup 属性及 `side`，不含 `children`，包含尺寸、样式和焦点配置 |
-| `backdrop` | `SlotBaseConfig<DialogBackdropProps>` | `true`，遮罩配置或完整替换节点 |
-| `close` | `SlotBaseConfig<DialogCloseProps>` | `true`，右上角关闭节点配置或完整替换节点 |
+| `backdrop` | `SheetProps['backdrop']` | `true`，遮罩配置或完整替换节点 |
+| `close` | `SheetProps['close']` | `true`，右上角关闭节点配置或完整替换节点 |
 | `modal` | `boolean \| 'trap-focus'` | `true`，焦点、滚动与外部交互策略 |
 | `disablePointerDismissal` | `boolean` | `false`，阻止外部点击关闭 |
 

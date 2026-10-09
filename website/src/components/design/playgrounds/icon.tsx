@@ -60,11 +60,6 @@ export function IconPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          size: {size}; strokeWidth: {strokeWidth}; morph: {String(morph)}
-        </code>
-      }
     >
       <div className='grid justify-items-center gap-6 text-momo-fg-default'>
         <div className='flex flex-wrap justify-center gap-momo-sm'>

@@ -31,6 +31,22 @@ import type {
 
 这些类型是结构兼容的。例如一个 `ControlSize` 变量可以传给同样接受 `"sm" | "md" | "lg"` 的组件，但这不表示所有组件都直接依赖该类型别名。
 
+### asAxis：方向转轴
+
+同一入口还导出 `asAxis`，将方向转换为布局或测量所需的轴：
+
+```ts
+import { asAxis } from "@momots/design/shared";
+
+asAxis("left");  // "x"
+asAxis("right"); // "x"
+asAxis("up");    // "y"
+asAxis("down");  // "y"
+asAxis();        // undefined
+```
+
+输入为 `ControlDirection | undefined`，返回 `ControlAxis | undefined`。它只确定轴，不包含移动正负方向，也不会处理 RTL 下的逻辑方向转换。
+
 ## ControlOption
 
 ```ts

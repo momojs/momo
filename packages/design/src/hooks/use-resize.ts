@@ -93,6 +93,15 @@ function readObservedSize(
  * 通知使用最近一次提交的回调，无需重新订阅。
  * options.key 变化时，即使元素未变，也会重新开始监听并测量。
  * 调用方已入队的更新在应用时必须自行校验对应的逻辑绑定。
+ *
+ * @param target 要监听的元素；null 表示禁用。
+ * @param onResize 接收元素与尺寸；尺寸为 null 表示布局不受支持。
+ * @param options 用 key 标记同一元素的不同逻辑绑定。
+ * @returns 不返回值；通过 onResize 接收初始尺寸和后续变化。
+ * @example
+ * const [target, setTarget] = useState<HTMLDivElement | null>(null);
+ * useResize(target, (_element, size) => console.log(size));
+ * // <div ref={setTarget} />
  */
 export function useResize<T extends HTMLElement>(
   target: T | null,

@@ -145,12 +145,6 @@ export function SliderPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          label: {label || 'empty'}; value: {value}; min: {min}; max: {max};
-          step: {step}; format: {format}
-        </code>
-      }
     >
       <div className='w-full max-w-sm'>
         <Slider

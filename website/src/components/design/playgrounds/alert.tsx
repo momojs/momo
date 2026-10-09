@@ -95,12 +95,6 @@ export function AlertPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          variant: {variant}; role: {role}; icon: {String(showIcon)}; action:{' '}
-          {String(showAction)}
-        </code>
-      }
     >
       <Alert
         className='max-w-lg'

@@ -67,12 +67,6 @@ export function TabsPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value}; orientation: {orientation}; icons: {String(showIcons)}
-          ; usageDisabled: {String(disableUsage)}
-        </code>
-      }
     >
       <Tabs
         value={value}

@@ -85,6 +85,104 @@ describe('MemoryStorage', () => {
 });
 
 describe('Storagefy', () => {
+  test('reuses decoded snapshots until the backing contents change', () => {
+    const store = new MemoryStorage();
+    const cell = new Storagefy<{ count: number }>('snapshot', store);
+    expect(cell.snapshot).toBeNull();
+    cell.set({ count: 1 });
+    const first = cell.snapshot;
+    expect(first).toEqual({ count: 1 });
+    expect(cell.snapshot).toBe(first);
+    cell.set({ count: 1 });
+    expect(cell.snapshot).toBe(first);
+    cell.set({ count: 2 });
+    expect(cell.snapshot).toEqual({ count: 2 });
+    expect(cell.snapshot).not.toBe(first);
+    cell.remove();
+    expect(cell.snapshot).toBeNull();
+  });
+
+  test('snapshot reads do not delete expired or malformed data or publish changes', () => {
+    const store = new MemoryStorage();
+    const cell = new Storagefy<{ count: number }>('snapshot-expiry', store);
+    cell.set({ count: 1 }, 10);
+    const data = JSON.parse(store.getItem(cell.key)!);
+    const now = spyOn(Date, 'now');
+    let notifications = 0;
+    const stop = cell.subscribe(() => notifications++);
+    try {
+      now.mockReturnValue(data.expired - 1);
+      expect(cell.snapshot).toEqual({ count: 1 });
+      now.mockReturnValue(data.expired + 1);
+      expect(cell.snapshot).toBeNull();
+      expect(store.getItem(cell.key)).not.toBeNull();
+      expect(notifications).toBe(0);
+      expect(cell.get()).toBeNull();
+      expect(store.getItem(cell.key)).toBeNull();
+      expect(notifications).toBe(1);
+      store.setItem(cell.key, 'broken');
+      expect(cell.snapshot).toBeNull();
+      expect(store.getItem(cell.key)).toBe('broken');
+      expect(notifications).toBe(1);
+    } finally {
+      now.mockRestore();
+      stop();
+    }
+  });
+
+  test('subscriptions follow the same key and storage across instances, including clear', () => {
+    const store = new MemoryStorage();
+    const cell = new Storagefy<number>('shared', store);
+    const peer = new Storagefy<number>('shared', store);
+    const otherKey = new Storagefy<number>('other', store);
+    const otherArea = new Storagefy<number>('shared', new MemoryStorage());
+    const values: (number | null)[] = [];
+    const stop = cell.subscribe(() => values.push(cell.snapshot));
+    peer.set(1);
+    otherKey.set(2);
+    otherArea.set(3);
+    peer.expire(60);
+    peer.remove();
+    peer.set(4);
+    Storagefy.clear(store);
+    expect(values).toEqual([1, 1, null, 4, null]);
+    stop();
+    peer.set(5);
+    expect(values).toEqual([1, 1, null, 4, null]);
+  });
+
+  test('unsubscribe is independent and idempotent across resubscriptions', () => {
+    const cell = new Storagefy<number>('resubscribe', new MemoryStorage());
+    let calls = 0;
+    const listener = () => calls++;
+    const first = cell.subscribe(listener);
+    const second = cell.subscribe(listener);
+    first();
+    cell.set(1);
+    expect(calls).toBe(1);
+    second();
+    const third = cell.subscribe(listener);
+    second();
+    cell.set(2);
+    expect(calls).toBe(2);
+    third();
+    cell.set(3);
+    expect(calls).toBe(2);
+  });
+
+  test('snapshots distinguish different backing areas even with identical serialized content', () => {
+    const first = new MemoryStorage();
+    const second = new MemoryStorage();
+    let current = first;
+    const cell = new Storagefy<{ count: number }>('area', () => current);
+    cell.set({ count: 1 });
+    const snapshot = cell.snapshot;
+    second.setItem(cell.key, first.getItem(cell.key)!);
+    current = second;
+    expect(cell.snapshot).toEqual(snapshot);
+    expect(cell.snapshot).not.toBe(snapshot);
+  });
+
   test('stores, updates, and removes values', () => {
     const store = new MemoryStorage();
     const cell = new Storagefy<number>('count', store);

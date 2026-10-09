@@ -191,17 +191,6 @@ export function SelectPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {multiple ? JSON.stringify(values) : (value ?? 'null')}; size:{' '}
-          {size}; multiple: {String(multiple)}; open: {String(open)}; disabled:{' '}
-          {String(disabled)}; readOnly: {String(readOnly)}; required:{' '}
-          {String(required)}; modal: {String(modal)}; highlightItemOnHover:{' '}
-          {String(highlightItemOnHover)}; side: {side}; align: {align};
-          alignItemWithTrigger: {String(alignItemWithTrigger)}; sideOffset:{' '}
-          {sideOffset}
-        </code>
-      }
     >
       <div className='w-full max-w-xs'>
         {multiple ? (

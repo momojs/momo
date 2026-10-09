@@ -83,12 +83,6 @@ export function ToggleGroupPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value ?? 'none'}; size: {size}; variant: {variant}; icons:{' '}
-          {String(showIcons)}; rightDisabled: {String(disableRight)}
-        </code>
-      }
     >
       <ToggleGroup
         size={size}

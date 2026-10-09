@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { useEffectEvent } from 'react';
 
 import type {
   FieldControlProps as BaseFieldControlProps,
@@ -320,15 +321,29 @@ export function FieldError({
   );
 }
 
-export function FieldCellError({ label, ...props }: FieldErrorProps) {
+export function FieldCellError({ label, children, ...props }: FieldErrorProps) {
   const toast = useToast({ strict: false });
+
+  const onTap = useEffectEvent(() => {
+    if (toast) {
+      toast.add({
+        type: 'danger',
+        title: label,
+        description: children,
+      });
+    } else {
+      console.warn('Field feedback requires a ToastProvider.');
+    }
+  });
 
   return (
     <FieldError
       {...props}
       render={(errorProps, { disabled }) => (
         <>
-          <div {...errorProps} className='sr-only' />
+          <div {...errorProps} className='sr-only'>
+            {children}
+          </div>
           <Button
             {...asData('field-feedback-trigger')}
             type='button'
@@ -337,18 +352,7 @@ export function FieldCellError({ label, ...props }: FieldErrorProps) {
             className='text-momo-fg-danger'
             size='inline'
             variant='link'
-            onClick={() => {
-              if (!toast) {
-                console.warn('Field feedback requires a ToastProvider.');
-                return;
-              }
-              console.log(label, 'label');
-              toast.add({
-                type: 'error',
-                title: label,
-                description: errorProps.children,
-              });
-            }}
+            onTap={onTap}
           >
             <HugeiconsIcon icon={AlertCircleIcon} aria-hidden />
           </Button>

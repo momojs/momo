@@ -23,8 +23,13 @@ import type {
   ContentContainerProps,
   ContentProps,
   ContentSlotsProps,
-} from '../shared/index.js';
-import { asClass, asContentSlots, hasContent } from '../shared/index.js';
+} from '../shared/content.js';
+import {
+  asContentSlots,
+  ContentContainer,
+  hasContent,
+} from '../shared/content.js';
+import { asClass } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
 
 const variants = {
@@ -237,7 +242,7 @@ export function Popover(props: PopoverProps) {
                     ((hasContent(title) && slots.title !== false) ||
                       (hasContent(description) &&
                         slots.description !== false)) && (
-                      <useContentRender
+                      <ContentContainer
                         {...slots.header}
                         data-slot='popover-header'
                         className={cx(
@@ -270,10 +275,10 @@ export function Popover(props: PopoverProps) {
                               {description}
                             </BasePopover.Description>
                           )}
-                      </useContentRender>
+                      </ContentContainer>
                     )}
                   {hasContent(children) && slots.content !== false && (
-                    <useContentRender
+                    <ContentContainer
                       {...slots.content}
                       data-slot='popover-content'
                       className={cx(
@@ -282,16 +287,16 @@ export function Popover(props: PopoverProps) {
                       )}
                     >
                       {children}
-                    </useContentRender>
+                    </ContentContainer>
                   )}
                   {hasContent(footer) && slots.footer !== false && (
-                    <useContentRender
+                    <ContentContainer
                       {...slots.footer}
                       data-slot='popover-footer'
                       className={cx(variants.footer(), slots.footer?.className)}
                     >
                       {footer}
-                    </useContentRender>
+                    </ContentContainer>
                   )}
                 </BasePopover.Popup>
               </BasePopover.Positioner>

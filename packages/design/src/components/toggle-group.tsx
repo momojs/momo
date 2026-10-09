@@ -9,18 +9,18 @@ import type { VariantProps } from 'cva';
 import { motion } from 'motion/react';
 import { isString } from 'remeda';
 
+import { useControllableValue } from '../hooks/use-controllable-value.js';
 import {
-  Highlight,
   useHighlightLayer,
   useHighlightRegistrar,
   useHighlightTrigger,
-} from '../effects/highlight.js';
-import type { RippleRef } from '../effects/ripples.js';
-import { Ripples } from '../effects/ripples.js';
-import { useControllableValue } from '../hooks/use-controllable-value.js';
+} from '../hooks/use-highlight.js';
 import { pose, useFeel } from '../motion/index.js';
 import type { ControlOption } from '../shared/index.js';
 import { cva, cx } from '../tailwind/index.js';
+import { Highlight } from './highlight.js';
+import type { RippleRef } from './ripples.js';
+import { Ripples } from './ripples.js';
 
 const variants = {
   toggle: cva({

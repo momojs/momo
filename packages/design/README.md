@@ -84,7 +84,7 @@ export function App() {
 `defineTheme` merges partial configuration over the bundled defaults. The
 presets are `snap` (feedback), `ui` (controls), `gentle` (large surfaces),
 `lively` (expressive effects), and `ambient` (loops). Motion-driven momo
-components, effects, and imperative animations consume these tokens. Explicit
+components and imperative animations consume these tokens. Explicit
 component animation props override the defaults during full motion.
 
 When the visitor prefers reduced motion, `calm` keeps opacity fades and makes
@@ -125,13 +125,23 @@ import { Icon } from '@momots/design/components/icon';
 `morph={false}` to disable transitions. Filled, multicolor, and transformed
 artwork should keep its original renderer.
 
-The root entry exports the supported components, effects, hooks, shared types,
+The root entry exports the supported components, hooks, shared types,
 and Tailwind helpers. Focused entry points are also available:
 
 ```ts
 import { Drawer } from '@momots/design/components/drawer';
-import { Highlight } from '@momots/design/effects';
-import { useControllableValue } from '@momots/design/hooks';
+import { Highlight } from '@momots/design/components/highlight';
+import { Ripples } from '@momots/design/components/ripples';
+import { Tooltip, TooltipProvider } from '@momots/design/components/tooltip';
+import {
+  useAutoSize,
+  useControllableValue,
+  useHighlightLayer,
+  useIsBreakpoint,
+  useMergedRefs,
+  usePrevious,
+  useResize,
+} from '@momots/design/hooks';
 import type { ControlOption } from '@momots/design/shared';
 import { cx } from '@momots/design/tailwind';
 ```
@@ -139,18 +149,52 @@ import { cx } from '@momots/design/tailwind';
 JavaScript entry points are ESM React Client Components. Type declarations are
 validated with TypeScript's `Bundler` and `NodeNext` module resolution modes.
 
+Measurement and interaction hooks live in `hooks`; visual effect components
+such as `Highlight` and `Ripples` live in `components`. Import `useAutoSize`,
+`useHighlightLayer`, `useHighlightRegistrar`, and `useHighlightTrigger` from
+`@momots/design/hooks`.
+
+`useIsBreakpoint` subscribes to viewport widths (`min` and `max` both include
+the breakpoint, like native CSS), with a shared `serverMatches` fallback for
+SSR and initial hydration. `useMergedRefs` composes object and callback refs
+while preserving callback cleanup functions. Both also have individual entry points at
+`@momots/design/hooks/use-is-breakpoint` and
+`@momots/design/hooks/use-merged-refs`.
+
+`useResize` observes an element's layout border box; `usePrevious` reads the
+value recorded by the most recent completed effect. See their hook pages for
+measurement constraints and render timing.
+
+`useStoragefy` subscribes to a synchronous `Storagefy` item and returns its value
+or `null`, plus an event-handler-safe setter. Functional updates read the latest
+stored value; `null` removes the item. The former `initial` option is removed:
+apply display defaults with `value ?? fallback`. SSR and initial hydration use
+an isolated empty `MemoryStorage`, then the client reads the configured storage.
+It also supports `@momots/design/hooks/use-storagefy` as an individual entry.
+
 Full component and theme documentation lives in the
 [Momo documentation](https://github.com/momojs/momo/tree/main/website/content/docs/design).
 
 ## Development checks
 
 ```sh
+# All checks: types, independent logic/SSR, then browser component tests.
 bun run --filter './packages/design' test
+
+# Run one layer independently.
+bun run --filter './packages/design' test:unit
 bun run --filter './packages/design' typecheck:spec
 bun run --filter './packages/design' test:browser
 ```
 
-Browser tests use real React commits, including transitions, layout effects,
-Suspense, and StrictMode. They run in an ephemeral WebKit session on macOS and
-require an installed Chrome on other platforms. `bunwright` is a development
-dependency only; the browser tests do not use the unit tests' mocked hooks.
+Component and hook behavior tests live in `browser-tests/` and use real React
+commits and browser DOM, including transitions, layout effects, Suspense, and
+StrictMode. They run in an ephemeral WebKit session on macOS and require an
+installed Chrome on other platforms. `bunwright` is a development dependency
+only. Component tests share fixture build assets and reload the document before
+each case; they do not mock React, Base UI, or Motion.
+
+Independent logic and server-rendering checks remain in `src/**/*.spec.*`.
+Hook type contracts in those files are compile-only and are checked by
+`typecheck:spec`; they do not invoke hooks outside React. `prepack` runs the full
+test command after building.

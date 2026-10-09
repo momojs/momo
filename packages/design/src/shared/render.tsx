@@ -36,6 +36,7 @@ function asProps<TProps extends SlotBaseProps>(
   return { children: arg } as Partial<TProps>;
 }
 
+/** 将上下方向映射为 y、左右方向映射为 x；省略方向时返回 undefined。 */
 export function asAxis(direction?: ControlDirection) {
   if (direction) {
     return (
@@ -47,11 +48,23 @@ export function asAxis(direction?: ControlDirection) {
   }
 }
 
+/** 字符串生成 data-slot；对象的键统一添加 data- 前缀，不转换键的大小写。 */
 export function asData(arg?: Record<string, string | undefined> | string) {
   if (isString(arg)) return { ['data-slot']: arg };
   return mapKeys(arg ?? {}, (key) => `data-${key}`);
 }
 
+/**
+ * 将静态类名与状态回调组合为同一个 className 回调。
+ *
+ * @param args 字符串、undefined 或接收同一 state 的类名回调。
+ * @returns 每次调用时求值所有回调，并按输入顺序使用 cx 合并类名的函数。
+ * @example
+ * asClass<{ disabled: boolean }>(
+ *   'px-3',
+ *   (state) => (state.disabled ? 'opacity-50' : undefined),
+ * );
+ */
 export function asClass<S>(...args: Array<SlotBaseClass<S>>) {
   return (state: S) => {
     return cx(...args.map((arg) => realize(arg, state)));

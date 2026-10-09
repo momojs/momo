@@ -101,13 +101,6 @@ export function RatingPlayground() {
           />
         </>
       }
-      state={
-        <code>
-          value: {value}; max: {max}; precision: {precision}; size: {size};
-          variant: {variant}; disabled: {String(disabled)}; readOnly:{' '}
-          {String(readOnly)}
-        </code>
-      }
     >
       <div className='grid justify-items-center gap-momo-sm'>
         <Rating

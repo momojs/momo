@@ -26,7 +26,7 @@ icon: Maximize
 
 ## 先观察：测量状态与动画目标
 
-默认场景展示紧凑面板同时变宽、变高。切换到其他场景可以观察仅高度动画；状态区域显示当前测量和动画目标。切换场景或点击“重新开始”会重建演示；系统开启减少动态效果时，尺寸立即更新。
+默认场景展示紧凑面板同时变宽、变高。切换到其他场景可以观察仅高度动画。切换场景或点击“重新开始”会重建演示；系统开启减少动态效果时，尺寸立即更新。
 
 <UseAutoSizePlayground />
 
@@ -39,7 +39,7 @@ icon: Maximize
 | 内容增减 → 添加补充内容 → 移除补充内容 | `ready`，高度先增大再减小 | 容器跟随内容展开、收回 |
 | 内容增减 → 缩窄内容 | 换行增多时，测得高度随之增大 | 无需再次调用 `activate` |
 | 面板切换 → 显示详情 → 立即显示摘要 | 目标从详情高度改为摘要高度 | 同一容器在动画中途改向 |
-| 面板切换 → 拒绝切换请求 → 显示详情 | 最近请求为 `details`，激活目标仍为 `summary` | 内容和高度都保持在摘要 |
+| 面板切换 → 拒绝切换请求 → 显示详情 | 激活目标仍为 `summary` | 内容和高度都保持在摘要 |
 | 等待挂载 → 等待新内容 → 挂载新内容 | `ready → pending → ready` | 等待时保留旧高度，挂载后移向新高度 |
 | 等待挂载 → 真实零高 | `ready`，有效测量高度与动画目标均为 `0` | 收至零高，外层边框仍在 |
 | 等待挂载 → `clear()` → 重新激活 | `idle → ready`，动画目标先为 `0` 再恢复 | 注册的内容仍可被重新激活 |
@@ -51,7 +51,7 @@ icon: Maximize
 
 ```tsx
 import { useLayoutEffect } from "react";
-import { useAutoSize } from "@momots/design/effects";
+import { useAutoSize } from "@momots/design/hooks";
 import { motion, useReducedMotion } from "motion/react";
 
 function CompactStatus({ expanded }: { expanded: boolean }) {
@@ -97,12 +97,12 @@ function CompactStatus({ expanded }: { expanded: boolean }) {
 
 ## 场景二：详情内容增加或减少
 
-Hook 从包根入口或 `@momots/design/effects` 导出。动画容器和测量目标必须是两个独立元素：
+Hook 从 `@momots/design/hooks` 导入。动画容器和测量目标必须是两个独立元素：
 
 ```tsx
 import type { ReactNode } from "react";
 import { useLayoutEffect } from "react";
-import { useAutoSize } from "@momots/design/effects";
+import { useAutoSize } from "@momots/design/hooks";
 import { motion, useReducedMotion } from "motion/react";
 
 function HeightRegion({ children }: { children: ReactNode }) {

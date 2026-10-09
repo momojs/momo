@@ -14,6 +14,123 @@ import type {
 } from '../components/toast';
 import type { ContentProps } from './content';
 
+function renderContentScenario(source: string) {
+  // Isolate real React from the mocks used by other component suites.
+  const result = Bun.spawnSync({
+    cmd: [
+      process.execPath,
+      '--eval',
+      `
+        import { createElement } from 'react';
+        import { renderToStaticMarkup } from 'react-dom/server';
+        import { ContentContainer, asContentSlots } from ${JSON.stringify(new URL('./content.tsx', import.meta.url).href)};
+        import { ToastProvider, createToastManager } from ${JSON.stringify(new URL('../components/toast.tsx', import.meta.url).href)};
+        ${source}
+      `,
+    ],
+    cwd: new URL('../..', import.meta.url).pathname,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  expect(new TextDecoder().decode(result.stderr)).toBe('');
+  expect(result.exitCode).toBe(0);
+  return new TextDecoder().decode(result.stdout);
+}
+
+test('renders containers with default, element and callback nodes', () => {
+  const markup = renderContentScenario(`
+    process.stdout.write(renderToStaticMarkup(createElement('main', null,
+      createElement(ContentContainer, { id: 'default' }, 'Default'),
+      createElement(ContentContainer, {
+        render: createElement('section', { className: 'custom' }),
+        className: 'base',
+      }, 'Element'),
+      createElement(ContentContainer, {
+        render: (props) => createElement('footer', props),
+      }, 'Callback'),
+    )));
+  `);
+  expect(markup).toContain('<div id="default">Default</div>');
+  expect(markup).toContain('<section class="custom base">Element</section>');
+  expect(markup).toContain('<footer>Callback</footer>');
+});
+
+test.each([
+  'shorthand',
+  'object',
+  'custom',
+])('preserves semantic IDs for nullish render IDs (%s)', (configuration) => {
+  const markup = renderContentScenario(`
+    const manager = createToastManager();
+    manager.add({ title: 'Title', description: 'Details' });
+    const slot = (tag, id) => {
+      const render = createElement(tag, { id: tag === 'h3' ? undefined : null });
+      if (${JSON.stringify(configuration)} === 'shorthand') return render;
+      return { render, id: ${configuration === 'custom'} ? id : undefined };
+    };
+    process.stdout.write(renderToStaticMarkup(createElement(ToastProvider, {
+      toastManager: manager, portal: false,
+      slots: {
+        title: slot('h3', 'custom-title'),
+        description: slot('p', 'custom-description'),
+        icon: false, close: false,
+      },
+    })));
+  `);
+  const titleId = markup.match(/aria-labelledby="([^"]+)"/)?.[1];
+  const descriptionId = markup.match(/aria-describedby="([^"]+)"/)?.[1];
+  expect(titleId).toBeDefined();
+  expect(descriptionId).toBeDefined();
+  expect(markup.match(/<h3[^>]*>/)?.[0]).toContain(`id="${titleId}"`);
+  expect(markup.match(/<p[^>]*>/)?.[0]).toContain(`id="${descriptionId}"`);
+  if (configuration === 'custom') {
+    expect(titleId).toBe('custom-title');
+    expect(descriptionId).toBe('custom-description');
+  }
+});
+
+test('normalizes empty render IDs without mutating element identity props', () => {
+  const result = JSON.parse(
+    renderContentScenario(`
+      const ref = () => undefined;
+      const onClick = () => undefined;
+      const render = createElement('h3', {
+        id: undefined, key: 'heading', ref, onClick, className: 'custom',
+      });
+      const config = Object.freeze({ id: 'slot-title', render });
+      const { title } = asContentSlots({ title: config });
+      const explicit = createElement('h3', { id: 'element-title' });
+      const { title: preferred } = asContentSlots({
+        title: { id: 'slot-title', render: explicit },
+      });
+      process.stdout.write(JSON.stringify({
+        originalIdPresent: Object.hasOwn(render.props, 'id'),
+        originalIdUnchanged: render.props.id === undefined,
+        originalRenderUnchanged: config.render === render,
+        keyPreserved: title.render.key === render.key,
+        refPreserved: title.render.props.ref === ref,
+        handlerPreserved: title.render.props.onClick === onClick,
+        className: title.render.props.className,
+        resolvedId: title.id,
+        preferredId: preferred.id,
+        explicitRenderUnchanged: preferred.render === explicit,
+      }));
+    `),
+  );
+  expect(result).toEqual({
+    originalIdPresent: true,
+    originalIdUnchanged: true,
+    originalRenderUnchanged: true,
+    keyPreserved: true,
+    refPreserved: true,
+    handlerPreserved: true,
+    className: 'custom',
+    resolvedId: 'slot-title',
+    preferredId: 'element-title',
+    explicitRenderUnchanged: true,
+  });
+});
+
 // These callbacks are intentionally not invoked: tsc validates their contextual
 // types, including the negative assertions, without mounting React components.
 test('infers node props and state for render shorthand and object configuration', () => {

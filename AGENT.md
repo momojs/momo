@@ -281,7 +281,7 @@ matched middlewares
 ### `@momots/design`
 
 - 原则：组件轻量、状态边界清晰、主题 token 优先。
-- 组件放 `src/components/`，hooks 放 `src/hooks/`，动画 / 视觉效果放 `src/effects/`。
+- 组件（包括视觉效果组件）放 `src/components/`，hooks 放 `src/hooks/`，动画预设与主题放 `src/motion/`。
 - 受控 / 非受控状态优先复用现有 hooks。
 - 样式变体优先用 `cva` 和主题 token 表达。
 - 对外导出时同步 `src/components/index.ts`、包 `exports` 和文档。
@@ -337,7 +337,7 @@ matched middlewares
 | 新增纯函数 | `packages/core/src/`、`packages/core/package.json#exports` |
 | 新增 Web API 工具 | `packages/host/src/`、`packages/host/src/guard/`、`packages/host/src/fetch/` |
 | 修改 HTTP 驱动 | `packages/drive/src/core.ts`、`context.ts`、`types.ts` |
-| 修改 UI 组件 | `packages/design/src/components/`、`hooks/`、`effects/` |
+| 修改 UI 组件 | `packages/design/src/components/`、`hooks/`、`motion/` |
 | 修改构建 | `packages/cli/src/`、各包 `momo.config.ts` |
 | 修改浏览器测试 | 包内 `browser-tests/`、`bunwright` |
 | 更新文档 | `website/content/docs/<pkg>/` |
