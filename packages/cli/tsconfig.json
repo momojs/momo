@@ -10,5 +10,10 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/**/*.spec.ts"]
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/**/*.fixture.ts",
+    "src/**/*.fixture.tsx"
+  ]
 }

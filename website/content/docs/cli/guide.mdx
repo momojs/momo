@@ -65,7 +65,7 @@ export default defineConfig({
 | `assets` | `{}` | 构建后复制的静态文件；键相对包根目录，值相对 `outdir` |
 | `executables` | `[]` | 构建后设置为可执行文件的相对路径 |
 
-构建器递归收集 `src` 中的 `.ts` 与 `.tsx` 文件，忽略声明文件和 spec，并保持目录结构输出。
+构建器递归收集 `src` 中的 `.ts` 与 `.tsx` 文件，忽略声明文件、`*.test.*`、`*.spec.*` 和 `*.fixture.*`，并保持目录结构输出。
 
 ## Workspace 拓扑构建
 
@@ -147,4 +147,6 @@ doctor 只检查本地配置与文件，不验证发布文件清单、依赖安�
 
 ## 浏览器测试
 
-CLI 不提供测试运行器。普通测试使用 `bun:test`；需要浏览器的用例使用 `bun:test` 管理测试生命周期，并用 bunwright 创建页面。完整示例见 [浏览器测试教程](/docs/cli/tutorial)。
+CLI 不提供测试运行器。非浏览器测试使用 `bun:test`，命名为 `*.test.ts`；浏览器测试使用 Playwright Test，命名为 `*.spec.ts`。两类测试都与源码就近放置，不建立专用测试目录。
+
+浏览器项目、服务启动和执行选项由根目录 `playwright.config.ts` 配置，`momo.config.ts` 继续负责构建。Bun 配置排除 `*.spec.ts`，避免将 Playwright 用例交给 Bun 运行。运行方式见 [浏览器测试教程](/docs/cli/tutorial)。

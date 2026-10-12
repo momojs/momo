@@ -141,7 +141,8 @@ website -> packages 的文档消费者
 新增公开 API 时：
 
 1. 在对应包的 `src/` 下新增实现。
-2. 添加同目录兄弟测试：`xxx.spec.ts`。
+2. 添加同目录兄弟测试：浏览器用例使用 `xxx.spec.ts`，非浏览器用例使用
+   `xxx.test.ts`。
 3. 更新对应包的 `src/index.ts`，只在适合根入口时导出。
 4. 更新 `package.json#exports`，优先支持子路径导入。
 5. 同步 `website/content/docs/<pkg>/`。
@@ -211,16 +212,21 @@ node_modules/.bin/biome check packages/<pkg>
 
 ```bash
 bun run --filter './packages/core' test
-bun run --filter './packages/host' test:browser
+bun run --filter './packages/design' test:browser
 bun run --filter './packages/design' typecheck
 ```
 
 测试约定：
 
-- 普通测试使用 `bun test src`。
-- 测试文件与目标文件同目录，命名为 `xxx.spec.ts`。
-- 真实浏览器测试放在包内 `browser-tests/`，通过 `test:browser` 运行。
-- `tsconfig.spec.json` 必须包含 `types: ["bun"]`。
+- 测试文件与目标源码就近放置，不建立专用测试目录。
+- 非浏览器测试使用 `bun:test`，命名为 `xxx.test.ts`，通过包内 `test` 或
+  `test:unit` 运行；Bun 配置排除 `*.spec.ts`。
+- 浏览器测试使用 Playwright Test，命名为 `xxx.spec.ts`，通过 `test:browser`
+  运行；根目录 `playwright.config.ts` 配置 Chromium 和 WebKit。
+- Playwright 默认每用例使用独立的 BrowserContext 和 Page。浏览器入口与源码
+  就近放置；共享配置、页面 fixture 和服务脚本放在仓库根目录或包根目录。
+- 首次运行浏览器测试前执行 `bunx playwright install chromium webkit`。
+- 包含 `bun:test` 的测试类型检查配置必须包含 `types: ["bun"]`。
 - 不要只依赖构建通过；行为变化应有对应测试。
 
 Biome 约定：
@@ -257,7 +263,8 @@ bun run --filter website build
 - 常见能力：DOM/BOM guard、`buffer`、`url`、`storage`、`persistent`、`css/*`、
   `fetch`、`fingerprint`。
 - `toCurl` 属于 `@momots/host/fetch`，不要从 `drive` 转发。
-- 需要真实浏览器 realm 的 guard 测试放 `browser-tests/`。
+- 需要真实浏览器 realm 的 guard 测试使用 Playwright，命名为 `*.spec.ts`，
+  与对应 guard 源码就近放置。
 
 ### `@momots/drive`
 
@@ -307,7 +314,8 @@ matched middlewares
 修改时：
 
 1. 只编辑源码、配置或文档；不要手写 `dist/`。
-2. 新增行为配套 `*.spec.ts`。
+2. 新增行为配套同目录测试：浏览器用例为 `*.spec.ts`，非浏览器用例为
+   `*.test.ts`。
 3. 公共 helper 先放内部文件，确认复用需求后再公开。
 4. 避免新增依赖；先查 workspace 内是否已有能力。
 
@@ -324,8 +332,9 @@ matched middlewares
 - **`realize` 与函数值**：函数会被调用；如果函数本身是配置值，不要传给 `realize`。
 - **Bun build 纯 re-export**：多入口构建时，纯 re-export 可能生成不理想产物。
   公开 wrapper 优先显式 import 后再 `export const`。
-- **浏览器测试**：真实 DOM realm 的能力用 bunwright 验证；运行环境需要已有
-  Chrome 或 WebKit。
+- **浏览器测试**：真实 DOM realm 的能力用 Playwright 验证；安装依赖后执行
+  `bunx playwright install chromium webkit`。Playwright 在 Node.js 中运行测试，
+  Bun 负责构建与启动测试页面服务。
 - **website Biome**：网站有 nested root Biome 配置；不要把这个问题混入普通功能改动。
 
 ---
@@ -339,6 +348,6 @@ matched middlewares
 | 修改 HTTP 驱动 | `packages/drive/src/core.ts`、`context.ts`、`types.ts` |
 | 修改 UI 组件 | `packages/design/src/components/`、`hooks/`、`motion/` |
 | 修改构建 | `packages/cli/src/`、各包 `momo.config.ts` |
-| 修改浏览器测试 | 包内 `browser-tests/`、`bunwright` |
+| 修改浏览器测试 | 源码旁的 `*.spec.ts`、根 `playwright.config.ts`、包内页面 fixture |
 | 更新文档 | `website/content/docs/<pkg>/` |
 | 修改首页叙事 | `website/src/components/hero.tsx` 与 `website/content/docs/index.mdx` |

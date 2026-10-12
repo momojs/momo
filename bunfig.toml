@@ -3,6 +3,7 @@ linker = "isolated"
 registry = "https://registry.npmjs.org"
 
 [test]
+pathIgnorePatterns = ["**/*.spec.ts"]
 coverageSkipTestFiles = true
 coveragePathIgnorePatterns = [
   "packages/core/dist/**",

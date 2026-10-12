@@ -1,23 +1,25 @@
-import { sumdig } from "./lib";
-
-import { cardinality } from "../tools";
+import { sumdig } from '@momots/core/sumdig';
 
 /**
- * @see https://github.com/kfbfarley/luhn-validation/blob/master/src/lib/card.ts
- * @param value String card
- * @description How to check if the IMEI is valid:
- * 1. Double the value of every other digit from right to left
- * 3. Add the digits of the results of the previous step to the remaining digits in the card number
- * 2. If the remainder of the division is 1, the verification is successful
- * @return A boolean of weather the card is valid or not
+ * 校验包含校验位的十进制字符串是否满足 Luhn（MOD 10）。
+ * 至少两位，不自动删除空格或分隔符；数字输入必须是非负安全整数。
+ * 仅检查校验和，不判断发卡机构、账号长度或账号是否存在。
+ * @example card('79927398713'); // true
  */
-export const card = (value: string | number): boolean => {
-  const str = value.toString();
+export const card = (value: unknown): boolean => {
+  if (
+    typeof value !== 'string' &&
+    (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+  ) {
+    return false;
+  }
+  const digits = String(value);
+  if (digits.length < 2 || /\D/.test(digits)) return false;
 
-  const sum = Array.from(str).reduceRight((acc, digit, idx, arr) => {
+  const sum = Array.from(digits).reduceRight((total, digit, index) => {
     const number = Number(digit);
-    const index = cardinality(arr) - idx;
-    return acc + (index % 2 !== 0 ? number : sumdig(number * 2));
+    const position = digits.length - index;
+    return total + (position % 2 === 0 ? sumdig(number * 2) : number);
   }, 0);
 
   return sum % 10 === 0;

@@ -9,7 +9,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.spec.ts"],
+      "includes": ["**/*.test.ts"],
       "linter": {
         "rules": {
           "style": {

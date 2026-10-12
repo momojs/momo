@@ -187,14 +187,24 @@ bun run --filter './packages/design' typecheck:spec
 bun run --filter './packages/design' test:browser
 ```
 
-Component and hook behavior tests live in `browser-tests/` and use real React
-commits and browser DOM, including transitions, layout effects, Suspense, and
-StrictMode. They run in an ephemeral WebKit session on macOS and require an
-installed Chrome on other platforms. `bunwright` is a development dependency
-only. Component tests share fixture build assets and reload the document before
-each case; they do not mock React, Base UI, or Motion.
+Browser tests use Playwright Test and live beside the corresponding source as
+`*.spec.ts`. The root `playwright.config.ts` runs Chromium and WebKit with a
+fresh BrowserContext and Page for each case. Install the browsers once from
+the repository root:
 
-Independent logic and server-rendering checks remain in `src/**/*.spec.*`.
-Hook type contracts in those files are compile-only and are checked by
-`typecheck:spec`; they do not invoke hooks outside React. `prepack` runs the full
-test command after building.
+```sh
+bunx playwright install chromium webkit
+```
+
+Playwright runs tests in Node.js and starts `packages/design/playwright.server.ts`
+with Bun. That server builds the browser entries, compiles Tailwind and theme
+styles, and prepares SSR markup. `playwright.fixture.ts` supplies the shared
+page setup; browser entry files named `*.fixture.tsx` live beside the source.
+Component and hook tests exercise real React commits and browser DOM, including
+transitions, layout effects, Suspense, and StrictMode.
+
+Independent logic and server-rendering checks use `bun:test` in source-adjacent
+`*.test.ts` files. Bun's test configuration excludes `*.spec.ts`; Playwright
+collects those files. There is no separate test directory. Hook type contracts
+are compile-only and checked by `typecheck:spec`; they do not invoke hooks
+outside React. `prepack` runs the full test command after building.

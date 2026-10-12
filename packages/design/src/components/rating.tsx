@@ -6,13 +6,20 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { StarIcon } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { VariantProps } from 'cva';
-import { MotionConfig, motion } from 'motion/react';
+import type { MotionValue } from 'motion/react';
+import {
+  animate,
+  MotionConfig,
+  motion,
+  useMotionValue,
+  useTransform,
+} from 'motion/react';
 
 import { useControllableValue } from '../hooks/index.js';
 import { pose, useFeel } from '../motion/index.js';
@@ -156,6 +163,31 @@ function getPointerValue(
   return normalizeValue(index + fraction, max, precision);
 }
 
+function RatingFill({
+  progress,
+  index,
+  children,
+}: {
+  progress: MotionValue<number>;
+  index: number;
+  children: React.ReactNode;
+}) {
+  const clipPath = useTransform(
+    progress,
+    [index, index + 1],
+    ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'],
+  );
+
+  return (
+    <motion.span
+      className='pointer-events-none absolute inset-0 grid place-items-center overflow-hidden'
+      style={{ clipPath }}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
 /** Props for the animated, form-compatible momo rating control. */
 export interface RatingProps
   extends Omit<
@@ -256,16 +288,34 @@ export function Rating({
     onChange: onValueChange,
   });
   const [hoveredValue, setHoveredValue] = useState(0);
-  const { reduced, mode, transition, spatial, fade } =
-    useFeel('snap');
+  const { reduced, mode, transition, fade, theme } = useFeel('snap');
   const currentValue = normalizeValue(
     selectedValue,
     resolvedMax,
     resolvedPrecision,
   );
   const displayValue = hoveredValue || currentValue;
+  const progress = useMotionValue(displayValue);
   const isInteractive = !disabled && !readOnly;
   const valueLabel = getValueLabel(currentValue, resolvedMax);
+
+  useEffect(() => {
+    if (reduced) {
+      progress.jump(displayValue);
+      return;
+    }
+
+    const distance = Math.abs(displayValue - progress.get());
+    if (distance === 0) return;
+
+    // One shared edge keeps fills contiguous, including when interrupted.
+    const controls = animate(progress, displayValue, {
+      ...fade,
+      duration:
+        (fade.duration ?? 0) + theme.stagger.tight * Math.max(0, distance - 1),
+    });
+    return () => controls.stop();
+  }, [displayValue, fade, progress, reduced, theme.stagger.tight]);
 
   const clearHover = useCallback(() => {
     if (hoveredValue === 0) return;
@@ -401,10 +451,7 @@ export function Rating({
                 className: itemClassName,
               })}
               initial={false}
-              animate={pose(
-                { scale: reduced || fill > 0 ? 1 : 0.96 },
-                mode,
-              )}
+              animate={pose({ scale: reduced || fill > 0 ? 1 : 0.96 }, mode)}
               whileHover={
                 isInteractive && !reduced ? { scale: 1.08 } : undefined
               }
@@ -422,17 +469,7 @@ export function Rating({
                   className: emptyIconClassName,
                 })}
               />
-              <motion.span
-                className='pointer-events-none absolute inset-0 grid place-items-center overflow-hidden'
-                initial={false}
-                animate={pose(
-                  {
-                    clipPath: `inset(0 ${100 - fill * 100}% 0 0)`,
-                  },
-                  mode,
-                )}
-                transition={reduced ? spatial : fade}
-              >
+              <RatingFill progress={progress} index={index}>
                 <HugeiconsIcon
                   icon={icon}
                   strokeWidth={1.8}
@@ -442,7 +479,7 @@ export function Rating({
                     className: filledIconClassName,
                   })}
                 />
-              </motion.span>
+              </RatingFill>
             </motion.span>
           );
         })}

@@ -10,7 +10,7 @@ icon: Rocket
 
 在 workspace 中使用 `momo topology --filter './packages/*'`，可以按包之间的依赖顺序串行构建；`--dry-run` 只显示构建计划。
 
-需要真实 DOM、布局、滚动或浏览器全局对象的测试由 [`bunwright`](https://bunwright.jonasperusquia.com/guides/getting-started/) 驱动，不再由 `momo` 提供测试命令。
+测试文件与源码就近放置：非浏览器测试使用 `bun:test` 和 `*.test.ts`；浏览器测试使用 [Playwright Test](https://playwright.dev/docs/intro) 和 `*.spec.ts`。`momo` 负责构建，测试配置使用独立的 `playwright.config.ts`。
 
 ## 前置条件
 

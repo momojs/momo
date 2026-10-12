@@ -4,6 +4,6 @@
     "noEmit": true,
     "types": ["bun"]
   },
-  "include": ["src/**/*.spec.ts", "src/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": []
 }

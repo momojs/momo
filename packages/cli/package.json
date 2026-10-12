@@ -27,6 +27,7 @@
     "src"
   ],
   "scripts": {
+    "test": "bun test src --path-ignore-patterns '**/*.spec.ts'",
     "build": "bun run ./src/bin.ts build",
     "momo": "bun run ./src/bin.ts",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",

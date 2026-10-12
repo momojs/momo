@@ -1,0 +1,65 @@
+{
+  "name": "@momots/refine",
+  "version": "0.1.0-alpha.0",
+  "type": "module",
+  "sideEffects": false,
+  "keywords": [
+    "momots",
+    "validation",
+    "luhn",
+    "checksum",
+    "typescript"
+  ],
+  "devDependencies": {
+    "@momots/cli": "workspace:*"
+  },
+  "peerDependencies": {
+    "@momots/core": ">=0.1.0-alpha.0 <0.2.0"
+  },
+  "description": "Luhn, MOD 11-2, and China ID card validation utilities for MomoTS.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cn/idcard": {
+      "types": "./dist/cn/idcard.d.ts",
+      "import": "./dist/cn/idcard.js"
+    },
+    "./luhn": {
+      "types": "./dist/luhn/index.d.ts",
+      "import": "./dist/luhn/index.js"
+    },
+    "./luhn/card": {
+      "types": "./dist/luhn/card.d.ts",
+      "import": "./dist/luhn/card.js"
+    },
+    "./iso": {
+      "types": "./dist/iso/index.d.ts",
+      "import": "./dist/iso/index.js"
+    },
+    "./iso/mod11-2": {
+      "types": "./dist/iso/mod11-2.d.ts",
+      "import": "./dist/iso/mod11-2.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
+  "scripts": {
+    "build": "momo build",
+    "test": "bun test src --path-ignore-patterns '**/*.spec.ts'",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
+    "types": "tsc --project tsconfig.build.json",
+    "prepack": "bun run build && bun run test && bun run typecheck:spec"
+  },
+  "dependencies": {
+    "date-fns": "^4.4.0"
+  }
+}

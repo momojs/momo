@@ -54,7 +54,11 @@ async function audio() {
   } catch (_) {
     return 'no_audio';
   } finally {
-    closure.clear?.();
+    try {
+      await closure.clear?.();
+    } catch {
+      // A failed close must not discard the collected fingerprint or reject globally.
+    }
   }
 }
 

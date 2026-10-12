@@ -195,8 +195,8 @@
   "scripts": {
     "build": "momo build",
     "test": "bun run typecheck:spec && bun run test:unit && bun run test:browser",
-    "test:unit": "bun test src",
-    "test:browser": "bun test browser-tests",
+    "test:unit": "bun test src --path-ignore-patterns '**/*.spec.ts'",
+    "test:browser": "playwright test --config ../../playwright.config.ts packages/design/src",
     "format": "biome format --write .",
     "typecheck:spec": "tsc --noEmit --project tsconfig.spec.json",
     "typecheck": "tsc --noEmit --project tsconfig.json",
@@ -207,8 +207,7 @@
     "@momots/cli": "workspace:*",
     "@tailwindcss/node": "^4.3.2",
     "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "bunwright": "^0.3.1"
+    "@types/react-dom": "^19.2.3"
   },
   "peerDependencies": {
     "@base-ui/react": "^1.6.0",

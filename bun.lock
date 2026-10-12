@@ -6,6 +6,7 @@
       "name": "momots",
       "devDependencies": {
         "@biomejs/biome": "^2.5.1",
+        "@playwright/test": "^1.64.0",
         "@types/bun": "^1.3.14",
         "typescript": "^7.0.2",
       },
@@ -19,7 +20,7 @@
     },
     "packages/core": {
       "name": "@momots/core",
-      "version": "0.1.0-beta.2",
+      "version": "0.1.0-beta.3",
       "devDependencies": {
         "@momots/cli": "workspace:*",
       },
@@ -30,7 +31,7 @@
     },
     "packages/design": {
       "name": "@momots/design",
-      "version": "0.1.0-alpha.1",
+      "version": "0.1.0-alpha.2",
       "dependencies": {
         "@ncdai/react-wheel-picker": "^1.2.2",
         "morphicons": "^1.7.1",
@@ -41,7 +42,6 @@
         "@tailwindcss/node": "^4.3.2",
         "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",
-        "bunwright": "^0.3.1",
       },
       "peerDependencies": {
         "@base-ui/react": "^1.6.0",
@@ -62,7 +62,7 @@
     },
     "packages/drive": {
       "name": "@momots/drive",
-      "version": "0.1.0-beta.1",
+      "version": "0.1.0-beta.2",
       "dependencies": {
         "mime": "^4.1.0",
         "nanoid": "^3.3.15",
@@ -82,12 +82,24 @@
       "version": "0.1.0-beta.0",
       "devDependencies": {
         "@momots/cli": "workspace:*",
-        "bunwright": "^0.3.1",
       },
       "peerDependencies": {
         "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
         "remeda": "^2.32.0",
         "type-fest": "5.4.4",
+      },
+    },
+    "packages/refine": {
+      "name": "@momots/refine",
+      "version": "0.1.0-alpha.0",
+      "dependencies": {
+        "date-fns": "^4.4.0",
+      },
+      "devDependencies": {
+        "@momots/cli": "workspace:*",
+      },
+      "peerDependencies": {
+        "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
       },
     },
     "website": {
@@ -303,6 +315,8 @@
 
     "@momots/host": ["@momots/host@workspace:packages/host"],
 
+    "@momots/refine": ["@momots/refine@workspace:packages/refine"],
+
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 
     "@ncdai/react-wheel-picker": ["@ncdai/react-wheel-picker@1.2.2", "", { "peerDependencies": { "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc" } }, "sha512-5BUA3ZsF6vCSSmshJml0ScjoDkzMTLc8cs7HtFHazERbhxdMEbBJKD01kLZNtnTgZ9DNL/e/+8WZnwBzOrIO4A=="],
@@ -318,6 +332,8 @@
     "@orama/orama": ["@orama/orama@3.1.18", "", {}, "sha512-a61ljmRVVyG5MC/698C8/FfFDw5a8LOIvyOLW5fztgUXqUpc1jOfQzOitSCbge657OgXXThmY3Tk8fpiDb4UcA=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.139.0", "", {}, "sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw=="],
+
+    "@playwright/test": ["@playwright/test@1.64.0", "", { "dependencies": { "playwright": "1.64.0" }, "bin": { "playwright": "cli.js" } }, "sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.2", "", {}, "sha512-ceTwaxc4I5IOi97DgCotl3pqiyRGvffcc0oOsE2dQYaJOFIDsDt4VWG6xEbg1QePv9QWausCEIppud/tJ1wNig=="],
 
@@ -688,8 +704,6 @@
     "browserslist": ["browserslist@4.28.5", "", { "dependencies": { "baseline-browser-mapping": "^2.10.42", "caniuse-lite": "^1.0.30001800", "electron-to-chromium": "^1.5.387", "node-releases": "^2.0.50", "update-browserslist-db": "^1.2.3" }, "bin": { "browserslist": "cli.js" } }, "sha512-Cu2E6QejHWzuDMTkuwgpABFgDfZrXLQq5V13YOACZx4mFAG4IwGTbTfHPMr4WtxlHoXSM8FIuRwYYCz5XiabaQ=="],
 
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
-
-    "bunwright": ["bunwright@0.3.1", "", { "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "bunwright": "dist/bunwright.mjs" } }, "sha512-vxIfNTqUctNy37mGEP9A5r4FGdwg85EMCRKzv5E/deOhFfX7g5g+M1pZ4c1VOQAc4h2lSoeD3R8+GsgZWhAQ9Q=="],
 
     "bytes": ["bytes@3.1.2", "", {}, "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg=="],
 
@@ -1242,6 +1256,10 @@
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 
     "picomatch": ["picomatch@4.0.5", "", {}, "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A=="],
+
+    "playwright": ["playwright@1.64.0", "", { "dependencies": { "playwright-core": "1.64.0" }, "bin": { "playwright": "cli.js" } }, "sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg=="],
+
+    "playwright-core": ["playwright-core@1.64.0", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg=="],
 
     "points-on-curve": ["points-on-curve@0.2.0", "", {}, "sha512-0mYKnYYe9ZcqMCWhUjItv/oHjvgEsfKvnUTg8sAtnHr3GVy7rGkXCb6d5cSyqrWqL4k81b9CPg3urd+T7aop3A=="],
 

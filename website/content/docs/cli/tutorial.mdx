@@ -1,95 +1,82 @@
 ---
 title: 浏览器测试
-description: 用 bun:test 与 bunwright 测试依赖真实浏览器的内容。
+description: 在源码旁维护 Playwright 浏览器测试与 bun:test 非浏览器测试。
 icon: GraduationCap
 ---
 
-普通逻辑测试继续使用 `bun:test`。只有依赖 DOM、布局、Canvas 或浏览器全局对象的内容才需要 bunwright。
+浏览器中的组件、Hook、布局和交互使用 Playwright Test；独立逻辑、SSR 和 Bun
+运行时检查使用 `bun:test`。测试文件与源码就近放置，分别使用 `.spec.ts` 和
+`.test.ts` 后缀，不建立专用测试目录。
 
-## 第 1 步：安装
+## 第 1 步：准备运行环境
 
-```bash
-bun add -d bunwright
-```
-
-bunwright 需要 Bun 1.3.12 或更高版本，以及本机已有的 Chrome 或 WebKit。
-
-## 第 2 步：准备浏览器入口
-
-浏览器不能直接导入本地 TypeScript 源码，因此先用 `Bun.build` 将待测模块打包。入口把浏览器内的操作暴露为可序列化的结果：
-
-```ts
-// browser-tests/fixture.ts
-import { isScrollable } from '../src/is-scrollable';
-
-globalThis.runBrowserCheck = () => {
-  const box = document.createElement('div');
-  box.style.cssText = 'height:100px;overflow:auto';
-  box.innerHTML = '<div style="height:1000px"></div>';
-  document.body.append(box);
-  return isScrollable(box);
-};
-```
-
-## 第 3 步：编写测试
-
-```ts
-// browser-tests/layout.test.ts
-import { afterAll, beforeAll, expect, test } from 'bun:test';
-import { browser } from 'bunwright';
-
-let server: ReturnType<typeof Bun.serve>;
-let page: Awaited<ReturnType<typeof browser.newPage>>;
-
-beforeAll(async () => {
-  const build = await Bun.build({
-    entrypoints: [new URL('./fixture.ts', import.meta.url).pathname],
-    target: 'browser',
-  });
-  if (!build.success) throw new Error('fixture build failed');
-
-  server = Bun.serve({
-    port: 0,
-    fetch(request) {
-      if (new URL(request.url).pathname === '/fixture.js') {
-        return new Response(build.outputs[0]);
-      }
-      return new Response(
-        '<script type="module" src="/fixture.js"></script>',
-        { headers: { 'Content-Type': 'text/html' } },
-      );
-    },
-  });
-
-  page = await browser.newPage();
-  await page.navigate(`http://${server.hostname}:${server.port}`);
-});
-
-afterAll(async () => {
-  await browser.close();
-  server.stop(true);
-});
-
-test('内容超高的容器是可滚动的', async () => {
-  const result = await page.evaluate(() => globalThis.runBrowserCheck());
-  expect(result).toBe(true);
-});
-```
-
-## 第 4 步：运行
-
-```json
-{
-  "scripts": {
-    "test": "bun test src",
-    "test:browser": "bun test browser-tests"
-  }
-}
-```
+在仓库根目录安装依赖和浏览器：
 
 ```bash
-bun run test
-bun run test:browser
+bun install
+bunx playwright install chromium webkit
 ```
 
-仓库里的 `@momots/host` 使用同样的结构：`bun:test` 负责测试报告和断言，bunwright 只负责真实浏览器页面。
+Playwright Test 在 Node.js 中运行。Bun 负责包管理、非浏览器测试，以及构建和
+提供浏览器测试页面。浏览器版本由项目安装的 Playwright 管理。
+
+## 第 2 步：了解文件分工
+
+`@momots/design` 的现有测试使用以下结构：
+
+| 文件 | 职责 |
+| --- | --- |
+| `playwright.config.ts` | 仓库根配置，收集 `*.spec.ts`，设置 Chromium、WebKit 和页面服务 |
+| `packages/design/playwright.server.ts` | 用 Bun 构建浏览器入口、编译样式、准备 SSR HTML 并提供 HTTP 服务 |
+| `packages/design/playwright.fixture.ts` | 扩展官方 `test`，为每个用例加载页面并等待入口准备完成 |
+| `packages/design/src/components.fixture.tsx` | 共享组件浏览器入口，导入真实组件并提供挂载等操作 |
+| `packages/design/src/components/alert.spec.ts` | Alert 的浏览器行为测试 |
+| `packages/design/src/components/alert.test.ts` | Alert 的非浏览器测试 |
+
+独立组件或 Hook 需要专用入口时，`*.fixture.tsx` 也放在对应源码旁。入口通过
+`Bun.build` 编译为浏览器模块，测试页面通过 HTTP 加载它。构建产物排除测试
+文件和这些浏览器入口。
+
+`momo.config.ts` 保持为构建配置；浏览器测试直接使用 Playwright 官方配置。
+
+## 第 3 步：使用页面 fixture
+
+现有浏览器测试从包内 `playwright.fixture.ts` 导入 `test` 和 `expect`，并通过
+测试参数取得 `page`。Playwright 默认为每个用例创建独立的 BrowserContext
+和 Page；Bun 页面服务及编译资源在本次运行中共享。
+
+组件在浏览器入口中挂载。测试可使用 `page.locator()` 操作元素，用
+`page.evaluate()` 在浏览器中读取 DOM、调用入口操作或采集布局数据，再断言
+返回结果。测试函数本身在 Node.js 中执行，因此不能直接访问 `document`。
+
+非浏览器测试从 `bun:test` 导入测试 API。根 `bunfig.toml` 排除 `*.spec.ts`，
+让两种运行器只收集各自的用例；类型契约由 `typecheck:spec` 单独检查。
+
+## 第 4 步：运行已有测试
+
+从仓库根目录运行 design 的各层检查：
+
+```bash
+bun run --filter './packages/design' typecheck:spec
+bun run --filter './packages/design' test:unit
+bun run --filter './packages/design' test:browser
+```
+
+运行全部 design 检查：
+
+```bash
+bun run --filter './packages/design' test
+```
+
+只运行一个现有浏览器文件或一个引擎：
+
+```bash
+bunx playwright test packages/design/src/components/alert.spec.ts
+bunx playwright test packages/design/src/components/alert.spec.ts --project=chromium
+```
+
+根配置在失败时保留 trace 和截图，HTML 报告可通过以下命令查看：
+
+```bash
+bunx playwright show-report
+```
