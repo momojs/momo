@@ -4,8 +4,6 @@ description: 用于传达重要状态、反馈与下一步操作的内联提示�
 icon: TriangleAlert
 ---
 
-`Alert` 是页面内的消息容器，用于呈现状态、重要反馈和可选的下一步操作。它提供明确的语义变体、可组合 slots 与 momo semantic token，但不会管理关闭状态或替代需要用户决策的模态框。
-
 <AlertPlayground />
 
 ## 使用
@@ -21,27 +19,23 @@ import { Alert } from "@momots/design/components/alert";
   icon={<HugeiconsIcon icon={InformationCircleIcon} />}
   title="新的同步策略"
   description="下次启动时会自动同步本地设置。"
-/>
+/>;
 ```
 
 内建 `AlertIcon` 会把图标视为装饰内容并设置 `aria-hidden`。标题与说明应直接表达消息含义，不能只依赖颜色或图标。
 
 ## 语义变体
 
-| Variant | 适用场景 |
-| --- | --- |
-| `default` | 中性说明、一般提醒 |
-| `info` | 新信息、功能提示、非阻塞更新 |
-| `success` | 操作完成、保存成功、状态恢复 |
-| `warning` | 需要关注、可能产生影响的情况 |
-| `danger` | 操作失败、数据风险或阻塞性问题 |
+| Variant   | 适用场景                       |
+| --------- | ------------------------------ |
+| `default` | 中性说明、一般提醒             |
+| `info`    | 新信息、功能提示、非阻塞更新   |
+| `success` | 操作完成、保存成功、状态恢复   |
+| `warning` | 需要关注、可能产生影响的情况   |
+| `danger`  | 操作失败、数据风险或阻塞性问题 |
 
 ```tsx
-<Alert
-  variant="success"
-  title="导入完成"
-  description="已添加 24 条记录。"
-/>
+<Alert variant="success" title="导入完成" description="已添加 24 条记录。" />
 ```
 
 ## 操作
@@ -112,17 +106,17 @@ Alert 的 `title` 与 `description` 提供标题和说明内容。`slots.icon`�
 
 ### Alert
 
-| Prop | 类型 | 说明 |
-| --- | --- | --- |
-| `variant` | `"default" \| "info" \| "success" \| "warning" \| "danger"` | 语义与视觉变体，默认 `"default"` |
-| `icon` | `ReactNode` | 可选装饰图标 |
-| `title` | `ReactNode` | 简短标题 |
-| `description` | `ReactNode` | 补充说明或处理建议 |
-| `action` | `ReactNode` | 可选按钮或链接 |
-| `role` | `AriaRole \| null` | 默认 `"alert"`；`null` 移除 live-region role |
-| `slots` | `AlertProps['slots']` | 配置内容节点，支持 `render` 或 `false` |
-| `className` | `string` | 追加根容器样式 |
-| `...props` | `React.ComponentProps<"div">` | 其余原生 div 属性 |
+| Prop          | 类型                                                        | 说明                                         |
+| ------------- | ----------------------------------------------------------- | -------------------------------------------- |
+| `variant`     | `"default" \| "info" \| "success" \| "warning" \| "danger"` | 语义与视觉变体，默认 `"default"`             |
+| `icon`        | `ReactNode`                                                 | 可选装饰图标                                 |
+| `title`       | `ReactNode`                                                 | 简短标题                                     |
+| `description` | `ReactNode`                                                 | 补充说明或处理建议                           |
+| `action`      | `ReactNode`                                                 | 可选按钮或链接                               |
+| `role`        | `AriaRole \| null`                                          | 默认 `"alert"`；`null` 移除 live-region role |
+| `slots`       | `AlertProps['slots']`                                       | 配置内容节点，支持 `render` 或 `false`       |
+| `className`   | `string`                                                    | 追加根容器样式                               |
+| `...props`    | `React.ComponentProps<"div">`                               | 其余原生 div 属性                            |
 
 ### Primitives
 

@@ -1,7 +1,7 @@
 {
   "name": "@momots/drive",
   "version": "0.1.0-beta.2",
-  "description": "Bun-first Fetch API client with onion-style middleware for MomoTS packages and apps.",
+  "description": "Fetch API client with onion-style middleware for authentication, logging, and response handling.",
   "keywords": [
     "momo",
     "momots",

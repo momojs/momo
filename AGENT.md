@@ -32,7 +32,7 @@
 
 ## 2. 项目概览
 
-`momo` 是一套 **Bun 优先**、面向函数式与可组合性的 React 工具链。它不是
+`momo` 是一套面向函数式与可组合性的 React 工具链。它不是
 React、TanStack、Remeda、Effect 或请求客户端的替代品，而是一组可独立引入、
 支持 tree-shaking 的 workspace packages。
 

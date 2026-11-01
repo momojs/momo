@@ -41,5 +41,6 @@ import { Slider } from "@momots/design/components/slider";
 ## 交互说明
 
 - **拖拽**：超出边界时有 rubber band 回弹效果（尊重 `prefers-reduced-motion`）。
+- **数值显示**：使用 `TweenNumber`，拖拽时即时跟随；点击、键盘及外部值更新时平滑过渡，保留步进精度和 `formatValue` 格式。减弱动效时直接更新。
 - **点击**：步进 ≤10 档时吸附到最近 step；连续滑块会吸附到最近 10% 刻度。
 - **键盘**：`ArrowLeft`/`ArrowRight` 按 `step` 微调；`Shift` + 方向键按 `10 × step` 快速调整；`Home`/`End` 跳到最小/最大值。

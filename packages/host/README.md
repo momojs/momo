@@ -1,7 +1,7 @@
 # @momots/host
 
-Bun-first Web Platform and host environment utilities for MomoTS packages and
-apps.
+`@momots/host` provides utilities for storage, binary data, Fetch, CSS, and DOM
+APIs.
 
 Current release: `0.1.0-beta.0` (`beta` tag).
 

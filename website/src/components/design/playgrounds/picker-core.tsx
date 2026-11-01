@@ -82,7 +82,7 @@ export function PickerCorePlayground() {
         </>
       }
     >
-      <div className='grid gap-4 text-center'>
+      <div className='grid w-56 max-w-full gap-4 text-center'>
         <div>
           <h3 id={labelId} className='font-medium text-momo-fg-default'>
             Reservation

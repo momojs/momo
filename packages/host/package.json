@@ -1,7 +1,7 @@
 {
   "name": "@momots/host",
   "version": "0.1.0-beta.0",
-  "description": "Bun-first Web Platform and host environment utilities for MomoTS packages and apps.",
+  "description": "Web Platform utilities for storage, binary data, Fetch, CSS, and DOM APIs.",
   "keywords": [
     "momots",
     "browser",

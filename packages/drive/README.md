@@ -1,6 +1,6 @@
 # @momots/drive
 
-`@momots/drive` is a Bun-first HTTP client that keeps the Fetch API visible while
+`@momots/drive` is an HTTP client that keeps the Fetch API visible while
 letting related requests share authentication, logging, error handling, and
 other transport policy through middleware.
 

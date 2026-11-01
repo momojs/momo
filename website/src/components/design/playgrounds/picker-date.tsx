@@ -116,7 +116,7 @@ export function PickerDatePlayground() {
         </>
       }
     >
-      <div className='grid gap-4 text-center'>
+      <div className='grid w-56 max-w-full gap-4 text-center'>
         <div className='inline-flex items-center justify-center gap-2 text-sm font-medium text-momo-fg-default'>
           <Icon icon={Calendar03Icon} />
           Date picker
