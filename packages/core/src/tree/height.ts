@@ -40,12 +40,9 @@ export function height<
     depth = Math.max(depth, current);
     const children = node[Children as C];
     if (isArray(children)) {
-      queue.push(
-        ...children.map((item) => ({
-          node: item,
-          depth: current + 1,
-        })),
-      );
+      for (const item of children) {
+        queue.push({ node: item, depth: current + 1 });
+      }
     }
   }
 

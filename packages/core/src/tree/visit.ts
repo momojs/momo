@@ -50,14 +50,10 @@ export function visit<
     state.depth = Math.max(state.depth, depth);
     const children = node[Children as C];
     if (isArray(children)) {
-      // 将子节点添加到队列
-      queue.push(
-        ...children.map((item) => ({
-          node: item,
-          parent: node,
-          depth: depth + 1,
-        })),
-      );
+      // 将子节点添加到队列；逐个入队，避免展开大数组时超出调用栈
+      for (const item of children) {
+        queue.push({ node: item, parent: node, depth: depth + 1 });
+      }
     }
     callback?.(node, depth, parent);
   }

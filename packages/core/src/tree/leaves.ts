@@ -37,7 +37,7 @@ export function leaves<
     const node = queue[head]!;
     const children = node[Children as C];
     if (isNot(isEmptyish)(children)) {
-      queue.push(...(children as CNode[]));
+      for (const item of children as CNode[]) queue.push(item);
       continue;
     }
     res.push(node);

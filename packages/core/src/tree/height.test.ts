@@ -19,4 +19,12 @@ describe('height', () => {
   test('returns zero for an empty tree', () => {
     expect(height([])).toBe(0);
   });
+
+  test('handles a node with a very large number of children', () => {
+    const children = Array.from({ length: 200_000 }, (_, id) => ({
+      id,
+      children: [],
+    }));
+    expect(height<{ id: number }>([{ id: -1, children }])).toBe(1);
+  });
 });

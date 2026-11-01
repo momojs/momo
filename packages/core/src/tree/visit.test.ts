@@ -29,4 +29,20 @@ describe('visit', () => {
       ['a1', 2, 'a'],
     ]);
   });
+
+  test('handles a node with a very large number of children', () => {
+    type Node = { id: number };
+    const children = Array.from({ length: 200_000 }, (_, id) => ({
+      id,
+      children: [],
+    }));
+    let count = 0;
+
+    const depth = visit<Node>([{ id: -1, children }], () => {
+      count++;
+    });
+
+    expect(depth).toBe(1);
+    expect(count).toBe(200_001);
+  });
 });

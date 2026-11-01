@@ -93,7 +93,9 @@ export function unflat<
     }
 
     if (orphan === 'root') {
-      tree.push(...Array.from(temp.values()).flat());
+      for (const nodes of temp.values()) {
+        for (const node of nodes) tree.push(node);
+      }
     }
   }
 

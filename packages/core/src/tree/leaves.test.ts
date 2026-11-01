@@ -18,4 +18,13 @@ describe('leaves', () => {
 
     expect(leaves<Node>(tree).map((node) => node.id)).toEqual(['b', 'a1']);
   });
+
+  test('handles a node with a very large number of children', () => {
+    type Node = { id: number };
+    const children = Array.from({ length: 200_000 }, (_, id) => ({
+      id,
+      children: [],
+    }));
+    expect(leaves<Node>([{ id: -1, children }])).toHaveLength(200_000);
+  });
 });

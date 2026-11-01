@@ -52,4 +52,12 @@ describe('unflat', () => {
       unflat([{ id: 'child', parent: 'missing' }], { orphan: 'discard' }),
     ).toEqual([]);
   });
+
+  test('promotes a very large number of orphan nodes', () => {
+    const data = Array.from({ length: 200_000 }, (_, id) => ({
+      id,
+      parent: 'missing',
+    }));
+    expect(unflat(data)).toHaveLength(200_000);
+  });
 });
