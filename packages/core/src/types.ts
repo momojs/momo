@@ -122,3 +122,24 @@ export type Stringifiable = {
  * 可调用的函数类型。
  */
 export type Callable = (...args: never[]) => unknown;
+
+/**
+ * 由外部提供的一次性计时能力，不依赖具体宿主的计时器或句柄类型。
+ *
+ * @example
+ * const timer: Timer = {
+ *   schedule(callback, milliseconds) {
+ *     const handle = setTimeout(callback, milliseconds);
+ *     return () => clearTimeout(handle);
+ *   },
+ * };
+ */
+export interface Timer {
+  /**
+   * 延迟调度至多一次的异步回调，0 毫秒也不能同步执行。
+   * @param callback 到期时执行的回调。
+   * @param milliseconds 延迟时长，单位为毫秒。
+   * @returns 幂等的取消函数；取消后不再执行尚未触发的回调。
+   */
+  schedule(callback: () => void, milliseconds: number): () => void;
+}

@@ -1,12 +1,12 @@
 ---
 title: 开始
-description: "@momots/core —— 零副作用的纯函数数据工具集。"
+description: "@momots/core —— 数组、对象、字符串、树结构与属性路径工具。"
 icon: Rocket
 ---
 
-`@momots/core` 是 momo 的基石：一组**纯函数**数据工具，覆盖大小写转换、树结构操作、类型守卫、单例缓存、惰性求值、模板替换等常见场景。
+`@momots/core` 提供数组、对象、字符串与树结构的数据处理工具。例如，将单个值包装成数组、批量转换对象键名、把带父子关系的列表转成树，以及按路径读取嵌套属性。
 
-它没有任何运行时副作用（`sideEffects: false`），支持按子路径精确导入，也提供配套的 TypeScript 类型工具。
+包内还提供类型守卫、TypeScript 类型工具、单例缓存、异步调用去重与内存投递队列。这些能力不依赖 DOM、Fetch 或 Storage 等宿主 API；使用缓存和回调时，仍需了解各自的状态与执行行为。
 
 ## 安装
 
@@ -14,17 +14,30 @@ icon: Rocket
 bun add @momots/core@beta remeda type-fest
 ```
 
-当前发布通道为 `beta`（`0.1.0-beta.1`）。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+当前发布通道为 `beta`。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+
+## 从输入和输出开始
+
+```ts
+import { asArray, PropertyPath, toCamelCasedProperties } from '@momots/core';
+
+asArray('momo'); // => ['momo']
+toCamelCasedProperties({ user_name: 'Momo' }); // => { userName: 'Momo' }
+PropertyPath.read({ user: { name: 'Momo' } }, 'user.name');
+// => { exists: true, value: 'Momo' }
+```
+
+`asArray` 遇到数组时返回原引用；`toCamelCasedProperties` 只转换顶层键名，保留值的引用；`PropertyPath.read` 用 `exists` 区分属性不存在和属性值为 `undefined`。各函数的规则与例外见[向导](/docs/core/guide)。
 
 ## 两种导入方式
 
-常用函数可以从根入口导入；所有公开 API 都可以从对应子路径导入，以获得明确的依赖边界与最佳的 tree-shaking 效果。标记为“仅子路径”的 API 不从根入口重新导出：
+常用函数可以从根入口导入；所有公开 API 都可以从对应子路径导入。子路径有助于明确代码依赖了哪个模块。标记为“仅子路径”的 API 不从根入口重新导出：
 
 ```ts
 // 从根入口导入
 import { eliminate, unflat, toCamelCasedProperties } from "@momots/core";
 
-// 按子路径导入（仅打包用到的部分）
+// 按子路径导入
 import { eliminate } from "@momots/core/eliminate";
 import { unflat } from "@momots/core/tree/unflat";
 import { toCamelCasedProperties } from "@momots/core/casing";
@@ -38,42 +51,47 @@ import { toCamelCasedProperties } from "@momots/core/casing";
 | 集合基数   | `cardinality`         | `cardinality`                               |
 | 键名大小写 | `casing/*`            | `toCamelCasedProperties`、`toSnakeCasedProperties` …      |
 | 值替换     | `eliminate`           | `eliminate`                                 |
+| 错误文本   | `error`、`error/*`     | `toErrorMessage`、`toErrorSummary`            |
 | 惰性求值   | `realize`             | `realize`                                   |
 | 类型守卫   | `guard/*`             | `isUndefined`、`isStringArray` …            |
 | 单例缓存   | `singleton`           | `singleton`                                 |
 | 并发去重   | `singleflight`        | `Singleflight`                              |
+| 等待超时   | `timeout`             | `timeout`、`TimeoutError`                    |
+| 投递队列   | `delivery-queue`      | `DeliveryQueue`                             |
 | 模板插值   | `substitute`          | `substitute`                                |
+| 文本遮罩   | `veil`                | `veil`                                      |
+| 数值转换   | `toFinite`            | `toFinite`                                  |
 | 数位求和   | `sumdig`              | `sumdig`                                    |
+| 属性路径   | `property-path`       | `PropertyPath`                              |
 | 树结构     | `tree/*`              | `unflat`、`flat`、`visit`、`prune` …        |
 | 类型断言   | `cast/*`              | `writable`                                  |
 | 类型工具   | `types`               | `MaybeArray`、`Realizable`、`Updater` …     |
 
 接下来可以查阅 [向导](/docs/core/guide) 了解每个 API，或前往 [示例](/docs/core/examples) 获取可直接使用的代码片段。
 
-## 比较
+## 状态与回调行为
 
-`@momots/core` **不是** Lodash、Remeda 或 Ramda 的替代品。它是从项目实践中提炼出**高频场景**的纯函数，与社区通用工具库互补：通用的 `map`、`pipe`、`merge`、`groupBy` 等仍建议使用 Remeda；`@momots/core` 仅额外提供树结构、惰性默认值、键名批量转换等 Remeda 未覆盖或少覆盖的能力。
+多数数据转换函数直接根据输入返回结果。以下 API 还会保存状态或执行调用方的函数：
 
-### 与社区工具库的对照
+- `singleton` 默认把创建的值保存到指定作用域，默认作用域是 `globalThis`。同一作用域中，相同 key 的后续调用复用该值；设置 `pass` 可跳过缓存。不要用默认作用域存储用户或请求专属状态。
+- `Singleflight` 在实例中保存进行中的 Promise。同一实例上的重叠调用会共享它，即使传入的参数不同；完成或失败后，下一次调用会重新执行。
+- `timeout` 通过调用方提供的 `Timer` 安排和取消计时。期限先到时结束等待，源任务仍会继续执行。
+- `DeliveryQueue` 在实例中保留尚未确认的条目及其引用。`enqueue()` 只接纳条目，`flush()` 才按顺序发送；失败后保留未确认条目，后续调用 `flush()` 可显式重试。
+- `realize` 遇到函数时立即用给定参数调用它，否则返回传入值。回调可以有副作用；如果函数本身就是需要保留的业务值，不要直接交给 `realize`。
 
-| 特性                                   | **@momots/core**              | **Lodash**               | **Remeda**                | **Ramda**        | **es-toolkit**   |
-| -------------------------------------- | ----------------------------- | ------------------------ | ------------------------- | ---------------- | ---------------- |
-| 定位                                   | 场景化纯函数补充              | 通用数据工具全集         | 现代 TS 数据变换          | 函数式组合与变换 | 轻量 Lodash 替代 |
-| API 粒度                               | 单函数单语义                  | 模块 + 链式              | 数据优先、`pipe`          | 柯里化、组合     | 函数为主         |
-| TypeScript                             | 一等公民                      | 后补 `@types`            | 一等公民                  | 中等             | 一等公民         |
-| 子路径 tree-shaking                    | 设计优先（`exports` 子路径）  | 需 `lodash-es` 或插件    | 按函数导入                | 按函数导入       | 按函数导入       |
-| `sideEffects`                          | `false`                       | 传统 bundle 有副作用风险 | `false`                   | `false`          | `false`          |
-| 宿主环境依赖                           | 无                            | 无                       | 无                        | 无               | 无               |
-| 树结构（`unflat` / `visit` / `prune`） | 有                            | 无                       | 无                        | 无               | 无               |
-| 对象键名风格批量替换                   | 有（顶层键）                  | 字符串级 `camelCase` 等  | 字符串级 `toCamelCase` 等 | 无               | 部分             |
-| 模板占位替换（`substitute`）           | 有                            | `template`（不同语义）   | 无                        | 无               | 无               |
-| 内置类型工具                           | `MaybeArray`、`Realizable` …  | 无                       | 少量                      | 无               | 部分             |
-| 与 Remeda 关系                         | peer dependency，部分能力复用 | 独立                     | 被 core 依赖              | 独立             | 独立             |
+`package.json` 中的 `sideEffects: false` 用于让打包器移除未使用的模块，不代表每个 API 调用都没有副作用。是否修改状态、调用回调或保留引用，应以对应 API 的说明为准。
 
-### 选型建议
+## 根据任务选择 API
 
-| 对比对象                | 何时用 `@momots/core`                                                                   |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| **Lodash / es-toolkit** | 需要扁平列表转树、遍历裁剪、惰性默认值等场景 API 时；                                   |
-| **Remeda**              | 与 Remeda 并用：补充单元函数，Remeda 负责通用集合变换与 `pipe` 编排。                   |
-| **Ramda**               | 偏好小函数、明确命名、无柯里化约定时选 `core`；需要函数组合子或 transducer 时用 Ramda。 |
+| 要处理的问题 | 可查看的 API | 使用前需要确认 |
+| --- | --- | --- |
+| 参数允许传单值或数组 | `asArray` | 数组输入会保留原引用 |
+| 接口对象的键名需要转换 | `toCamelCasedProperties`、`toCamelCasedPropertiesDeep` | 前者只转换顶层，后者递归处理 |
+| 列表包含 `id` 与 `parent`，需要生成树 | `unflat` | 父节点缺失时的处理方式，以及输入是否存在环 |
+| 读取嵌套属性，并区分缺失与 `undefined` | `PropertyPath.read` | 字符串片段访问普通对象，数字片段访问数组 |
+| 从错误中提取提示文本或诊断摘要 | `toErrorMessage`、`toErrorSummary` | 两者不执行脱敏或长度裁剪 |
+| 复用实例，或合并重叠的异步调用 | `singleton`、`Singleflight` | 共享状态的作用域，以及不同参数是否允许共用结果 |
+| 为已有 Promise 设置等待期限 | `timeout` | 显式提供 `Timer`；超时不会取消源任务 |
+| 先收集条目，再按顺序分批投递 | `DeliveryQueue` | 容量包含在途条目，每次 `flush()` 只等待调用时已有条目 |
+
+通用集合变换可以继续使用项目已有的工具库，按需要引入这里的 API。涉及 DOM、Fetch 或存储的能力，请查阅 [`@momots/host`](/docs/host)；请求中间件与响应解析请查阅 [`@momots/drive`](/docs/drive)。

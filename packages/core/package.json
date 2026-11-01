@@ -1,7 +1,7 @@
 {
   "name": "@momots/core",
-  "version": "0.1.0-beta.3",
-  "description": "Bun-first functional primitives for MomoTS packages and apps.",
+  "version": "0.1.0",
+  "description": "Functional utilities, type guards, and data transformations for TypeScript.",
   "keywords": [
     "momots",
     "functional",
@@ -73,13 +73,33 @@
       "types": "./dist/compact.d.ts",
       "import": "./dist/compact.js"
     },
+    "./delivery-queue": {
+      "types": "./dist/delivery-queue.d.ts",
+      "import": "./dist/delivery-queue.js"
+    },
     "./eliminate": {
       "types": "./dist/eliminate.d.ts",
       "import": "./dist/eliminate.js"
     },
+    "./error": {
+      "types": "./dist/error/index.d.ts",
+      "import": "./dist/error/index.js"
+    },
+    "./error/toErrorMessage": {
+      "types": "./dist/error/toErrorMessage.d.ts",
+      "import": "./dist/error/toErrorMessage.js"
+    },
+    "./error/toErrorSummary": {
+      "types": "./dist/error/toErrorSummary.d.ts",
+      "import": "./dist/error/toErrorSummary.js"
+    },
     "./realize": {
       "types": "./dist/realize.d.ts",
       "import": "./dist/realize.js"
+    },
+    "./property-path": {
+      "types": "./dist/property-path.d.ts",
+      "import": "./dist/property-path.js"
     },
     "./guard/*": {
       "types": "./dist/guard/*.d.ts",
@@ -100,6 +120,14 @@
     "./singleflight": {
       "types": "./dist/singleflight.d.ts",
       "import": "./dist/singleflight.js"
+    },
+    "./timeout": {
+      "types": "./dist/timeout.d.ts",
+      "import": "./dist/timeout.js"
+    },
+    "./toFinite": {
+      "types": "./dist/toFinite.d.ts",
+      "import": "./dist/toFinite.js"
     },
     "./tree/cascade": {
       "types": "./dist/tree/cascade.d.ts",
@@ -136,12 +164,15 @@
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
+    },
+    "./veil": {
+      "types": "./dist/veil.d.ts",
+      "import": "./dist/veil.js"
     }
   },
   "files": ["dist", "README.md"],
   "publishConfig": {
-    "access": "public",
-    "tag": "beta"
+    "access": "public"
   },
   "scripts": {
     "build": "momo build",

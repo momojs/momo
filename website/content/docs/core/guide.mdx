@@ -1,17 +1,21 @@
 ---
 title: 向导
-description: "@momots/core 全部公开函数的用法说明。"
+description: "按用途查阅 @momots/core 的函数、路径工具与类型工具。"
 icon: BookOpen
 ---
 
-欢迎查阅 `@momots/core` 的 API 参考。下文按 [能力地图](/docs/core#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。常用 API 可从根入口导入，全部公开 API 均提供对应子路径；仅子路径导出的 API 会单独说明。
+本页按用途说明各个 API 的输入、返回值和使用限制。第一次使用时，可以先看
+[开始](/docs/core)中的常见场景，再按需查阅这里的条目。
+
+常用 API 可以从根入口导入，全部公开 API 都提供对应子路径。仅通过子路径导出的
+API 会在条目中单独标明：
 
 ```ts
 import { eliminate } from '@momots/core';
 import { unflat } from '@momots/core/tree/unflat';
 ```
 
-需要可复制的实战片段，请前往 [示例](/docs/core/examples)。
+需要将多个工具用在同一段业务代码中时，可以阅读[示例](/docs/core/examples)。
 
 ## 数组
 
@@ -19,7 +23,9 @@ import { unflat } from '@momots/core/tree/unflat';
 
 ### asArray
 
-将单个值或数组归一化为数组形态。传入值已是数组时返回原引用；否则用 `Array.of` 包成单元素数组。**不会**展开字符串、Iterable 或类数组对象。
+将单个值或数组统一为数组。传入值已是数组时返回原引用；否则用 `Array.of` 包成单元素数组。
+不会展开字符串、Iterable 或类数组对象。返回类型中的 `readonly` 只限制 TypeScript 写入，
+函数不会冻结数组。
 
 ```ts
 const asArray = <T>(value: MaybeArray<T>): readonly T[];
@@ -42,24 +48,25 @@ asArray(['momo', 'kit']); // => 原数组引用
 
 ### compact
 
-从数组中移除所有 emptyish 值。emptyish 语义来自 Remeda，包括 `null`、`undefined`、空字符串、空数组、空普通对象等。返回新数组，不修改原数组。
+移除 `false`，以及 Remeda `isEmptyish` 判定为空的值，例如 `null`、`undefined`、空字符串、
+空数组和空普通对象。保留 `0` 与 `NaN`，返回新数组，不修改原数组。
 
 ```ts
-function compact<T>(source: ReadonlyArray<T>): NonEmptyish<T>[];
+function compact<T>(source: ReadonlyArray<T>): NonFalseish<T>[];
 ```
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| `source` | `ReadonlyArray<T>` | 待压缩的输入数组 |
+| `source` | `ReadonlyArray<T>` | 待清理的数组 |
 
 | 返回 | 说明 |
 | --- | --- |
-| `NonEmptyish<T>[]` | 移除 emptyish 后的新数组 |
+| `NonFalseish<T>[]` | 移除 false 与空项后的新数组 |
 
 ```ts
 import { compact } from '@momots/core/compact';
 
-compact([0, 1, '', 'momo', null, undefined, [], {}, [1], { a: 1 }]);
+compact([0, 1, false, '', 'momo', null, undefined, [], {}, [1], { a: 1 }]);
 // => [0, 1, 'momo', [1], { a: 1 }]
 ```
 
@@ -69,7 +76,9 @@ compact([0, 1, '', 'momo', null, undefined, [], {}, [1], { a: 1 }]);
 
 ### cardinality
 
-获取离散集合或容器的基数。支持数组、字符串、`Map`、`Set` 和普通对象（按可枚举键数量计算）。不支持 Blob、ArrayBuffer、TypedArray 等宿主或二进制对象。
+返回数组或字符串的 `length`、`Map` 或 `Set` 的 `size`，或普通对象自身可枚举字符串键的数量。
+这里把这些数量统称为“基数”。字符串使用 JavaScript 的 `length`，不按用户感知字符计数。
+不支持的值返回 `0`，包括 `Blob`、`ArrayBuffer` 和 TypedArray。
 
 ```ts
 const cardinality = (data: unknown): number;
@@ -77,7 +86,7 @@ const cardinality = (data: unknown): number;
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| `data` | `unknown` | 待计算基数的值 |
+| `data` | `unknown` | 待计算长度、成员数或键数的值 |
 
 | 返回 | 说明 |
 | --- | --- |
@@ -304,9 +313,12 @@ toPascalCase('fooBAR', { preserveConsecutiveUppercase: true }); // => 'FooBAR'
 当 `Object.is(source, sentinel)` 为真时，把 `source` 替换为 `otherwise`（默认 `undefined`），否则原样返回。省略 `sentinel` 时默认为 `false`，便于处理 `cond && value` 短路结果。基于 `Object.is`，能区分 `-0` 与 `0`、识别 `NaN`。
 
 ```ts
-function eliminate<const T, const P = false, D = undefined>(
+function eliminate<const T>(
   source: T,
-  sentinel?: P,
+): T extends false ? Exclude<T, false> | undefined : T;
+function eliminate<const T, const P, D = undefined>(
+  source: T,
+  sentinel: P,
   otherwise?: D,
 ): T extends P ? Exclude<T, P> | D : T;
 ```
@@ -329,17 +341,117 @@ eliminate(false, false, 'fallback');       // => 'fallback'
 eliminate(Number.NaN, Number.NaN, 'nan');  // => 'nan'
 ```
 
-多条件组合时，可替代嵌套三元运算符。例如埋点参数需同时满足「模块可见」「还有更多数据」「流水号有效」：
+例如，只有模块可见、还有更多数据且流水号非空时，才创建埋点参数。
+先把条件明确写成布尔值，再用 `eliminate` 把失败结果从 `false` 转成 `undefined`：
 
 ```ts
-const trackPayload = eliminate(
-  moduleVisible && hasMore && flowID && { flowID, pageSize },
-);
-// 全部满足 => { flowID, pageSize }
-// 任一不满足 => undefined
+function createTrackPayload(
+  moduleVisible: boolean,
+  hasMore: boolean,
+  flowID: string,
+  pageSize: number,
+) {
+  const canTrack = moduleVisible && hasMore && flowID.length > 0;
+  return eliminate(canTrack && { flowID, pageSize });
+}
+
+createTrackPayload(true, true, 'flow-1', 20);
+// => { flowID: 'flow-1', pageSize: 20 }
+createTrackPayload(true, true, '', 20); // => undefined
 ```
 
-`&&` 链在任一条件为假时短路为 `false`；`eliminate` 再把 `false` 规范为 `undefined`。
+`&&` 会返回遇到的第一个假值，不一定是 `false`。`eliminate` 默认只替换 `false`，
+会保留 `0`、空字符串、`null` 和 `undefined`；要替换其他值，应显式传入 `sentinel`。
+
+## 错误消息与摘要
+
+子路径：`error`、`error/toErrorMessage`、`error/toErrorSummary`
+
+错误可能来自 `Error`、接口响应或校验结果。这两个函数把不同形状的错误整理成文本：
+
+| 需要什么 | 使用哪个函数 |
+| --- | --- |
+| 一条错误消息，例如页面提示 | `toErrorMessage` |
+| 包含错误名称、错误码和原因的诊断文本 | `toErrorSummary` |
+
+两者都可能返回 `undefined`，调用方可以用 `??` 提供默认文案。返回文本不做脱敏或长度裁剪，
+展示给用户前仍需按业务需要处理。
+
+### toErrorMessage
+
+从错误中提取第一条非空白消息。保留消息原文，包括首尾空白；不会把其他值强制转为字符串。
+
+字符串输入本身就是消息；对于错误对象，按下面的顺序查找，找到消息后即停止：
+
+1. `issues` 数组中的消息。
+2. 消息字段，依次为 `message`、`errMsg`、`codeMsg`、`msg`、`error_description`、`detail`。
+3. `errors` 数组中的消息。
+4. `error`、`reason`、`cause` 中的嵌套错误。
+
+```ts
+function toErrorMessage(error: unknown): string | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `error` | `unknown` | 错误对象、拒绝原因或消息字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `string \| undefined` | 首条有效消息；未找到时返回 `undefined` |
+
+```ts
+import { toErrorMessage } from '@momots/core/error/toErrorMessage';
+
+toErrorMessage(new TypeError('请求失败')); // => '请求失败'
+toErrorMessage('  请求失败  ');           // => '  请求失败  '
+toErrorMessage({ errMsg: '请求超时' });   // => '请求超时'
+toErrorMessage({
+  message: '校验失败',
+  issues: [{ message: '请输入姓名' }],
+}); // => '请输入姓名'
+toErrorMessage({ cause: new Error('连接中断') }); // => '连接中断'
+toErrorMessage(undefined); // => undefined
+```
+
+### toErrorSummary
+
+将未知错误整理为多行诊断摘要，保留名称、错误码、校验路径、子错误和原因。消息选择顺序与 `toErrorMessage` 相同；错误码优先读取 `code`，无有效值时读取 `errCode`。循环引用以 `[Circular]` 标记。
+
+```ts
+function toErrorSummary(error: unknown): string | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `error` | `unknown` | 错误对象、拒绝原因或消息字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `string \| undefined` | 包含可用错误上下文的摘要；没有可描述内容时返回 `undefined` |
+
+```ts
+import { toErrorSummary } from '@momots/core/error/toErrorSummary';
+
+toErrorSummary(new TypeError('请求失败')); // => 'TypeError: 请求失败'
+toErrorSummary({ code: 401, message: '未授权' }); // => '[401]: 未授权'
+toErrorSummary({
+  issues: [{ path: ['user', 'name'], message: '请输入姓名' }],
+}); // => 'issues:\n  [0] user.name: 请输入姓名'
+toErrorSummary(new Error('提交失败', {
+  cause: new Error('连接中断'),
+})); // => 'Error: 提交失败\ncause: Error: 连接中断'
+toErrorSummary(undefined); // => undefined
+```
+
+#### 错误读取范围
+
+两函数只读取约定的错误字段，不读取 `stack`、`body` 或 `data`，也不序列化整个输入。
+访问这些字段会执行对象上的 getter；getter 抛错时，函数把这个错误抛出。
+
+为限制对嵌套错误的遍历，根值深度记为 `0`，最多深入 `5` 层、访问 `100` 个值，
+数组和其中的元素分别计数。校验路径最多读取 `100` 个片段。
+遇到循环引用时，`toErrorMessage` 跳过该引用，`toErrorSummary` 使用 `[Circular]` 标记。
 
 ## 惰性求值
 
@@ -347,7 +459,11 @@ const trackPayload = eliminate(
 
 ### realize
 
-将惰性值具体化。若 `realizable` 是函数则用 `args` 调用并返回结果；否则直接返回。**函数值会被视为 thunk/resolver，而不是普通值。**
+配置既可以直接给出一个值，也可以用函数在调用时计算。`realize` 统一处理这两种输入：
+输入是函数时，用后续的 `args` 调用它并返回结果；输入是其他值时，原样返回。
+
+每次调用都会重新执行传入的函数，不会缓存结果。如果业务数据本身就是一个函数，
+直接传入也会执行；需要保留该函数时，可以再包一层 `() => callback`。
 
 ```ts
 const realize = <T, Args extends unknown[]>(
@@ -363,7 +479,7 @@ const realize = <T, Args extends unknown[]>(
 
 | 返回 | 说明 |
 | --- | --- |
-| `T` | 具体化后的结果 |
+| `T` | 输入值，或调用输入函数得到的结果 |
 
 ```ts
 import { realize } from '@momots/core/realize';
@@ -376,9 +492,142 @@ realize((a, b) => `${a}-${b}`, 'a', 'b');   // => 'a-b'
 
 子路径：`guard/*`
 
+### hasOwn
+
+判断对象是否包含指定自有属性，不检查原型链。可以传入类型守卫，进一步校验并收窄属性值。
+
+```ts
+import type { IsLiteral, IsUnion } from 'type-fest';
+
+type SingleKey<K extends PropertyKey> =
+  IsLiteral<K> extends true ? (IsUnion<K> extends false ? K : never) : never;
+
+function hasOwn<
+  T extends object = object,
+  K extends PropertyKey = PropertyKey,
+  D = unknown,
+>(
+  o: T,
+  k: K & SingleKey<K>,
+  guard: (data: unknown) => data is D,
+): o is T & Record<K, D>;
+function hasOwn<
+  T extends object = object,
+  K extends PropertyKey = PropertyKey,
+>(
+  o: T,
+  k: K & SingleKey<K>,
+  guard?: (data: unknown) => data is unknown,
+): o is T & Record<K, unknown>;
+function hasOwn<
+  T extends object = object,
+  K extends PropertyKey = PropertyKey,
+  D = unknown,
+>(o: T, k: K, guard?: (data: unknown) => data is D): boolean;
+```
+
+省略 `guard` 时只检查属性是否存在，不读取属性值，值为 `undefined` 的自有属性也会返回 `true`。传入守卫时，仅在自有属性存在后调用守卫。如果守卫本身可能为 `undefined`，则新增属性的类型仍为 `unknown`。
+
+单个字面量键会收窄对应属性。联合键、`string`、`number`、`symbol` 以及带无限取值的模板字面量键只返回 `boolean`，不收窄对象，因为一次检查不能保证多个键或整个索引范围存在。`SingleKey` 是签名中的内部辅助类型，不单独导出。
+
+```ts
+import { hasOwn } from '@momots/core/guard/hasOwn';
+import { isString } from 'remeda';
+
+const data: object = { name: 'momo' };
+
+if (hasOwn(data, 'name')) {
+  data.name; // unknown
+}
+
+if (hasOwn(data, 'name', isString)) {
+  data.name.toUpperCase(); // string
+}
+```
+
+### isFinite
+
+判断值是否为有限数值原始值，语义与 `Number.isFinite` 一致，不做类型转换。
+接受整数、小数、`0` 与 `-0`，不要求数值为安全整数；拒绝 `NaN`、正负无穷和
+非数值类型。可从根入口或 `@momots/core/guard/isFinite` 导入。
+
+```ts
+function isFinite(data: unknown): data is FiniteNumber;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is FiniteNumber` | 值为有限数值原始值时为 `true`，并收窄为 `FiniteNumber`；否则为 `false` |
+
+`FiniteNumber` 是 `number` 与私有 `unique symbol` 品牌的交集类型，可从本方法子路径或
+根入口通过 `import type` 导入。返回 `false` 不会排除所有数值，值仍可能是 `NaN`
+或无穷值。需要解析十进制数字字符串时，使用 `toFinite`。
+
+```ts
+import { isFinite } from '@momots/core/guard/isFinite';
+import type { FiniteNumber } from '@momots/core/guard/isFinite';
+
+isFinite(1.5); // => true
+isFinite(-0); // => true
+isFinite(Number.MAX_VALUE); // => true
+isFinite(Number.MAX_SAFE_INTEGER + 1); // => true
+isFinite(NaN); // => false
+isFinite(Infinity); // => false
+isFinite(-Infinity); // => false
+isFinite('1.5'); // => false
+isFinite(null); // => false
+isFinite(new Number(1)); // => false
+
+const values: unknown[] = [1.5, '2', NaN, Infinity, 0];
+const numbers: FiniteNumber[] = values.filter(isFinite); // => [1.5, 0]
+```
+
+### isNonEmptyString
+
+判断值是否为包含非空白字符的字符串原始值。使用 `trim()` 后的长度进行判断，
+不转换类型，也不修改字符串原文。可从根入口或 `@momots/core/guard/isNonEmptyString` 导入。
+
+```ts
+function isNonEmptyString(data: unknown): data is NonEmptyString;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is NonEmptyString` | 字符串原始值且 `trim().length > 0` 时为 `true`，并收窄为 `NonEmptyString`；否则为 `false` |
+
+`NonEmptyString` 是 `string` 与私有 `unique symbol` 品牌的交集类型，可从本方法子路径或
+根入口通过 `import type` 导入。返回 `false` 不会排除所有字符串，值仍可能为空或纯空白。
+空白范围遵循 ECMAScript `trim()`；例如不间断空格和全角空格会被去除，零宽空格 `\u200B` 不会。
+
+```ts
+import { isNonEmptyString } from '@momots/core/guard/isNonEmptyString';
+import type { NonEmptyString } from '@momots/core/guard/isNonEmptyString';
+
+isNonEmptyString('momo'); // => true
+isNonEmptyString(''); // => false
+isNonEmptyString(' '); // => false
+isNonEmptyString('\n'); // => false
+isNonEmptyString(' momo '); // => true，原字符串仍包含首尾空格
+isNonEmptyString(new String('momo')); // => false
+isNonEmptyString(123); // => false
+isNonEmptyString(null); // => false
+
+const values: unknown[] = ['momo', '', ' ', 123];
+const names: NonEmptyString[] = values.filter(isNonEmptyString);
+```
+
 ### isPropertyKey
 
-判断目标值是否是 JavaScript 属性键（`string`、`number` 或 `symbol`）。`bigint` 不能作为对象属性键。
+判断值是否属于 TypeScript 的 `PropertyKey` 类型，即 `string`、`number` 或 `symbol`。
+不包含 `bigint`，也不执行属性键转换。
 
 ```ts
 function isPropertyKey(data: unknown): data is PropertyKey;
@@ -390,13 +639,70 @@ function isPropertyKey(data: unknown): data is PropertyKey;
 
 | 返回 | 说明 |
 | --- | --- |
-| `data is PropertyKey` | 可作为属性键使用时为 `true` |
+| `data is PropertyKey` | 值属于上述三种类型时为 `true` |
 
 ```ts
 import { isPropertyKey } from '@momots/core/guard/isPropertyKey';
 
 isPropertyKey('name');   // => true
 isPropertyKey(42n);      // => false
+```
+
+### isSafeInteger
+
+判断值是否为指定闭区间内的安全整数，包含上下界。只接受数值原始值，使用
+`Number.isSafeInteger` 判断，不做类型转换；`0` 与 `-0` 都是合法安全整数。
+可从根入口或 `@momots/core/guard/isSafeInteger` 导入。
+
+```ts
+function isSafeInteger(data: unknown): data is SafeInteger;
+function isSafeInteger(data: unknown, options: undefined): data is SafeInteger;
+function isSafeInteger(
+  data: unknown,
+  options: { min?: number; max?: number } | undefined,
+): boolean;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `data` | `unknown` | 待判断的值 |
+| `options.min` | `number` | 区间下界，默认 `Number.MIN_SAFE_INTEGER` |
+| `options.max` | `number` | 区间上界，默认 `Number.MAX_SAFE_INTEGER` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `data is SafeInteger` | 不传 `options` 或显式传入 `undefined` 时，成功会收窄为 `SafeInteger` |
+| `boolean` | 传入边界对象，或类型为边界对象与 `undefined` 联合的参数时，通过安全整数及区间检查为 `true`，否则为 `false`；不做类型收窄 |
+
+`SafeInteger` 是 `number` 与私有 `unique symbol` 品牌的交集类型，可从本方法子路径或
+根入口通过 `import type` 导入。返回 `false` 不会排除所有数值，值仍可能是小数或不安全整数。
+
+边界允许小数和无穷值，但不会扩大安全整数的值域。任一边界为 `NaN`，或 `min > max` 时，
+返回 `false`。
+
+```ts
+import { isSafeInteger } from '@momots/core/guard/isSafeInteger';
+import type { SafeInteger } from '@momots/core/guard/isSafeInteger';
+
+isSafeInteger(2, { min: 1, max: 2 }); // => true
+isSafeInteger(-0); // => true
+isSafeInteger(2, { min: 1.5, max: 2.5 }); // => true
+isSafeInteger(Number.MAX_SAFE_INTEGER + 1, { max: Infinity }); // => false
+isSafeInteger('2'); // => false
+isSafeInteger(2n); // => false
+isSafeInteger(new Number(2)); // => false
+isSafeInteger(2.5); // => false
+isSafeInteger(NaN); // => false
+isSafeInteger(Infinity); // => false
+isSafeInteger(2, { min: NaN }); // => false
+isSafeInteger(2, { min: 3, max: 1 }); // => false
+
+function printNonNegativeInteger(value: unknown) {
+  if (isSafeInteger(value) && isSafeInteger(value, { min: 0 })) {
+    const integer: SafeInteger = value;
+    console.log(integer);
+  }
+}
 ```
 
 ### isStringArray
@@ -451,7 +757,16 @@ isUndefined(null);      // => false
 
 ### singleton
 
-在指定 `scope`（默认 `globalThis`）上按 key 创建或读取缓存实例；`factory` 每个 key/scope 只执行一次，除非 `pass` 跳过缓存。适用于 SDK 被多次打包后仍需全局唯一实例的场景；**不要**用它缓存请求相关状态（token、用户态等）。
+按 `key` 在指定对象 `scope` 上查找缓存，默认使用 `globalThis`。已有自有属性时直接返回其值；
+没有时执行 `factory`，把结果写入 `scope[key]`，然后返回。
+
+如果 `factory` 抛出异常，本次不会写入缓存，后续调用会重新尝试创建。
+
+这适合让同一运行环境中的多份模块代码共享一个实例。缓存随 `scope` 保留；
+删除或改写该属性会影响后续调用。设置 `pass` 为真时跳过缓存，每次直接执行 `factory`。
+
+服务端的默认 `globalThis` 由同一进程内的请求共享，因此不要用默认作用域缓存
+token、当前用户等请求相关状态。
 
 ```ts
 interface SingletonOptions {
@@ -469,7 +784,7 @@ const singleton = <T>(
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
 | `key` | `PropertyKey` | 全局唯一 key，推荐 `Symbol.for("@scope/name")` |
-| `factory` | `() => T` | 不存在实例时的构造函数，每个 key/scope 只调用一次 |
+| `factory` | `() => T` | key 不存在或跳过缓存时执行；结果在未跳过缓存时写入 scope |
 | `options.pass` | `boolean \| (() => boolean)` | 为真时跳过缓存，直接执行 `factory` |
 | `options.scope` | `Record<PropertyKey, unknown>` | 挂载作用域，默认 `globalThis` |
 
@@ -489,11 +804,16 @@ singleton(key, () => ({ count: 2 }), { scope }); // => 仍是 { count: 1 }
 
 ## 并发去重
 
-子路径：`singleflight`（仅子路径导出）
+子路径：`singleflight`
 
 ### Singleflight
 
-将同一实例上时间重叠的异步调用合并为一个进行中的 Promise。首个 `call` 会启动异步函数；在该 Promise fulfilled 或 rejected 之前，后续调用都会得到同一个 Promise，并忽略各自传入的参数。Promise settled 后，下一次调用会开启新的 flight。
+同一个任务还没完成时，后续调用可以等待已有结果，而不再启动一次任务。
+`Singleflight` 为同一实例上的这些调用返回同一个 Promise：只有第一次 `call` 的参数会传给
+执行函数。任务成功或失败后，下一次调用会创建新的 Promise 并重新执行。
+
+它不比较参数。即使两次传入不同的用户 ID，只要共用同一实例且前一次任务尚未完成，
+第二次也会得到第一次的结果。需要按用户 ID 分别合并调用时，应为每个 ID 维护独立实例。
 
 ```ts
 class Singleflight<TRes, TArgs extends unknown[] = []> {
@@ -505,9 +825,9 @@ class Singleflight<TRes, TArgs extends unknown[] = []> {
 
 | 成员 | 说明 |
 | --- | --- |
-| `constructor(fn)` | 设置每次新 flight 开始时执行的异步函数 |
-| `call(...args)` | 加入当前 flight，或使用参数创建新 flight |
-| `forget()` | 忘记当前 flight，使下次调用立即创建新 Promise；不会取消已有异步操作 |
+| `constructor(fn)` | 设置启动任务时执行的异步函数 |
+| `call(...args)` | 返回进行中的 Promise；没有进行中任务时，用这些参数启动新任务 |
+| `forget()` | 清除对当前 Promise 的记录，使下次调用启动新任务；不会取消已有任务 |
 
 ```ts
 import { Singleflight } from '@momots/core/singleflight';
@@ -523,11 +843,220 @@ const second = profileFlight.call('ignored-while-pending');
 first === second; // => true
 await first;
 
-// 上一个 Promise settled 后会开始新的 flight
+// 上一个任务结束后，使用 'kit' 启动新任务
 await profileFlight.call('kit');
 ```
 
-`Singleflight` 只合并同一实例上的重叠调用，不缓存 settled 结果，也不取消请求。若需要按 key 分组，应由调用方为每个 key 维护独立实例。
+`Singleflight` 不缓存已经结束的结果，也不取消请求。调用 `forget()` 时，已经等待旧 Promise
+的调用方仍会收到旧任务的结果；新调用可以同时启动另一项任务。
+
+## 等待超时
+
+子路径：`timeout`（`timeout` 与 `TimeoutError` 也从根入口导出）
+
+### timeout
+
+为一个已有的 Promise 设置等待期限。源 Promise 在期限前成功或拒绝时，保留原值或原错误，
+并取消计时；期限先到时，以 `TimeoutError` 拒绝返回的 Promise。
+
+```ts
+function timeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  timer: Timer,
+): Promise<T>;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `promise` | `Promise<T>` | 要等待的源 Promise |
+| `milliseconds` | `number` | 非负有限毫秒数，允许 `0`、小数和超过 `2 ** 31 - 1` 的数值 |
+| `timer` | `Timer` | 必须显式提供的一次性计时能力，从 `@momots/core/types` 或根入口导入其类型 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `Promise<T>` | 源 Promise 先完成时采用其结果，期限先到时以 `TimeoutError` 拒绝 |
+
+`Timer` 由调用方适配运行环境，`timeout` 不使用全局计时器，也不依赖宿主类型。
+计时精度、可支持的时长及宿主计时器上限由适配器负责。以下示例使用 `setTimeout`：
+
+```ts
+import { timeout, TimeoutError } from '@momots/core/timeout';
+import type { Timer } from '@momots/core/types';
+
+const timer: Timer = {
+  schedule(callback, milliseconds) {
+    const handle = setTimeout(callback, milliseconds);
+    return () => clearTimeout(handle);
+  },
+};
+
+const profile = fetch('/api/profile').then(response => response.json());
+
+try {
+  const result = await timeout(profile, 1000, timer);
+  console.log(result);
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.log(`等待超过 ${error.milliseconds}ms`);
+  } else {
+    throw error;
+  }
+}
+```
+
+超时只结束本次等待，不会取消源任务。源 Promise 之后仍可成功或拒绝，迟到的拒绝仍由
+内部处理函数接收。`Timer` 的回调必须异步触发，因此已经结算的原生 Promise 会先于
+`0` 毫秒计时回调采用原结果。
+
+`TimeoutError` 继承 `Error`，`name` 为 `'TimeoutError'`，只读属性 `milliseconds: number`
+保存本次等待期限。时长类型错误以 `TypeError` 拒绝，负数、`NaN` 和无穷值以 `RangeError`
+拒绝，均不会调用 `timer.schedule`。非法 `Timer`、`schedule` 抛出的异常或返回非取消函数，
+也会使返回的 Promise 拒绝；这些错误不会从 `timeout()` 同步抛出。
+
+清理计时器时，如果源 Promise 成功但取消函数抛出异常，返回的 Promise 会以该清理错误
+拒绝；如果已经取得源拒绝或 `TimeoutError`，则保留该错误，不让清理异常覆盖它。
+
+## 投递队列
+
+子路径：`delivery-queue`（`DeliveryQueue` 与配套类型也从根入口导出）
+
+### DeliveryQueue
+
+`DeliveryQueue` 在内存中按先入先出的顺序保留条目，调用 `flush()` 时再分批交给
+`request`。它适合先收集事件、日志或待处理记录，再由调用方选择发送时机的场景。
+`enqueue()` 只同步接纳条目，构造和 `configure()` 只绑定发送函数，都不会触发发送。
+
+```ts
+type DeliveryRequest<T> = (items: readonly T[]) => Promise<unknown>;
+type DeliveryPartition<T> = (candidates: readonly T[]) => number;
+
+interface DeliveryQueueOptions<T> {
+  capacity?: number;
+  request?: DeliveryRequest<T>;
+  partition?: DeliveryPartition<T>;
+}
+
+class DeliveryQueue<T> {
+  constructor(options?: DeliveryQueueOptions<T>);
+  get size(): number;
+  get full(): boolean;
+  get configured(): boolean;
+  get reporting(): boolean;
+  enqueue(item: T): boolean;
+  configure(request: DeliveryRequest<T>): void;
+  flush(): Promise<void>;
+}
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `options.capacity` | `number` | 容量上限，未提供时为 `Infinity`；显式配置只接受 `Infinity` 或正安全整数，其余值报错，不做类型转换 |
+| `options.request` | `DeliveryRequest<T>` | 构造时绑定的发送函数，也可以稍后通过 `configure()` 绑定 |
+| `options.partition` | `DeliveryPartition<T>` | 每批发送前返回本批从队首取出的条目数；默认取全部候选条目 |
+
+#### 方法一览
+
+| 方法名 | 返回值 | 说明 |
+| --- | --- | --- |
+| `constructor(options?)` | `DeliveryQueue<T>` | 创建内存队列，设置容量、发送函数与分批规则 |
+| `enqueue(item)` | `boolean` | 未满时把条目追加到队尾并返回 `true`；已满时返回 `false`，不接纳条目 |
+| `configure(request)` | `void` | 直接赋值绑定或替换发送函数，不进行运行时函数校验或重复绑定检查 |
+| `flush()` | `Promise<void>` | 等待本次调用时已有条目全部确认；发送失败时拒绝，空队列直接完成 |
+
+调用方负责提供有效的 `request`，并避免在发送期间替换它。
+
+#### 属性一览
+
+| 属性名 | 类型声明 | 说明 |
+| --- | --- | --- |
+| `size` | `number` | 尚未确认的条目数，包括正在发送的批次 |
+| `full` | `boolean` | `size` 是否已达到容量上限；在途条目仍占用容量 |
+| `configured` | `boolean` | 是否已绑定发送函数 |
+| `reporting` | `boolean` | 是否存在尚未完成的 `flush()` 确认目标，包括等待微任务启动、执行分批及发送中的阶段 |
+
+这些属性均为只读 getter。队列保留条目的原引用；`partition` 和 `request` 收到独立、
+已冻结的只读数组快照，但数组中的元素仍是原引用，不会深拷贝或冻结元素。
+
+```ts
+import { DeliveryQueue } from '@momots/core/delivery-queue';
+
+interface EventRecord {
+  name: string;
+  createdAt: number;
+}
+
+const queue = new DeliveryQueue<EventRecord>({
+  capacity: 100,
+  partition: candidates => Math.min(20, candidates.length),
+});
+
+queue.enqueue({ name: 'opened', createdAt: Date.now() }); // => true
+queue.configured; // => false
+
+queue.configure(async items => {
+  const response = await fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(items),
+  });
+  if (!response.ok) throw new Error(`Send failed: ${response.status}`);
+});
+
+// configure 不会发送，flush 才会启动投递
+await queue.flush();
+queue.size; // => 0
+```
+
+#### 确认边界与分批
+
+每次 `flush()` 都固定调用时的队尾作为确认目标。之后入队的条目不会扩大这次等待范围；
+后续 `flush()` 可以把它们纳入自己的目标。一个实例只运行一个发送流程，所有批次串行
+发送，各次调用的 Promise 在自己的目标全部确认后完成。每批都不会越过最早尚未完成的
+等待目标，因此较早的调用无需等待后续追加的条目。
+
+```ts
+queue.enqueue({ name: 'first', createdAt: Date.now() });
+const first = queue.flush();
+
+queue.enqueue({ name: 'second', createdAt: Date.now() });
+const second = queue.flush();
+
+await first; // 只等待 first 条目确认
+await second; // 等待 second 条目也确认
+```
+
+`partition(candidates)` 在每批发送前调用。候选数组始终非空，只包含队首到最早等待目标
+之间的条目；返回值必须是 `1` 到 `candidates.length` 之间的整数，表示取出的连续前缀长度。
+返回 `0` 或其他非法值会使本次发送失败，`0` 不表示暂停。上例把每批限制在 20 条以内，
+也可以按队首条目的上下文选择连续的一段：
+
+```ts
+const queue = new DeliveryQueue<{ context: string; value: string }>({
+  partition: candidates => {
+    const context = candidates[0]!.context;
+    const end = candidates.findIndex(item => item.context !== context);
+    return end === -1 ? candidates.length : end;
+  },
+  request: async items => {
+    // 同一批条目的 context 相同，在这里交给对应的发送逻辑
+    console.log(items);
+  },
+});
+```
+
+#### 发送结果与重试
+
+`request` 返回的 Promise 成功完成时，整批条目被确认并从队列移除，返回值被忽略。
+如果业务响应还需要判断成功与否，应在回调中完成判断，并在失败时抛出异常。
+
+`request` 拒绝或同步抛出异常，以及 `partition` 抛出异常或返回非法值，都会拒绝当前所有
+尚未完成的 `flush()`，并保留未确认条目。之前已成功的批次不会回滚，队列也不会自动重试；
+调用方可以在处理失败后再次调用 `flush()`，显式重试剩余条目。
+
+空队列调用 `flush()` 即使未配置发送函数也会直接完成；非空队列未配置时则拒绝并保留
+条目，可以绑定 `request` 后再次调用。队列只负责内存中的接纳、分批和确认；持久化与
+中断由外部适配负责。
 
 ## 模板插值
 
@@ -564,13 +1093,122 @@ substitute('hello {{name|friend}}', {});           // => 'hello friend'
 substitute('hello {{name}}', {});                  // => 'hello name'
 ```
 
+## 文本遮罩
+
+子路径：`veil`
+
+### veil
+
+保留字符串头尾指定数量的字素（用户感知字符），将中间每个字素替换为一次 `mask`。按 `Intl.Segmenter` 分段，不拆开 emoji 或组合字符；运行环境需支持 `Intl.Segmenter`。
+
+```ts
+interface VeilParams {
+  fore: number;
+  tail: number;
+  mask?: string;
+}
+
+function veil(value: string, params?: VeilParams): string;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `string` | 待遮罩的字符串 |
+| `params` | `VeilParams` | 省略时使用 `{ fore: 0, tail: 0, mask: '*' }`，遮盖全部字素 |
+| `params.fore` | `number` | 头部保留的字素数，必须为非负整数 |
+| `params.tail` | `number` | 尾部保留的字素数，必须为非负整数 |
+| `params.mask` | `string` | 每个被遮盖字素的替换文本，默认 `'*'`；允许空串、多字符或 emoji |
+
+即使 `value` 为空串，`fore` 或 `tail` 不是非负整数时也会抛出 `RangeError`。
+
+| 返回 | 说明 |
+| --- | --- |
+| `string` | 遮罩后的字符串；保留范围覆盖或重叠时返回原文，空串返回空串 |
+
+```ts
+import { veil } from '@momots/core/veil';
+
+veil('abcdefghij', { fore: 2, tail: 3 }); // => 'ab*****hij'
+veil('张三丰', { fore: 1, tail: 0 }); // => '张**'
+veil('A👨‍👩‍👧‍👦B', { fore: 1, tail: 1, mask: '•' }); // => 'A•B'
+veil('abc'); // => '***'
+veil('abc', { fore: 2, tail: 2 }); // => 'abc'
+veil(''); // => ''
+```
+
+## 数值转换
+
+子路径：`toFinite`（也从根入口导出）
+
+### toFinite
+
+将有限数值或完整的十进制数字字符串归一为 `number`，无法转换时返回 `undefined`。
+有限数值原始值保持不变，包括 `0` 和 `-0`；其他类型不会进行隐式转换，也不会调用对象的
+转换钩子。
+
+```ts
+function toFinite(value: unknown): number | undefined;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `unknown` | 待转换的有限数值原始值或十进制数字字符串 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `number` | 原有有限数值，或合法字符串转换得到的有限数值 |
+| `undefined` | 输入类型或格式不符合规则，或数值为 `NaN`、无穷值及转换结果溢出 |
+
+字符串会去除首尾 ECMAScript `trim` 空白，并要求剩余内容完整匹配十进制格式。
+允许可选的 `+` / `-`、前导零、整数和小数；小数点前后至少一侧有 ASCII 数字，
+因此 `.5`、`-.5` 和 `12.` 都有效。尾数后可以带 `e` / `E` 指数，指数允许正负号，
+但必须包含至少一位 ASCII 数字且为整数，例如 `1.e3` 和 `2.5e-2`。
+
+空字符串、内部空白、十六进制 / 二进制 / 八进制前缀、数字分隔符、千分位、百分号、
+单位及不完整的数字格式均不接受。布尔值、空值、`bigint`、数组、对象、包装对象和函数
+也都返回 `undefined`。
+
+```ts
+import { toFinite } from '@momots/core/toFinite';
+
+toFinite(42); // => 42
+toFinite(' +0012.5e2 '); // => 1250
+toFinite('.5'); // => 0.5
+toFinite('12.'); // => 12
+toFinite('1.e3'); // => 1000
+toFinite('0x10'); // => undefined
+toFinite('12px'); // => undefined
+toFinite('1e+'); // => undefined
+toFinite('1e309'); // => undefined
+toFinite(true); // => undefined
+toFinite(new Number(1)); // => undefined
+```
+
+字符串转换遵循 `Number` 的舍入和下溢规则，不保证安全整数或十进制精度；需要安全整数
+结果时，可以组合 `isSafeInteger` 检查转换后的数值。
+
+```ts
+import { isSafeInteger } from '@momots/core/guard/isSafeInteger';
+
+toFinite('9007199254740993'); // => 9007199254740992
+toFinite('1e-400'); // => 0
+Object.is(toFinite('-1e-400'), -0); // => true
+
+isSafeInteger(toFinite('42')); // => true
+isSafeInteger(toFinite('1.5')); // => false
+```
+
 ## 数位求和
 
 子路径：`sumdig`
 
 ### sumdig
 
-把输入转为字符串后对每个字符求数位和；含非数字字符时返回 `NaN`。
+将输入转成字符串，再逐字符用 `Number` 转换并相加。适用于纯数字字符串或数字的逐位求和，
+不执行校验位算法，也不校验输入格式。
+
+某个字符无法转成数字时，结果为 `NaN`。空字符串返回 `0`，空白字符也按 `0` 参与求和；
+负数、小数以及使用科学计数法表示的数字会因负号、小数点或字母而得到 `NaN`。
 
 ```ts
 const sumdig = (digits: string | number): number;
@@ -582,7 +1220,7 @@ const sumdig = (digits: string | number): number;
 
 | 返回 | 说明 |
 | --- | --- |
-| `number` | 各位数字之和；含非数字字符时为 `NaN` |
+| `number` | 各字符转换为数字后的总和；无法转换时为 `NaN` |
 
 ```ts
 import { sumdig } from '@momots/core/sumdig';
@@ -590,17 +1228,327 @@ import { sumdig } from '@momots/core/sumdig';
 sumdig(1234);  // => 10
 sumdig('909'); // => 18
 sumdig('12x'); // => NaN
+sumdig('1 2'); // => 3，空格按 0 参与
+sumdig('');    // => 0
+```
+
+## 属性路径
+
+子路径：`property-path`（`PropertyPath` 与配套类型也从根入口导出）
+
+### PropertyPath
+
+`PropertyPath` 保存对象属性或数组元素的位置。例如，`users[0].name` 表示先取 `users`，
+再取第一个数组元素，最后取它的 `name` 属性。
+
+路径由字符串或数字片段组成：字符串表示对象属性名，数字表示数组下标。
+路径实例只记录位置；需要读取数据时，把数据和路径一起交给静态方法 `read`：
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+const path = PropertyPath.from('users[0].name');
+path.segments; // => ['users', 0, 'name']
+path.name; // => 'name'
+path.parent?.toString(); // => 'users[0]'
+
+const data = { users: [{ name: 'Mango' }] };
+PropertyPath.read(data, path); // => { exists: true, value: 'Mango' }
+```
+
+路径实例不可变。构造时会复制并冻结片段数组，`append` 等操作返回新路径。
+构造路径不要求数据存在，也不会创建对应属性。
+
+#### 路径表达式
+
+常见写法与解析结果如下：
+
+| 表达式 | 片段数组 | 含义 |
+| --- | --- | --- |
+| `users[0].name` | `['users', 0, 'name']` | 数组中第一个用户的 name 属性 |
+| `records.0` | `['records', '0']` | records 对象中名为 `'0'` 的属性 |
+| `records[0]` | `['records', 0]` | records 数组中下标为 `0` 的元素 |
+| `["a.b"]` | `['a.b']` | 名称中包含点号的单个属性 |
+| `[""]` | `['']` | 名称为空字符串的属性 |
+| 空字符串 | `[]` | 根路径，表示整个数据 |
+
+属性名含点号、括号、空白、引号或反斜杠时，使用 JSON 双引号方括号写法。
+也可以直接传片段数组，例如 `PropertyPath.from(['a.b'])`，数组中的字符串不会被再次解析。
+未加引号的 `a[foo]` 是兼容写法，含义与 `a.foo` 相同。
+
+数字下标必须是 `0` 到 `2 ** 32 - 2` 之间的整数。表达式中的下标使用无前导零的十进制写法：
+`[0]` 和 `[12]` 有效，`[01]`、`[1.0]` 和 `[1e2]` 无效。另接受精确的 `[-0]`，按 `[0]` 处理。
+
+#### 方法一览
+
+| 方法名 | 返回值 | 说明 |
+| --- | --- | --- |
+| `from(source)` | `PropertyPath` | 静态方法，构造路径实例，规则见下方独立条目 |
+| `read(source, path)` | `PropertyPathRead` | 静态方法，按路径读取给定数据的自有属性，区分属性缺失和值为 `undefined`，规则见下方独立条目 |
+| `toSegment(value)` | `PropertyPathSegment` | 静态方法，校验并归一化单个片段，规则见下方独立条目 |
+| `toSegments(values)` | `readonly PropertyPathSegment[]` | 静态方法，逐项校验并返回新的冻结片段数组，规则见下方独立条目 |
+| `append(segment)` | `PropertyPath` | 追加一个完整片段并返回新路径；字符串不作为表达式解析，非法片段按 `toSegment` 规则报错 |
+| `resolve(expression)` | `PropertyPath` | 根据表达式解析路径；相对表达式以当前路径为基准，规则见下方“相对路径” |
+| `isPrefixOf(other)` | `boolean` | 按完整片段判断当前路径是否为 `other` 的前缀，包含相等情况；根是所有路径的前缀 |
+| `overlaps(other)` | `boolean` | 两路径相等或存在祖先关系时为 `true`；同一父路径下的不同子路径不重叠 |
+| `toString()` | `string` | 返回可重新解析的规范表达式；根返回 `''`，不保留输入表达式的原始写法 |
+
+#### 属性一览
+
+| 属性名 | 类型声明 | 说明 |
+| --- | --- | --- |
+| `root` | `PropertyPath` | 静态根路径，片段序列为空 |
+| `segments` | `readonly PropertyPathSegment[]` | 冻结的完整片段数组；构造时复制数组，后续修改源数组不会影响路径 |
+| `key` | `PropertyPathKey` | 片段序列的稳定 JSON 数组编码；相同路径值具有相同 `key`，字符串片段与数字片段产生不同的键，可比较路径值是否相等 |
+| `name` | `string` | 最后一个片段的显示名称；数字下标转为字符串，根返回 `''`。不包含完整路径 |
+| `parent` | `PropertyPath \| undefined` | 父路径；单段路径的父路径是 `root`，根的父路径为 `undefined` |
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+PropertyPath.from('user.name').name; // => 'name'
+PropertyPath.from('company.name').name; // => 'name'
+
+PropertyPath.from('records.0').key; // => '["records","0"]'
+PropertyPath.from('records[0]').key; // => '["records",0]'
+PropertyPath.root.append('a.b').toString(); // => '["a.b"]'
+```
+
+`name` 不能唯一标识完整路径。比较完整路径时使用 `key`，它还保留字符串属性名和数字下标的区别。
+`append` 始终只追加一个完整片段，不解析字符串中的点号或括号。
+
+#### 相对路径
+
+`from` 只接受绝对路径。需要以已有路径为基准时，使用实例的 `resolve`：
+
+| 写法 | 从哪里开始解析 |
+| --- | --- |
+| `.` 或 `./` | 返回当前路径自身 |
+| `./x` | 从当前路径追加 x |
+| `../x` | 从当前路径的父路径追加 x；每多一个 `../` 就再向上一级 |
+| 无相对前缀，例如 `users[0]` | 从根路径开始 |
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+const city = PropertyPath.from('address.city');
+city.resolve('./code').toString(); // => 'address.city.code'
+city.resolve('../province').toString(); // => 'address.province'
+city.resolve('../../name').toString(); // => 'name'
+city.resolve('users[0]').toString(); // => 'users[0]'
+city.resolve('../../../name'); // 抛出 RangeError
+```
+
+越过根路径会抛出 `RangeError`，语法无效会抛出 `SyntaxError`，非法数字下标会抛出 `RangeError`。
+
+#### 比较路径关系
+
+`isPrefixOf` 判断祖先关系或相等，`overlaps` 判断任一路径是否为另一路径的祖先或与其相等。
+它们按完整片段比较，同一父路径下的不同子路径不重叠：
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+const user = PropertyPath.from('users[0]');
+const path = PropertyPath.from('users[0].name');
+user.isPrefixOf(path); // => true
+user.isPrefixOf(user); // => true
+path.overlaps(user); // => true
+path.overlaps(PropertyPath.from('users[0].age')); // => false
+```
+
+### PropertyPath.from
+
+从以下任一种输入构造路径：
+
+| 输入 | 处理方式 |
+| --- | --- |
+| 字符串 | 按上方路径语法解析；不接受 `./`、`../` 等相对表达式 |
+| 片段数组 | 字符串作为完整属性名保留，数字作为数组下标；复制并冻结数组 |
+| 已有 `PropertyPath` 实例 | 原样返回同一实例 |
+
+传入空字符串或空数组时，返回 `PropertyPath.root`。数组中的 `null`、`undefined`
+和空位不会被忽略，都会使校验失败并抛出 `TypeError`。
+
+```ts
+static from(
+  source: PropertyPath | string | readonly PropertyPathSegment[],
+): PropertyPath;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `source` | `PropertyPath \| string \| readonly PropertyPathSegment[]` | 已有路径、绝对表达式或片段数组 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `PropertyPath` | 冻结的路径实例；传入实例时返回自身，传入 `''` 或 `[]` 时返回 `PropertyPath.root` |
+
+常见失败情况：
+
+| 原因 | 异常 |
+| --- | --- |
+| 表达式语法错误，或传入相对表达式 | `SyntaxError` |
+| 输入或片段类型不合法，或片段数组包含空位 | `TypeError` |
+| 数字片段不是合法数组下标 | `RangeError` |
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+const path = PropertyPath.from('users[0].name');
+path.segments; // => ['users', 0, 'name']
+PropertyPath.from(path) === path; // => true
+PropertyPath.from('') === PropertyPath.root; // => true
+PropertyPath.from([]) === PropertyPath.root; // => true
+PropertyPath.from(['a.b']).toString(); // => '["a.b"]'
+PropertyPath.from('a[foo]').toString(); // => 'a.foo'
+PropertyPath.from('../name'); // 抛出 SyntaxError
+PropertyPath.from(new Array(1)); // 抛出 TypeError
+PropertyPath.from(['users', -1]); // 抛出 RangeError
+```
+
+### PropertyPath.read
+
+读取给定数据中的路径，并分别报告“目标是否存在”和“目标的值”。这样可以区分
+属性缺失与属性存在但值为 `undefined`：
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+PropertyPath.read({ name: undefined }, 'name');
+// => { exists: true, value: undefined }
+PropertyPath.read({}, 'name'); // => { exists: false }
+```
+
+读取前先通过 `from` 校验路径，非法路径会抛出对应异常。空字符串、空数组或
+`PropertyPath.root` 表示根路径，会返回整个 `source`；即使 `source` 为 `undefined`，也视为存在。
+
+```ts
+export type PropertyPathRead =
+  | { readonly exists: true; readonly value: unknown }
+  | { readonly exists: false };
+
+static read(
+  source: unknown,
+  path: PropertyPath | string | readonly PropertyPathSegment[],
+): PropertyPathRead;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `source` | `unknown` | 待读取的数据；根路径接受任意源值 |
+| `path` | `PropertyPath \| string \| readonly PropertyPathSegment[]` | 已有路径、绝对表达式或片段数组；使用与 `from` 相同的校验规则 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `PropertyPathRead` | `exists: true` 时包含 `unknown` 类型的 `value`；`exists: false` 时没有 `value` 字段 |
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+PropertyPath.read({ user: { name: 'Mango' } }, 'user.name');
+// => { exists: true, value: 'Mango' }
+PropertyPath.read(undefined, ''); // => { exists: true, value: undefined }
+```
+
+#### 属性名与数组下标
+
+读取时不把字符串 `'0'` 和数字 `0` 互相转换：
+
+| 路径片段 | 可以向下读取的值 | 可读取的位置 |
+| --- | --- | --- |
+| 字符串，例如 `'name'`、`'0'` | 普通对象，包括 null 原型对象 | 对象自身的属性，不查找原型链 |
+| 数字，例如 `0` | 数组 | 数组自身的下标，不读取数组空位 |
+
+读取时先识别数组，其余值再判断是否为普通对象；数组即使被修改了原型，也只接受数字片段。
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+PropertyPath.read({ records: ['Mango'] }, 'records[0]');
+// => { exists: true, value: 'Mango' }
+PropertyPath.read({ records: ['Mango'] }, 'records.0'); // => { exists: false }
+PropertyPath.read({ records: { '0': 'Mango' } }, 'records.0');
+// => { exists: true, value: 'Mango' }
+PropertyPath.read({ records: { '0': 'Mango' } }, 'records[0]');
+// => { exists: false }
+```
+
+属性缺失、数组空位或中途的数据结构不匹配时，返回 `{ exists: false }`。
+`Date`、`Map`、`Set`、类实例和函数可以作为最终读到的值，但不会继续读取它们的内部属性。
+
+读取过程不修改、克隆或冻结源数据，返回的 `value` 保留原值及引用。
+访问属性可能执行 getter 或 Proxy trap；它们抛出的异常会继续向调用方传播。
+
+### PropertyPath.toSegment
+
+校验并归一化单个未知片段。字符串原样保留，包括 `''`、`'0'`、`'a.b'`；数字必须是 `0` 到 `2 ** 32 - 2` 之间的整数，`-0` 归一化为 `0`。不进行类型强转，也不解析表达式。
+
+```ts
+static toSegment(value: unknown): PropertyPathSegment;
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `unknown` | 待校验的片段；`null`、`undefined` 及其他非字符串、非数字值抛出 `TypeError`，非法数字抛出 `RangeError` |
+
+| 返回 | 说明 |
+| --- | --- |
+| `PropertyPathSegment` | 原字符串或归一化后的合法数字下标 |
+
+```ts
+PropertyPath.toSegment('a.b'); // => 'a.b'
+PropertyPath.toSegment('0'); // => '0'
+PropertyPath.toSegment(-0); // => 0
+PropertyPath.toSegment(null); // 抛出 TypeError
+PropertyPath.toSegment(1.5); // 抛出 RangeError
+```
+
+### PropertyPath.toSegments
+
+按顺序校验数组中的每个片段，返回新的冻结数组，不修改输入。只处理数组，不解析路径表达式；`from` 接收片段数组时也执行这些校验，无需提前调用本方法。
+
+```ts
+static toSegments(values: readonly unknown[]): readonly PropertyPathSegment[];
+```
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `values` | `readonly unknown[]` | 待校验的数组；拒绝非数组、`null` / `undefined` 元素及数组空洞，数字遵循 `toSegment` 的范围规则。元素错误保留 `TypeError` / `RangeError` 类型，消息包含从 `0` 开始的错误下标 |
+
+| 返回 | 说明 |
+| --- | --- |
+| `readonly PropertyPathSegment[]` | 保留输入顺序和长度的新冻结数组；空数组仍返回新数组 |
+
+```ts
+const source = ['users', -0, 'name'];
+const segments = PropertyPath.toSegments(source);
+segments; // => ['users', 0, 'name']
+segments === source; // => false
+Object.isFrozen(segments); // => true
+PropertyPath.toSegments(['users', undefined]); // TypeError，index 1
+PropertyPath.toSegments(['users', -1]); // RangeError，index 1
+PropertyPath.toSegments(new Array(1)); // TypeError，index 0
 ```
 
 ## 树结构
 
 子路径：`tree/*`
 
-节点形状为 `TreeNode<T, C> = T & Record<C, TreeNode<T, C>[]>`，默认字段名为 `id` / `parent` / `children`。所有函数都支持 `params.names` 自定义字段名。
+树由节点数组组成，每个节点通过 `children` 保存下一层节点。`id` 标识当前节点，
+`parent` 保存父节点的 id。所有函数都支持通过 `params.names` 自定义字段名。
+
+对应的类型为 `TreeNode<T, C> = T & Record<C, TreeNode<T, C>[]>`：
+`T` 是业务字段，`C` 是子节点字段名，默认为 `'children'`。
 
 ### unflat
 
-将带 `id`/`parent` 关系的扁平列表还原为树。`parent` 为空值的节点作为根节点。遇到找不到父节点的孤儿节点时，行为由 `orphan` 控制。
+将带 `id` / `parent` 关系的扁平列表还原为树。`parent` 为 `null` 或 `undefined` 的节点作为根节点；
+`0` 和空字符串仍可作为有效父节点 ID。父节点不存在时，由 `orphan` 决定将节点提升为根、
+丢弃节点，还是抛出异常。
+
+输入应具有唯一的节点 ID，且父子关系不能成环。`orphan: 'throw'` 只检查父节点是否存在，
+不会检测循环关系。
 
 ```ts
 function unflat<
@@ -865,8 +1813,11 @@ const tree = unflat([
   { id: 'b', parent: 'root' },
 ]);
 
-prune(tree, (n) => n.id === 'a' || n.id === 'root');
-// 仅保留 id 为 'a' 的路径及其祖先
+prune(tree, (node) => node.id === 'a');
+// root 不满足谓词，但作为 a 的祖先仍被保留。
+// => [{ id: 'root', parent: null, children: [
+//   { id: 'a', parent: 'root', children: [] },
+// ] }]
 ```
 
 ## 类型工具
@@ -921,7 +1872,7 @@ type PartialRecord<K extends PropertyKey, T> = { [P in K]?: T };
 type PlainObject<T = unknown> = Record<PropertyKey, T>;
 ```
 
-普通对象形状，树工具的基础约束。
+描述对象键值的类型，是树工具的基础约束。它不会在运行时检查输入是否为普通对象。
 
 ### OmitOf
 
@@ -937,7 +1888,7 @@ type OmitOf<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 type Realizable<T, Args extends unknown[] = []> = T | ((...args: Args) => T);
 ```
 
-普通值或返回普通值的可具体化形式，供 `realize` 使用。
+一个值，或调用后返回该值的函数，供 `realize` 使用。`Args` 描述函数接收的参数。
 
 ### Updater
 
@@ -1000,6 +1951,35 @@ type Stringifiable = { toString(): string };
 
 具备 `toString()` 的值，供 `substitute` 插值使用。
 
+### Timer
+
+```ts
+interface Timer {
+  schedule(callback: () => void, milliseconds: number): () => void;
+}
+```
+
+描述由调用方提供的一次性计时能力。`schedule` 按给定的毫秒数安排异步触发 `callback`，
+每次安排至多执行一次；即使 `milliseconds` 为 `0`，也不能同步调用回调。
+返回的取消函数必须幂等，多次调用效果相同，并阻止尚未执行的回调。
+
+`Timer` 只有类型声明，不提供默认实现，也不依赖宿主类型。使用方可以适配当前运行环境，
+例如使用 `setTimeout`：
+
+```ts
+import type { Timer } from '@momots/core/types';
+
+const timer: Timer = {
+  schedule(callback, milliseconds) {
+    const handle = setTimeout(callback, milliseconds);
+    return () => clearTimeout(handle);
+  },
+};
+
+const cancel = timer.schedule(() => console.log('done'), 1000);
+cancel();
+```
+
 ### Callable
 
 ```ts
@@ -1031,7 +2011,11 @@ type SetValue = (updater: Updater<string>) => void;  // setter
 
 ### writable
 
-将只读类型断言为可写类型。调用方需自行保证后续写入安全。仅可通过子路径导入（根入口不重新导出）。
+在 TypeScript 中移除只读限制，返回的仍是同一个值。修改返回的对象也会修改源对象，
+调用方需要自行保证后续写入安全。只移除 `readonly`，不会拓宽属性的字面量类型，
+也不会解除 `Object.freeze` 造成的运行时冻结。
+
+仅可通过子路径导入，根入口不重新导出。
 
 ```ts
 const writable = <T>(value: T): Writable<T>;
@@ -1048,7 +2032,10 @@ const writable = <T>(value: T): Writable<T>;
 ```ts
 import { writable } from '@momots/core/cast/writable';
 
-const source = { name: 'momo' } as const;
+const source: Readonly<{ name: string }> = { name: 'momo' };
 const draft = writable(source);
 draft.name = 'kit';
+
+draft === source; // => true
+source.name; // => 'kit'
 ```
