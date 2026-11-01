@@ -7,16 +7,14 @@
     "momots",
     "validation",
     "luhn",
+    "iso7064",
     "checksum",
     "typescript"
   ],
   "devDependencies": {
     "@momots/cli": "workspace:*"
   },
-  "peerDependencies": {
-    "@momots/core": ">=0.1.0-alpha.0 <0.2.0"
-  },
-  "description": "Luhn, MOD 11-2, and China ID card validation utilities for MomoTS.",
+  "description": "Luhn, ISO 7064 MOD 11-2, and China ID card validation utilities for MomoTS.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -30,17 +28,17 @@
       "types": "./dist/luhn/index.d.ts",
       "import": "./dist/luhn/index.js"
     },
-    "./luhn/card": {
-      "types": "./dist/luhn/card.d.ts",
-      "import": "./dist/luhn/card.js"
+    "./luhn/mod10": {
+      "types": "./dist/luhn/mod10.d.ts",
+      "import": "./dist/luhn/mod10.js"
     },
-    "./iso": {
-      "types": "./dist/iso/index.d.ts",
-      "import": "./dist/iso/index.js"
+    "./iso7064": {
+      "types": "./dist/iso7064/index.d.ts",
+      "import": "./dist/iso7064/index.js"
     },
-    "./iso/mod11-2": {
-      "types": "./dist/iso/mod11-2.d.ts",
-      "import": "./dist/iso/mod11-2.js"
+    "./iso7064/mod11-2": {
+      "types": "./dist/iso7064/mod11-2.d.ts",
+      "import": "./dist/iso7064/mod11-2.js"
     }
   },
   "files": [

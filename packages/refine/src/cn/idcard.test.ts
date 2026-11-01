@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
+import type { ChinaIdCard } from './idcard';
 import { fromChinaIdCard, isValidChinaIdCard } from './idcard';
 
 const referenceDate = new Date(2026, 0, 1);
@@ -19,7 +20,7 @@ describe('China ID card', () => {
   test('parses the fields of the standard example', () => {
     expect(fromChinaIdCard(sample, referenceDate)).toEqual({
       region: '110105',
-      date: '1949-12-31',
+      birthDate: '1949-12-31',
       age: 76,
       gender: 'F',
     });
@@ -57,6 +58,8 @@ describe('China ID card', () => {
     '20010001',
     '20010100',
     '00000101',
+    '00010101',
+    '17991231',
     '20260102',
   ])('rejects invalid or future birthdays even with a matching checksum: %s', (birthday) => {
     const code = withChecksum(`110105${birthday}001`);
@@ -72,6 +75,21 @@ describe('China ID card', () => {
     expect(fromChinaIdCard(code, new Date(2026, 5, 15)).age).toBe(26);
     const newborn = withChecksum('11010520260101002');
     expect(fromChinaIdCard(newborn, referenceDate).age).toBe(0);
+    const earliest = withChecksum('11010518000101001');
+    expect(fromChinaIdCard(earliest, referenceDate).birthDate).toBe(
+      '1800-01-01',
+    );
+  });
+
+  test('narrows only the true branch', () => {
+    const input: string = sample;
+    if (isValidChinaIdCard(input, referenceDate)) {
+      const code: ChinaIdCard = input;
+      expect(code.length).toBe(18);
+    } else {
+      // false 分支保留 string；收窄成 never 时这里无法通过类型检查。
+      expect(input.length).toBeNumber();
+    }
   });
 
   test('rejects invalid reference dates and invalid parsing input', () => {

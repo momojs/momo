@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { card } from './card';
 import { luhn } from './index';
+import { mod10 } from './mod10';
 
-describe('Luhn card', () => {
+describe('Luhn MOD 10', () => {
   test.each([
     '79927398713',
     '4111111111111111',
@@ -11,7 +11,8 @@ describe('Luhn card', () => {
     '059',
     '18',
     '00',
-  ])('accepts a valid checksum: %s', (value) => expect(card(value)).toBe(true));
+  ])('accepts a valid checksum: %s', (value) =>
+    expect(mod10(value)).toBe(true));
 
   test.each(
     [
@@ -39,11 +40,11 @@ describe('Luhn card', () => {
       Number.MAX_SAFE_INTEGER + 1,
     ].map((value) => ({ value })),
   )('rejects an invalid input: %j', ({ value }) => {
-    expect(card(value)).toBe(false);
+    expect(mod10(value)).toBe(false);
   });
 
   test('supports safe integer inputs and preserves the namespace API', () => {
-    expect(card(79927398713)).toBe(true);
-    expect(luhn.card).toBe(card);
+    expect(mod10(79927398713)).toBe(true);
+    expect(luhn.mod10).toBe(mod10);
   });
 });

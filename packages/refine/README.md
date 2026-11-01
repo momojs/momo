@@ -6,32 +6,34 @@ Luhn、MOD 11-2 与中国公民身份号码解析和校验工具。当前版本�
 ## 安装
 
 ```bash
-bun add @momots/refine@alpha @momots/core@beta remeda type-fest
+bun add @momots/refine@alpha
 ```
 
-`@momots/core` 是 peer dependency；`remeda` 和 `type-fest` 是 core 的 peer
-依赖。`date-fns` 随 refine 的 dependencies 安装。发布物为 ESM JavaScript
+唯一运行时依赖 `date-fns` 会随 refine 自动安装。发布物为 ESM JavaScript
 与 TypeScript 声明文件，可在 Bun、Node.js 和浏览器打包器中使用。
 
 ## 导入
 
 ```ts
-import { luhn, ISO, fromChinaIdCard, isValidChinaIdCard } from '@momots/refine';
+import { luhn, iso7064, fromChinaIdCard, isValidChinaIdCard } from '@momots/refine';
 
-import { card } from '@momots/refine/luhn/card';
-import { mod11_2 } from '@momots/refine/iso/mod11-2';
-import type { ChinaIdCardInfo } from '@momots/refine/cn/idcard';
+import { mod10 } from '@momots/refine/luhn/mod10';
+import { mod11_2 } from '@momots/refine/iso7064/mod11-2';
+import type { ChinaIdCard, ChinaIdCardInfo } from '@momots/refine/cn/idcard';
 ```
 
-也可分别从 `@momots/refine/luhn` 与 `@momots/refine/iso` 导入 `luhn`、`ISO`。
+也可分别从 `@momots/refine/luhn` 与 `@momots/refine/iso7064` 导入 `luhn`、`iso7064`。
+
+`luhn` 与 `iso7064` 是算法层，只校验校验和；`cn/idcard` 是证件层，负责格式、
+日期与字段解析，内部调用算法层。
 
 ## Luhn
 
 ```ts
-luhn.card('79927398713'); // true
-card('79927398714'); // false
-card('059'); // true，保留前导零
-card('4111 1111 1111 1111'); // false，不自动清理输入
+luhn.mod10('79927398713'); // true
+mod10('79927398714'); // false
+mod10('059'); // true，保留前导零
+mod10('4111 1111 1111 1111'); // false，不自动清理输入
 ```
 
 输入包含末位校验位，必须至少有两位 ASCII 数字。支持非负安全整数，但保留
@@ -41,20 +43,17 @@ card('4111 1111 1111 1111'); // false，不自动清理输入
 例如 `00` 满足校验和规则。Luhn 与号码格式检查属于不同层面的检查，参见
 [IBM 关于 Luhn 与格式检查的说明](https://www.ibm.com/docs/en/gdp/11.4.0?topic=policies-special-pattern-tests)。
 
-## MOD 11-2
+## ISO 7064 MOD 11-2
 
 ```ts
-const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
-const codes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
-
-ISO.mod11_2('11010519491231002X', weights, codes); // true
-mod11_2('11010519491231002x', weights, codes); // true
+iso7064.mod11_2('11010519491231002X'); // true
+mod11_2('11010519491231002x'); // true
+mod11_2('0000000218250097'); // true，ORCID / ISNI
 ```
 
-`weights` 与十进制本体码等长，元素为非负安全整数；`codes` 是余数 0–10
-对应的 11 个单字符 ASCII 数字或英文字母。两个数组支持 readonly。
-校验码按大小写不敏感比较。输入或参数内容不符合约定时返回 `false`。
-调用方负责选择适合其号码编码规则的权重和映射，本函数不推断编码方案。
+输入为十进制本体码加末位校验字符，校验字符为 `0`–`9` 或 `X`，大小写不敏感。
+权重与校验字符按 ISO 7064 固定，与 GB 11643 公民身份号码的权重表一致。
+只检查校验和，不判断号码长度；不自动清理空白或分隔符，其他输入返回 `false`。
 
 ## 公民身份号码
 
@@ -64,17 +63,18 @@ const referenceDate = new Date(2026, 0, 1);
 isValidChinaIdCard('11010519491231002x', referenceDate); // true
 isValidChinaIdCard('invalid', referenceDate); // false
 fromChinaIdCard('11010519491231002X', referenceDate);
-// { region: '110105', date: '1949-12-31', age: 76, gender: 'F' }
+// { region: '110105', birthDate: '1949-12-31', age: 76, gender: 'F' }
 ```
 
-支持 18 位号码，依次检查格式、校验位、有效日历日期和生日不晚于参考日期。
+支持 18 位号码，依次检查格式、校验位、有效日历日期，以及出生年份不早于
+1800、生日不晚于参考日期。
 `x` 与 `X` 等价。当前 alpha 不支持旧 15 位号码，不自动去除空白或前后缀。
 18 位号码的字段划分可参考
 [北京市公安局说明](https://gaj.beijing.gov.cn/hudong/rddf/202003/t20200331_1771804.html)。
 
-- `isValidChinaIdCard(code: unknown, referenceDate?: Date)`：非法号码或无效参考日期返回 `false`。
+- `isValidChinaIdCard(code: unknown, referenceDate?: Date)`：非法号码或无效参考日期返回 `false`；true 分支收窄为 `ChinaIdCard`，false 分支保留原类型。
 - `fromChinaIdCard(code: string, referenceDate?: Date)`：返回 `ChinaIdCardInfo`；未通过相同检查时抛出 `RangeError`。
-- `region` 保留六位地址码；`date` 为 `yyyy-MM-dd`；`age` 为周岁；`gender` 是号码顺序码表示的 `M` 或 `F`。
+- `region` 保留六位地址码；`birthDate` 为 `yyyy-MM-dd`；`age` 为周岁；`gender` 是号码顺序码表示的 `M` 或 `F`。
 - `referenceDate` 默认当前时间，日期与年龄按运行环境的本地日历计算。需要可重复结果时显式传入。
 - 不核验行政区划是否真实分配，也不核验实际发证、账号归属或身份真实性。
 

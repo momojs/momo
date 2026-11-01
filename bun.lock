@@ -98,9 +98,6 @@
       "devDependencies": {
         "@momots/cli": "workspace:*",
       },
-      "peerDependencies": {
-        "@momots/core": ">=0.1.0-alpha.0 <0.2.0",
-      },
     },
     "website": {
       "name": "website",
