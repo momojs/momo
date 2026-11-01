@@ -30,8 +30,9 @@ import { TweenNumber } from "@momots/design/components/tween-number";
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
 | `value` | `number \| string` | 目标数值 |
-| `duration` | `number` | 过渡时长（秒），默认 `0.6` |
+| `duration` | `number` | 过渡时长（秒）；默认使用主题动画，`0` 表示立即更新 |
 | `format` | `Intl.NumberFormatOptions` | 数字格式化选项 |
+| `formatter` | `(value: number) => string` | 格式化动画中的数值，优先于 `format` 与 `locales` |
 | `locales` | `Intl.LocalesArgument` | 区域设置，默认 `zh-CN` |
 | `transition` | `Transition` | 覆盖 motion 过渡配置 |
 | `className` | `string` | 容器追加 Tailwind class |

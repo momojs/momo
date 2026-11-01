@@ -32,6 +32,7 @@ import { PickerDate } from './components/picker-date';
 import { PickerTime } from './components/picker-time';
 import { Rating } from './components/rating';
 import { Select } from './components/select';
+import { TweenNumber } from './components/tween-number';
 import type { ControlOptions } from './hooks/use-controllable-value';
 import { useControllableValue } from './hooks/use-controllable-value';
 import { useMemoize } from './hooks/use-memoize';
@@ -154,6 +155,7 @@ const api = {
   PickerTime,
   Rating,
   Select,
+  TweenNumber,
   SelectParts,
   useControllableValue,
   useMemoize,
