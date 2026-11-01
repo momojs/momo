@@ -1,0 +1,111 @@
+---
+title: Combobox
+description: 带搜索过滤、多选标签和 Motion 弹层动画的选择控件。
+icon: ListFilter
+---
+
+`Combobox` 基于 Base UI Combobox，使用与 `Select` 一致的选项结构、尺寸和主题 token。适合需要输入关键词筛选的预定义选项；选中值与输入文本分别管理。
+
+<ComboboxPlayground />
+
+## 基本用法
+
+```tsx
+import { Combobox } from '@momots/design/components/combobox';
+
+const options = [
+  { value: 'react', label: 'React' },
+  { value: 'vue', label: 'Vue' },
+  { value: 'svelte', label: 'Svelte', disabled: true },
+];
+
+<label htmlFor='framework'>框架</label>
+<Combobox
+  options={options}
+  defaultValue='react'
+  name='framework'
+  placeholder='搜索框架…'
+  clearable
+  emptyText='没有匹配结果'
+  slots={{ input: { id: 'framework' } }}
+/>
+```
+
+每个选项使用唯一的字符串或数字 `value`。`null` 表示单选未选择，不能用作选项值。`label` 支持 JSX；复杂标签应提供 `textValue`，用于搜索和输入框显示。选项还支持 `disabled`、`icon`、`extra`、`className` 和 `style`。
+
+输入框应有对应的 `label`、`Field.Label` 或 `slots.input['aria-label']`；placeholder 只提供输入提示。
+
+## 受控与多选
+
+```tsx
+const [value, setValue] = useState<string | null>(null);
+const [values, setValues] = useState<string[]>(['react']);
+
+<Combobox options={options} value={value} onChange={setValue}
+  slots={{ input: { 'aria-label': '主要框架' } }} clearable />
+
+<Combobox options={options} multiple value={values} onChange={setValues}
+  slots={{ input: { 'aria-label': '使用的框架' } }} clearable />
+```
+
+单选清空时 `onChange` 收到 `null`，多选清空时收到 `[]`。多选通过标签展示已选项，可点击移除按钮或使用键盘删除。`defaultValue` 提供非受控初始值；使用 `value` 时由调用方更新它。`multiple` 决定值的类型，切换模式时应重新挂载组件。
+
+`onValueChange(value, details)` 先于 `onChange` 调用；`details.cancel()` 可阻止这次选择及简化回调。`open`、`defaultOpen` 和 `onOpenChange` 管理弹层，取消 `onOpenChange` 同样会阻止开关。`disabled` 禁用交互，`readOnly` 保留可读状态但禁止修改。
+
+## 搜索
+
+默认使用 Base UI 的文本过滤。`inputValue` / `defaultInputValue` 与 `onInputValueChange` 管理搜索文本，`value` 管理选中的选项值。自定义 `filter(value, query, itemToString)` 可改变匹配规则；`filter={null}` 关闭本地过滤。
+
+异步搜索时，通过 `inputValue` 与 `onInputValueChange` 驱动请求，再更新 `options`。调用方负责加载状态与请求竞态，并应保留当前已选项的数据，以维持标签显示。也可以保留完整 `options`，用 `filteredItems` 提供要展示的选项值数组。
+
+`itemToStringLabel` 可覆盖 `textValue` / 字符串标签的默认转换；表单提交使用原始选项值，`itemToStringValue` 可自定义序列化。
+
+## 自定义节点
+
+`slots` 复用内容插槽的归一方式，支持属性对象、元素简写和 `(props, state) => JSX`：
+
+```tsx
+<Combobox
+  options={options}
+  slots={{
+    input: { 'aria-label': '框架', className: 'font-medium' },
+    trigger: (props, state) => (
+      <button {...props} type='button' data-expanded={state.open} />
+    ),
+    item: <div className='tracking-wide' />,
+    clear: { 'aria-label': '清空选择' },
+  }}
+  renderOption={(option) => <span>{option.label}</span>}
+/>
+```
+
+可配置 `control`、`input`、`trigger`、`clear`、`item`、`itemIndicator`、`chip`、`chipRemove`、`empty`。`trigger`、`clear`、`itemIndicator`、`chipRemove` 支持 `false` 隐藏。render 回调需转发传入的 props 和 ref，以保留语义、交互和定位。`renderOption` 只替换选项的可见内容。
+
+后缀区域只有一个图标位。`trigger` 与 `clear` 是覆盖在该位置上的透明按钮，图标由组件统一渲染，不读取它们的 `children`，所以 render 回调不需要提供图标或文字。同一时刻只挂载其中一个按钮：
+
+| 状态 | 后缀 |
+| --- | --- |
+| `clearable`，已有选中值，且输入组处于鼠标悬停或聚焦 | `clear`（×） |
+| 其他情况 | `trigger`，收起时为下箭头，展开时为上箭头 |
+
+单选以 `value` 不为 `null` 判断有值，多选以至少一个标签判断；只输入了搜索文字不算有值。触屏点按不计为悬停，触屏用户聚焦输入框后即可看到清空按钮。`disabled`、`readOnly` 或 `slots.clear={false}` 时始终显示箭头；`slots.trigger={false}` 时，不满足清空条件就不显示后缀。图标切换使用 [`Icon`](/docs/design/icon) 的路径变形，减少动效时直接切换。
+
+`slots` 遵循 [Content Slots](/docs/design/content-slots) 的配置规则；内容仍由顶层属性提供。`emptyText` 是空结果的内容，`slots.empty` 配置承载它的节点；`emptyText` 为 `undefined`、`null` 或 `false` 时不显示文字，但空结果节点保持挂载，以便读屏器播报结果变化。
+
+`className` 用于整个输入组。`portalProps`、`positionerProps`、`popupProps`、`listProps` 配置对应层；弹层的 render 由 Motion 管理。默认 Portal 挂载到 `body`，局部主题可用 `portalProps.container` 指定挂载位置。
+
+## 尺寸与定位
+
+| 属性 | 默认值 | 说明 |
+| --- | --- | --- |
+| `size` | `md` | `sm` / `md` / `lg` |
+| `clearable` | `false` | 有值时在悬停或聚焦状态下把后缀切换为清空按钮 |
+| `side` / `align` | `bottom` / `start` | 弹层首选方向与对齐 |
+| `sideOffset` / `alignOffset` | `6` / `0` | 定位偏移 |
+| `emptyText` | `No results found.` | 无匹配结果时的内容 |
+
+弹层宽度跟随输入组，并受视口可用空间约束。方向键导航选项，Enter 选择，Escape 关闭；焦点留在输入框。
+
+动画与 `Select` 一致：弹层使用 `useFeel('ui')`，从锚点方向以 `travel.hover` 的位移和轻微缩放进入，退出完成后再卸载；减少动效时只保留透明度。高亮项由共享的 `Highlight` 层跟随，键盘导航与指针悬停移动同一层；`highlightItemOnHover={false}` 时只跟随键盘。
+
+Combobox 选择预定义值，不能把任意输入文本当作选项提交。完整的交互语义见 [Base UI Combobox 文档](https://base-ui.com/react/components/combobox)。

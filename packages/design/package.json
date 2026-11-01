@@ -39,9 +39,17 @@
       "types": "./dist/components/button.d.ts",
       "import": "./dist/components/button.js"
     },
+    "./components/card": {
+      "types": "./dist/components/card.d.ts",
+      "import": "./dist/components/card.js"
+    },
     "./components/checkbox": {
       "types": "./dist/components/checkbox.d.ts",
       "import": "./dist/components/checkbox.js"
+    },
+    "./components/combobox": {
+      "types": "./dist/components/combobox.d.ts",
+      "import": "./dist/components/combobox.js"
     },
     "./components/dialog": {
       "types": "./dist/components/dialog.d.ts",

@@ -9,6 +9,15 @@ import { createRoot } from 'react-dom/client';
 import { Alert, AlertRoot } from './components/alert';
 import { Badge } from './components/badge';
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardRoot,
+  CardTitle,
+} from './components/card';
+import {
   Field,
   FieldError,
   FieldItem,
@@ -122,6 +131,13 @@ const api = {
   Alert,
   AlertRoot,
   Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardRoot,
+  CardTitle,
   Field,
   FieldItem,
   FieldLabel,

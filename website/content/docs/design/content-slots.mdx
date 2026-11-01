@@ -4,13 +4,13 @@ description: 通过组件的内容属性与 slots 配置内容节点的通用约
 icon: PanelsTopLeft
 ---
 
-Content Slots 是组件配置内容节点的通用约定：内容属性提供要显示的内容，`slots` 配置承载内容的节点。Drawer、Popover、Sheet 与 Dialog 支持标题、说明、正文和页脚；Alert、Toast 和 Tooltip 按各自结构提供对应的内容与 slots。
+Content Slots 是组件配置内容节点的通用约定：内容属性提供要显示的内容，`slots` 配置承载内容的节点。Card、Drawer、Popover、Sheet 与 Dialog 支持标题、说明、正文和页脚；Alert、Toast 和 Tooltip 按各自结构提供对应的内容与 slots。
 
 ## 内容与节点
 
 `title`、`description`、`children`、`footer` 都表示内容。`header` 是标题与说明的容器，通过 `slots.header` 配置；正文容器使用 `slots.content`。
 
-Drawer、Popover、Sheet 和 Dialog 的 header、正文与 footer 容器默认渲染为 `div`，可通过对应 slot 的 `render` 指定元素或提供渲染回调。
+Card、Drawer、Popover、Sheet 和 Dialog 的 header、正文与 footer 容器默认渲染为 `div`，可通过对应 slot 的 `render` 指定元素或提供渲染回调。
 
 ```tsx
 <Popover
@@ -30,7 +30,7 @@ Drawer、Popover、Sheet 和 Dialog 的 header、正文与 footer 容器默认�
 </Popover>
 ```
 
-上面的内容字段与五个 slot 同样适用于 Drawer、Sheet 和 Dialog。各组件保留自己的开关状态、定位、手势与动画属性。
+上面的内容字段与五个 slot 同样适用于 Card、Drawer、Sheet 和 Dialog。各组件保留自己的布局或交互属性。
 
 ## Slot 规则
 
@@ -74,8 +74,9 @@ render 元素上非空值的 ID 优先于 slot props 的 ID；`id={undefined}` �
 
 | 组件 | 内容字段 | 内容 slots |
 | --- | --- | --- |
-| Drawer / Popover / Sheet / Dialog | `title`、`description`、`children`、`footer` | `header`、`title`、`description`、`content`、`footer` |
+| Card / Drawer / Popover / Sheet / Dialog | `title`、`description`、`children`、`footer` | `header`、`title`、`description`、`content`、`footer` |
 | Tooltip | `children` | `content` |
+| Combobox | `emptyText`；选项内容来自 `options` | `control`、`input`、`trigger`、`clear`、`item`、`itemIndicator`、`chip`、`chipRemove`、`empty` |
 | Alert | `title`、`description`、`icon`、`action` | `icon`、`content`、`title`、`description`、`action` |
 | ToastOptions | `title`、`description`；操作通过 `actionProps` 提供 | 由 Provider / List 的 `slots` 配置 |
 | ToastProvider / ToastList | Provider 的 `children` 是应用子树 | `content`、`text`、`title`、`description`、`icon`、`action`、`close` |
