@@ -1,21 +1,9 @@
-import { useEffect, useState } from 'react';
-
 import { Link } from '@tanstack/react-router';
 
-import {
-  Blocks,
-  Boxes,
-  Package,
-  Sparkles,
-  Terminal,
-  TrendingDown,
-  TrendingUp,
-  Zap,
-} from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import type { Variants } from 'motion/react';
 import { motion, useReducedMotion } from 'motion/react';
 
-import { cn } from '@/lib/cn';
 import { docsLinkParams, gitConfig } from '@/lib/shared';
 
 const container: Variants = {
@@ -53,16 +41,13 @@ export function Hero() {
         animate={reduced ? undefined : 'show'}
         className='relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center text-center'
       >
-        <motion.a
+        <motion.div
           variants={item}
-          href='https://bun.sh'
-          target='_blank'
-          rel='noreferrer'
-          className='group inline-flex items-center gap-2 rounded-full border border-fd-border bg-fd-card/60 px-3.5 py-1.5 text-xs font-medium text-fd-muted-foreground backdrop-blur transition-colors hover:text-fd-foreground'
+          className='inline-flex items-center gap-2 rounded-full border border-fd-border bg-fd-card/60 px-3.5 py-1.5 text-xs font-medium text-fd-muted-foreground backdrop-blur'
         >
           <Sparkles className='size-3.5 text-fd-primary' />
-          momo 读作 mo-mo · Bun 优先 · 函数式
-        </motion.a>
+          momo 读作 mo-mo · 函数式
+        </motion.div>
 
         <motion.h1
           variants={item}
@@ -80,8 +65,8 @@ export function Hero() {
           variants={item}
           className='mt-6 max-w-xl text-balance text-base leading-relaxed text-fd-muted-foreground sm:text-lg'
         >
-          momo 把那些在 React 项目里反复出现的纯函数、宿主环境能力与请求驱动，
-          收束成一组边界清晰、按需引入、适合长期组合的工具包。
+          提供 React 组件与动画、数据处理、宿主环境工具和 HTTP 客户端。 使用
+          TypeScript 编写，支持按需导入。
         </motion.p>
 
         <motion.div
@@ -91,13 +76,13 @@ export function Hero() {
           <Link
             to='/docs/$'
             params={docsLinkParams()}
-            className='group inline-flex h-11 items-center gap-2 rounded-xl bg-fd-primary px-5 text-sm font-semibold text-fd-primary-foreground shadow-lg shadow-fd-primary/20 transition-transform hover:-translate-y-0.5'
+            className='group inline-flex h-11 items-center gap-2 rounded-xl bg-fd-primary px-5 text-sm font-semibold text-fd-primary-foreground shadow-lg shadow-fd-primary/20 transition-transform motion-safe:hover:-translate-y-0.5'
           >
             开始使用
             <svg
               viewBox='0 0 24 24'
               fill='none'
-              className='size-4 transition-transform group-hover:translate-x-0.5'
+              className='size-4 transition-transform motion-safe:group-hover:translate-x-0.5'
               aria-hidden='true'
             >
               <path
@@ -119,10 +104,6 @@ export function Hero() {
             <GithubMark className='size-4' />在 GitHub 上查看
           </a>
         </motion.div>
-
-        <motion.div variants={item} className='mt-16 w-full'>
-          <OssTicker reduced={!!reduced} />
-        </motion.div>
       </motion.div>
     </section>
   );
@@ -142,109 +123,6 @@ function BackdropGlow() {
       <div className='absolute left-1/2 top-[-12rem] size-[36rem] -translate-x-1/2 rounded-full bg-fd-primary/20 blur-[120px]' />
       <div className='absolute bottom-[-16rem] left-[10%] size-[26rem] rounded-full bg-fuchsia-500/15 blur-[120px]' />
       <div className='absolute bottom-[-16rem] right-[8%] size-[24rem] rounded-full bg-amber-500/10 blur-[120px]' />
-    </div>
-  );
-}
-
-type OssItem = {
-  name: string;
-  meta: string;
-  base: number;
-  icon: typeof Package;
-};
-
-const OSS_ITEMS: OssItem[] = [
-  { name: '@momots/core', meta: 'pure fns', base: 2.4, icon: Boxes },
-  { name: '@momots/host', meta: 'runtime', base: 1.8, icon: Blocks },
-  { name: '@momots/drive', meta: 'fetch', base: 3.1, icon: Zap },
-  { name: '@momots/cli', meta: 'bun build', base: 0.9, icon: Terminal },
-  { name: 'remeda', meta: 'peer', base: -0.6, icon: Package },
-  { name: 'type-fest', meta: 'types', base: 1.2, icon: Package },
-];
-
-function OssTicker({ reduced }: { reduced: boolean }) {
-  const [trends, setTrends] = useState<number[]>(() =>
-    OSS_ITEMS.map((it) => it.base),
-  );
-
-  useEffect(() => {
-    if (reduced) return;
-    const id = setInterval(() => {
-      setTrends((prev) =>
-        prev.map((v) => {
-          const next = v + (Math.random() - 0.46) * 1.8;
-          return Math.max(-9.9, Math.min(13.5, next));
-        }),
-      );
-    }, 2400);
-    return () => clearInterval(id);
-  }, [reduced]);
-
-  const chips = OSS_ITEMS.map((it, i) => (
-    <TrendChip key={it.name} item={it} value={trends[i]} />
-  ));
-
-  return (
-    <div className='relative w-full'>
-      <p className='mb-4 text-xs font-medium uppercase tracking-[0.2em] text-fd-muted-foreground/70'>
-        Open-source ecosystem · live
-      </p>
-
-      <div className='relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]'>
-        {reduced ? (
-          <div className='flex flex-wrap items-center justify-center gap-3'>
-            {chips}
-          </div>
-        ) : (
-          <motion.div
-            className='flex w-max gap-3'
-            animate={{ x: ['0%', '-50%'] }}
-            transition={{
-              duration: 26,
-              ease: 'linear',
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          >
-            <div className='flex shrink-0 gap-3'>{chips}</div>
-            <div className='flex shrink-0 gap-3' aria-hidden='true'>
-              {OSS_ITEMS.map((it, i) => (
-                <TrendChip key={`dup-${it.name}`} item={it} value={trends[i]} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TrendChip({ item, value }: { item: OssItem; value: number }) {
-  const up = value >= 0;
-  const Icon = item.icon;
-  return (
-    <div className='flex shrink-0 items-center gap-2.5 rounded-full border border-fd-border bg-fd-card/70 px-4 py-2 backdrop-blur'>
-      <Icon className='size-4 text-fd-muted-foreground' />
-      <span className='font-mono text-sm text-fd-foreground'>{item.name}</span>
-      <span className='hidden text-xs text-fd-muted-foreground/70 sm:inline'>
-        {item.meta}
-      </span>
-      <motion.span
-        key={up ? 'up' : 'down'}
-        initial={{ opacity: 0.6 }}
-        animate={{ opacity: 1 }}
-        className={cn(
-          'flex items-center gap-0.5 text-xs font-semibold tabular-nums',
-          up ? 'text-emerald-500' : 'text-rose-500',
-        )}
-      >
-        {up ? (
-          <TrendingUp className='size-3.5' />
-        ) : (
-          <TrendingDown className='size-3.5' />
-        )}
-        {up ? '+' : ''}
-        {value.toFixed(1)}%
-      </motion.span>
     </div>
   );
 }
