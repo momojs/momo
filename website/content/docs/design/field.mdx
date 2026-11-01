@@ -83,7 +83,7 @@ import {
 />
 ```
 
-不传 `error` 时，Error 会使用浏览器、`validate` 或 Base UI Form 提供的错误文本，`cell` 的错误提示也会使用这些内容。`cell` 的错误图标由实际校验状态决定，预设 `error` 文案不会让有效字段显示错误图标。需要只匹配 `tooShort` 等单个 `ValidityState` 时，请使用 `FieldError` primitive 的 `match` 属性。
+不传 `error` 或传入 `undefined` 时，Error 会使用浏览器、`validate` 或 Base UI Form 提供的错误文本，`cell` 的错误提示也会使用这些内容。显式传入 `null` 时，两种变体都保留空内容，不回退到默认错误文本，也不改变字段的校验状态。`cell` 的错误图标由实际校验状态决定，预设 `error` 文案不会让有效字段显示错误图标。需要只匹配 `tooShort` 等单个 `ValidityState` 时，请使用 `FieldError` primitive 的 `match` 属性。
 
 ### 自定义校验
 
@@ -162,9 +162,11 @@ import { ToastProvider } from "@momots/design/components/toast";
 </ToastProvider>
 ```
 
-没有 `ToastProvider` 时，Field 仍然可以正常渲染；点击提示按钮只会通过 `console.warn` 提醒缺少 Provider，不会展开内容。有 Provider 时，点击会展示 Toast。错误提示由实际校验状态决定，并优先于说明；通知不会自动随每次校验弹出。
+没有 `ToastProvider` 时，Field 仍然可以正常渲染；触发提示按钮只会通过 `console.warn` 提醒缺少 Provider，不会展开内容。有 Provider 时，触发提示会展示 Toast。错误提示由实际校验状态决定，并优先于说明；通知不会自动随每次校验弹出。
 
-提示按钮使用原生按钮语义，支持辅助技术和键盘激活。当前提示的语义节点保留在所属 Field 内并关联到控件，Toast 只接收解析后的展示内容。`stacked` 始终使用内联反馈。
+提示按钮通过 `onTap` 原样遵循 Motion 的 tap 手势：指针或触摸完成轻触，以及按钮聚焦后使用 Enter 键；手势取消时不弹出 Toast。原生 Space 键产生的 click 与 `HTMLElement.click()` 不会被转换为 tap。
+
+提示按钮保留原生按钮语义。当前提示的语义节点保留在所属 Field 内并关联到控件，Toast 只接收解析后的展示内容。`stacked` 始终使用内联反馈。
 
 ## Control slot
 

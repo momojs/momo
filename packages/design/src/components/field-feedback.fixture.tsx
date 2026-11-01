@@ -21,6 +21,9 @@ function Fixture() {
   const [invalid, setInvalid] = useState(false);
   const [replaced, setReplaced] = useState(false);
   const [submissions, setSubmissions] = useState(0);
+  const [serverErrors, setServerErrors] = useState({
+    email: ['Already registered.', 'Choose another address.'],
+  });
 
   return (
     <>
@@ -70,6 +73,17 @@ function Fixture() {
       <button id='blur' type='button'>
         Blur
       </button>
+      <button
+        id='replace-server-errors'
+        type='button'
+        onClick={() =>
+          setServerErrors({
+            email: ['Address is unavailable.', 'Try another domain.'],
+          })
+        }
+      >
+        Replace server errors
+      </button>
       <Count id='outer-count' manager={outer} />
       <Count id='inner-count' manager={inner} />
       <Count id='replacement-count' manager={replacement} />
@@ -100,9 +114,7 @@ function Fixture() {
             'Second validation error.',
           ]}
         />
-        <Form
-          errors={{ email: ['Already registered.', 'Choose another address.'] }}
-        >
+        <Form errors={serverErrors}>
           <Field id='server' name='email' label='Server error' />
         </Form>
         <ToastProvider toastManager={inner} portal={false} timeout={0}>

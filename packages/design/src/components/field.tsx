@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { Fragment } from 'react';
 
 import type {
   FieldControlProps as BaseFieldControlProps,
@@ -18,14 +19,23 @@ import type {
   FieldRootState,
 } from '@base-ui/react/field';
 import { Field as BaseField } from '@base-ui/react/field';
+import { useFieldRootContext } from '@base-ui/react/internals/field-root-context';
+import { useFormContext } from '@base-ui/react/internals/form-context';
 import { AlertCircleIcon, HelpCircleIcon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { isEmptyish } from 'remeda';
+import { asArray, hasOwn, isUndefined } from '@momots/core';
+import { isEmptyish, isString } from 'remeda';
 
 import type { ControlSize, SlotBaseConfig } from '../shared/index.js';
-import { asClass, asData, isReactNode, render } from '../shared/index.js';
+import {
+  asClass,
+  asData,
+  isNonEmptyReactNode,
+  isReactNode,
+  render,
+} from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
 import { Button } from './button.js';
+import { Icon } from './icon.js';
 import { useToast } from './toast.js';
 
 const {
@@ -253,46 +263,6 @@ export function FieldDescription({
   );
 }
 
-export function FieldCellDescription({
-  label,
-  ...props
-}: FieldDescriptionProps) {
-  const toast = useToast({ strict: false });
-
-  return (
-    <FieldDescription
-      {...props}
-      render={(descriptionProps, { disabled }) => (
-        <>
-          <p {...descriptionProps} className='sr-only' />
-          <Button
-            {...asData('field-feedback-trigger')}
-            type='button'
-            aria-label='Show field description'
-            disabled={disabled}
-            size='inline'
-            variant='link'
-            className='text-inherit'
-            onClick={() => {
-              if (!toast) {
-                console.warn('Field feedback requires a ToastProvider.');
-                return;
-              }
-              toast.add({
-                title: label,
-                type: 'info',
-                description: descriptionProps.children,
-              });
-            }}
-          >
-            <HugeiconsIcon icon={HelpCircleIcon} aria-hidden />
-          </Button>
-        </>
-      )}
-    />
-  );
-}
-
 /** Props for a validation message associated with a field control. */
 export interface FieldErrorProps
   extends Omit<BaseFieldErrorProps, 'className'> {
@@ -316,44 +286,6 @@ export function FieldError({
       )}
       {...props}
       {...(children === undefined ? {} : { children })}
-    />
-  );
-}
-
-export function FieldCellError({ label, children, ...props }: FieldErrorProps) {
-  const toast = useToast({ strict: false });
-
-  return (
-    <FieldError
-      {...props}
-      {...(children === undefined ? {} : { children })}
-      render={(errorProps, { disabled }) => (
-        <>
-          <div {...errorProps} className='sr-only' />
-          <Button
-            {...asData('field-feedback-trigger')}
-            type='button'
-            aria-label='Show field error'
-            disabled={disabled}
-            className='text-momo-fg-danger'
-            size='inline'
-            variant='link'
-            onTap={() => {
-              if (!toast) {
-                console.warn('Field feedback requires a ToastProvider.');
-                return;
-              }
-              toast.add({
-                type: 'danger',
-                title: label,
-                description: errorProps.children,
-              });
-            }}
-          >
-            <HugeiconsIcon icon={AlertCircleIcon} aria-hidden />
-          </Button>
-        </>
-      )}
     />
   );
 }
@@ -385,6 +317,98 @@ export function FieldValidity(props: FieldValidityProps) {
   return <Validity {...asData('field-validity')} {...props} />;
 }
 
+/** Props for compact field feedback, read from the nearest Field root. */
+export interface FieldCellValidityProps {
+  /** Title used when presenting the feedback in a Toast. */
+  label?: FieldLabelProps['children'];
+  /** Custom error content. Omit to use the resolved validation message. */
+  error?: FieldErrorProps['children'];
+  /** Supporting content shown while the field is valid. */
+  description?: FieldDescriptionProps['children'];
+}
+
+/** Presents field feedback in a Toast while keeping accessible messages local. */
+export function FieldCellValidity({
+  label,
+  error,
+  description,
+}: FieldCellValidityProps) {
+  const {
+    name,
+    invalid,
+    disabled,
+    validityData, //
+  } = useFieldRootContext(false);
+
+  const { valid } = validityData.state;
+
+  const { errors } = useFormContext();
+
+  const toast = useToast({ strict: false });
+
+  const isError = invalid === true || valid === false;
+
+  const isHelper = isNonEmptyReactNode(description);
+
+  const formError =
+    isString(name) && hasOwn(errors, name) ? errors[name] : undefined;
+  const errs = isEmptyish(formError) ? validityData.errors : asArray(formError);
+  const resolvedError = isUndefined(error) ? (
+    errs.length > 1 ? (
+      <ul>
+        {errs.map((message) => (
+          <li key={message}>{message}</li>
+        ))}
+      </ul>
+    ) : (
+      errs[0]
+    )
+  ) : (
+    error
+  );
+
+  const content = isError ? resolvedError : description;
+
+  return (
+    <Fragment>
+      {isHelper && (
+        <Description {...asData('field-description')} className='sr-only'>
+          {description}
+        </Description>
+      )}
+      {isError && (
+        <Error match {...asData('field-error')} className='sr-only'>
+          {resolvedError}
+        </Error>
+      )}
+      {(isError || isHelper) && (
+        <Button
+          {...asData('field-feedback-trigger')}
+          type='button'
+          size='inline'
+          variant='link'
+          disabled={disabled}
+          aria-label={isError ? 'Show field error' : 'Show field description'}
+          className={isError ? 'text-momo-fg-danger' : 'text-inherit'}
+          onTap={() => {
+            if (toast) {
+              toast.add({
+                title: label,
+                type: isError ? 'danger' : 'info',
+                description: content,
+              });
+            } else {
+              console.warn('Field feedback requires a ToastProvider.');
+            }
+          }}
+        >
+          <Icon icon={isError ? AlertCircleIcon : HelpCircleIcon} />
+        </Button>
+      )}
+    </Fragment>
+  );
+}
+
 /** Props for a composed momo field. */
 export interface FieldProps extends Omit<BaseFieldRootProps, 'children'> {
   /** Custom control rendered directly inside the Field root. */
@@ -399,10 +423,10 @@ export interface FieldProps extends Omit<BaseFieldRootProps, 'children'> {
   error?: FieldErrorProps['children'];
   /** Configures or replaces the description slot. */
   description?: FieldDescriptionProps['children'];
-  /** Reads the complete field validity state for custom feedback. */
-  validity?: BaseFieldValidityProps['children'];
   /** Configures, replaces, or removes the built-in native input. */
   control?: SlotBaseConfig<FieldControlProps>;
+  /** Reads the complete field validity state for custom feedback. */
+  validity?: BaseFieldValidityProps['children'];
 }
 
 /**
@@ -431,8 +455,6 @@ export function Field({
   className,
   ...props
 }: FieldProps) {
-  const hasDesc = !isEmptyish(description);
-
   const hasControl = !isEmptyish(children);
 
   return (
@@ -454,21 +476,11 @@ export function Field({
       {variant === 'cell' ? (
         <div className='flex items-center gap-momo-xxs'>
           <FieldLabel size={size}>{label}</FieldLabel>
-          <FieldValidity>
-            {({ validity }) =>
-              validity.valid === false ? (
-                <FieldCellError match label={label}>
-                  {error}
-                </FieldCellError>
-              ) : (
-                hasDesc && (
-                  <FieldCellDescription label={label}>
-                    {description}
-                  </FieldCellDescription>
-                )
-              )
-            }
-          </FieldValidity>
+          <FieldCellValidity
+            label={label}
+            error={error}
+            description={description}
+          />
         </div>
       ) : (
         <FieldLabel size={size}>{label}</FieldLabel>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { createElement, createRef } from 'react';
 
+import { Field as FieldParts } from '@base-ui/react/field';
 import { Form } from '@base-ui/react/form';
 import { Select as SelectParts } from '@base-ui/react/select';
 import { flushSync } from 'react-dom';
@@ -19,6 +20,7 @@ import {
 } from './components/card';
 import {
   Field,
+  FieldCellValidity,
   FieldError,
   FieldItem,
   FieldLabel,
@@ -139,10 +141,12 @@ const api = {
   CardRoot,
   CardTitle,
   Field,
+  FieldCellValidity,
   FieldItem,
   FieldLabel,
   FieldError,
   FieldValidity,
+  FieldParts,
   Form,
   Input,
   Numeric,

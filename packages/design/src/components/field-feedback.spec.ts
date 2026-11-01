@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test } from '../../playwright.fixture';
 import type {} from './field-feedback.fixture';
 
@@ -5,6 +7,16 @@ test.use({
   fixturePath: 'field-feedback',
   readySelector: '#connected input',
 });
+
+// Motion dispatches gesture callbacks after rendering the frame.
+async function waitForGestureCallbacks(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
 
 test('standalone feedback warns without expanding or submitting', async ({
   page,
@@ -106,33 +118,13 @@ test('uses the nearest provider and responds to a replaced manager', async ({
 }) => {
   await page.click('#connected [data-slot="field-feedback-trigger"]');
   await page.click('#nested [data-slot="field-feedback-trigger"]');
-  expect(
-    await page
-      .locator('#inner-count')
-      .evaluate((element) => element.textContent),
-  ).toBe('1');
-  expect(
-    await page
-      .locator('#outer-count')
-      .evaluate((element) => element.textContent),
-  ).toBe('1');
+  await expect(page.locator('#inner-count')).toHaveText('1');
+  await expect(page.locator('#outer-count')).toHaveText('1');
   await page.click('#replace-manager');
   await page.click('#connected [data-slot="field-feedback-trigger"]');
-  expect(
-    await page
-      .locator('#replacement-count')
-      .evaluate((element) => element.textContent),
-  ).toBe('1');
-  expect(
-    await page
-      .locator('#outer-count')
-      .evaluate((element) => element.textContent),
-  ).toBe('1');
-  expect(
-    await page
-      .locator('#inner-count')
-      .evaluate((element) => element.textContent),
-  ).toBe('1');
+  await expect(page.locator('#replacement-count')).toHaveText('1');
+  await expect(page.locator('#outer-count')).toHaveText('1');
+  await expect(page.locator('#inner-count')).toHaveText('1');
 });
 
 test('keeps native, custom and server error content out of Field context when presenting Toast', async ({
@@ -199,4 +191,109 @@ test('provides a focusable native button and inherits disabled state', async ({
       };
     }),
   ).toEqual({ type: 'button', tabIndex: 0, focused: true, disabled: true });
+});
+
+test('refreshes every server error in both local feedback and Toast', async ({
+  page,
+}) => {
+  const localErrors = page.locator('#server [data-slot="field-error"] li');
+  const toastErrors = page.locator(
+    '[data-slot="toast"][data-toast-interactive="true"] [data-slot="toast-description"] li',
+  );
+  await expect(localErrors).toHaveText([
+    'Already registered.',
+    'Choose another address.',
+  ]);
+  await page.click('#server [data-slot="field-feedback-trigger"]');
+  await expect(toastErrors).toHaveText([
+    'Already registered.',
+    'Choose another address.',
+  ]);
+  await page.click('#replace-server-errors');
+  await expect(localErrors).toHaveText([
+    'Address is unavailable.',
+    'Try another domain.',
+  ]);
+  await page.click('#server [data-slot="field-feedback-trigger"]');
+  await expect(toastErrors).toHaveText([
+    'Address is unavailable.',
+    'Try another domain.',
+  ]);
+});
+
+test('opens feedback once when a pointer tap completes', async ({ page }) => {
+  const trigger = page.locator(
+    '#connected [data-slot="field-feedback-trigger"]',
+  );
+  await trigger.hover();
+  await page.mouse.down();
+  await expect(page.locator('#outer-count')).toHaveText('0');
+  await page.mouse.up();
+  await expect(page.locator('#outer-count')).toHaveText('1');
+});
+
+test('does not open feedback when a pointer tap ends outside the trigger', async ({
+  page,
+}) => {
+  const trigger = page.locator(
+    '#connected [data-slot="field-feedback-trigger"]',
+  );
+  await trigger.hover();
+  await page.mouse.down();
+  await page.locator('#blur').hover();
+  await page.mouse.up();
+  await waitForGestureCallbacks(page);
+  await expect(page.locator('#outer-count')).toHaveText('0');
+});
+
+test('opens feedback on Enter release and cancels the gesture on blur', async ({
+  page,
+}) => {
+  const trigger = page.locator(
+    '#connected [data-slot="field-feedback-trigger"]',
+  );
+  await trigger.focus();
+  await page.keyboard.down('Enter');
+  await expect(page.locator('#outer-count')).toHaveText('0');
+  await page.keyboard.up('Enter');
+  await expect(page.locator('#outer-count')).toHaveText('1');
+
+  await page.keyboard.down('Enter');
+  await page.locator('#blur').focus();
+  await page.keyboard.up('Enter');
+  await waitForGestureCallbacks(page);
+  await expect(page.locator('#outer-count')).toHaveText('1');
+});
+
+test('does not reinterpret Space or programmatic clicks as tap gestures', async ({
+  page,
+}) => {
+  const trigger = page.locator(
+    '#connected [data-slot="field-feedback-trigger"]',
+  );
+  await trigger.focus();
+  await trigger.press('Space');
+  await trigger.evaluate((element: HTMLButtonElement) => element.click());
+  await waitForGestureCallbacks(page);
+  await expect(page.locator('#outer-count')).toHaveText('0');
+});
+
+test('does not open feedback from a disabled trigger', async ({ page }) => {
+  const warnings: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'warning') warnings.push(message.text());
+  });
+  const trigger = page.locator(
+    '#disabled [data-slot="field-feedback-trigger"]',
+  );
+  await expect(trigger).toBeDisabled();
+  const bounds = await trigger.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.mouse.click(
+    bounds!.x + bounds!.width / 2,
+    bounds!.y + bounds!.height / 2,
+  );
+  await trigger.evaluate((element: HTMLButtonElement) => element.click());
+  await waitForGestureCallbacks(page);
+  expect(warnings).toEqual([]);
 });

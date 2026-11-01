@@ -18,6 +18,12 @@ import { Button } from "@momots/design/components/button";
 </Button>
 ```
 
+## 事件语义
+
+`onTap` 原样遵循 Motion 的 tap 手势：指针或触摸完成轻触，以及按钮聚焦后使用 Enter 键。手势取消时不会调用 `onTap`。原生 Space 键产生的 click 与 `HTMLElement.click()` 不会被转换为 tap。
+
+`onClick` 仍是原生 click 的处理入口。需要响应按钮的原生点击激活时，使用 `onClick`。
+
 ## Props
 
 | Prop | 类型 | 说明 |

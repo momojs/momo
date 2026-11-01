@@ -146,6 +146,278 @@ test('renders stacked fields without a feedback provider', async ({ page }) => {
   expect(result).toEqual({ text: 'Used for notifications.', feedback: false });
 });
 
+test('keeps descriptions associated and removes resolved errors', async ({
+  page,
+}) => {
+  const result = await page.evaluate(() => {
+    const { h, mount, Field, slot } = window.designFixture;
+    const render = (description: string | number | false, invalid = false) => {
+      mount(
+        h(Field, {
+          label: 'Email',
+          description,
+          invalid,
+          error: 'Invalid email.',
+        }),
+      );
+      const input = slot('field-control');
+      return {
+        trigger: document
+          .querySelector('[data-slot="field-feedback-trigger"]')
+          ?.getAttribute('aria-label'),
+        messages: (input.getAttribute('aria-describedby') ?? '')
+          .split(' ')
+          .filter(Boolean)
+          .map((id) => document.getElementById(id)?.textContent),
+        icons: document.querySelectorAll(
+          '[data-slot="field-feedback-trigger"] svg',
+        ).length,
+        errors: document.querySelectorAll('[data-slot="field-error"]').length,
+        descriptions: document.querySelectorAll(
+          '[data-slot="field-description"]',
+        ).length,
+      };
+    };
+    return [
+      render('Initial help.'),
+      render('Updated help.'),
+      render('Updated help.', true),
+      render(0),
+      render(false),
+    ];
+  });
+  expect(result).toEqual([
+    {
+      trigger: 'Show field description',
+      messages: ['Initial help.'],
+      icons: 1,
+      errors: 0,
+      descriptions: 1,
+    },
+    {
+      trigger: 'Show field description',
+      messages: ['Updated help.'],
+      icons: 1,
+      errors: 0,
+      descriptions: 1,
+    },
+    {
+      trigger: 'Show field error',
+      messages: ['Updated help.', 'Invalid email.'],
+      icons: 1,
+      errors: 1,
+      descriptions: 1,
+    },
+    {
+      trigger: 'Show field description',
+      messages: ['0'],
+      icons: 1,
+      errors: 0,
+      descriptions: 1,
+    },
+    { trigger: undefined, messages: [], icons: 0, errors: 0, descriptions: 0 },
+  ]);
+});
+
+test('reads field validity when composing cell feedback', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const { h, mount, FieldParts, FieldCellValidity, Input, slot } =
+      window.designFixture;
+    const render = (invalid: boolean) => {
+      mount(
+        h(
+          FieldParts.Root,
+          { invalid },
+          h(Input),
+          h(FieldCellValidity, {
+            error: 'Manual error.',
+            description: 'Manual help.',
+          }),
+        ),
+      );
+      return slot('field-feedback-trigger').getAttribute('aria-label');
+    };
+    return [render(false), render(true), render(false)];
+  });
+  expect(result).toEqual([
+    'Show field description',
+    'Show field error',
+    'Show field description',
+  ]);
+});
+
+test('refreshes cell errors when form errors or the field name changes', async ({
+  page,
+}) => {
+  const result = await page.evaluate(() => {
+    const { h, mount, Field, Form, slot } = window.designFixture;
+    const render = (name: string, errors: Record<string, string[]>) => {
+      mount(h(Form, { errors }, h(Field, { name, label: 'Email' })));
+      const input = slot('field-control');
+      const message = slot('field-error');
+      return {
+        errors: [...message.querySelectorAll('li')].map(
+          (element) => element.textContent,
+        ),
+        associated: input
+          .getAttribute('aria-describedby')
+          ?.split(' ')
+          .includes(message.id),
+      };
+    };
+    return [
+      render('email', { email: ['Initial error.', 'Initial detail.'] }),
+      render('email', { email: ['Updated error.', 'Updated detail.'] }),
+      render('other', {
+        email: ['Old field error.'],
+        other: ['Other error.', 'Other detail.'],
+      }),
+    ];
+  });
+  expect(result).toEqual([
+    { errors: ['Initial error.', 'Initial detail.'], associated: true },
+    { errors: ['Updated error.', 'Updated detail.'], associated: true },
+    { errors: ['Other error.', 'Other detail.'], associated: true },
+  ]);
+});
+
+test('preserves null errors and restores default errors in both layouts', async ({
+  page,
+}) => {
+  const result = await page.evaluate(() => {
+    const { h, mount, Field, Form, slot } = window.designFixture;
+    return (['cell', 'stacked'] as const).map((variant) => {
+      const render = (error: null | undefined) => {
+        mount(
+          h(
+            Form,
+            { errors: { email: 'Server error.' } },
+            h(Field, { name: 'email', label: 'Email', variant, error }),
+          ),
+        );
+        return {
+          text: slot('field-error').textContent,
+          invalid: slot('field-control').getAttribute('aria-invalid'),
+        };
+      };
+      return {
+        variant,
+        messages: [render(undefined), render(null), render(undefined)],
+      };
+    });
+  });
+  const messages = [
+    { text: 'Server error.', invalid: 'true' },
+    { text: '', invalid: 'true' },
+    { text: 'Server error.', invalid: 'true' },
+  ];
+  expect(result).toEqual([
+    { variant: 'cell', messages },
+    { variant: 'stacked', messages },
+  ]);
+});
+
+test('morphs the same focused icon and reverses an in-flight validity change', async ({
+  page,
+}) => {
+  const result = await page.evaluate(async () => {
+    const { h, mount, Field, slot, reduce, waitFor } = window.designFixture;
+    const render = (invalid: boolean) =>
+      mount(
+        h(Field, {
+          label: 'Email',
+          description: 'Email help.',
+          error: 'Invalid email.',
+          invalid,
+        }),
+      );
+    reduce(true);
+    render(true);
+    const trigger = slot('field-feedback-trigger');
+    const svg = trigger.querySelector('svg')!;
+    const path = svg.querySelector('path')!;
+    const errorPath = path.getAttribute('d');
+    render(false);
+    const descriptionPath = path.getAttribute('d');
+    const messageId = slot('field-control').getAttribute('aria-describedby');
+    reduce(false);
+    trigger.focus();
+
+    render(true);
+    const startsFromDescription = path.getAttribute('d') === descriptionPath;
+    await new Promise((resolve) => setTimeout(resolve, 70));
+    const intermediate = path.getAttribute('d');
+    render(false);
+    const reversesFromCurrentPath = path.getAttribute('d') === intermediate;
+    await waitFor(() => path.getAttribute('d') === descriptionPath);
+
+    return {
+      differentTargets: descriptionPath !== errorPath,
+      startsFromDescription,
+      hasIntermediateFrame:
+        intermediate !== descriptionPath && intermediate !== errorPath,
+      reversesFromCurrentPath,
+      sameButton: slot('field-feedback-trigger') === trigger,
+      sameSvg: trigger.querySelector('svg') === svg,
+      samePath: svg.querySelector('path') === path,
+      focused: document.activeElement === trigger,
+      sameMessageId:
+        slot('field-control').getAttribute('aria-describedby') === messageId,
+      message: slot('field-description').textContent,
+    };
+  });
+  expect(result).toEqual({
+    differentTargets: true,
+    startsFromDescription: true,
+    hasIntermediateFrame: true,
+    reversesFromCurrentPath: true,
+    sameButton: true,
+    sameSvg: true,
+    samePath: true,
+    focused: true,
+    sameMessageId: true,
+    message: 'Email help.',
+  });
+});
+
+test('switches the same validity icon immediately with reduced motion', async ({
+  page,
+}) => {
+  const result = await page.evaluate(async () => {
+    const { h, mount, Field, slot, reduce } = window.designFixture;
+    const render = (invalid: boolean) =>
+      mount(
+        h(Field, {
+          label: 'Email',
+          description: 'Email help.',
+          error: 'Invalid email.',
+          invalid,
+        }),
+      );
+    reduce(true);
+    render(false);
+    const path = slot('field-feedback-trigger').querySelector('path')!;
+    const descriptionPath = path.getAttribute('d');
+    render(true);
+    const errorPath = path.getAttribute('d');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const stable = path.getAttribute('d') === errorPath;
+    render(false);
+    return {
+      samePath: slot('field-feedback-trigger').querySelector('path') === path,
+      changedImmediately: errorPath !== descriptionPath,
+      stable,
+      restoredImmediately: path.getAttribute('d') === descriptionPath,
+    };
+  });
+  expect(result).toEqual({
+    samePath: true,
+    changedImmediately: true,
+    stable: true,
+    restoredImmediately: true,
+  });
+});
+
 test('configures the built-in control and stacked supporting content', async ({
   page,
 }) => {
