@@ -17,7 +17,7 @@ icon: Palette
 - `neutral`：shadcn `neutral` 主题，取值来自 `shadcn@4.13.0` 的官方 registry。
 - `anthropic`：基于 `packages/design/DESIGN.md` 的 Claude / Anthropic 暖调主题。
 
-组件不再消费 `--momo-primary`、`--momo-background` 这类旧 alias；颜色统一用 `bg-*` 和 `fg-*` 区分背景与文本。
+背景颜色使用 `--momo-bg-*`，文本与图标颜色使用 `--momo-fg-*`；对应的 Tailwind utility 为 `bg-momo-bg-*` 和 `text-momo-fg-*`。
 
 ## 引入方式
 

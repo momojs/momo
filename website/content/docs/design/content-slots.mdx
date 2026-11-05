@@ -70,6 +70,8 @@ slot 配置不接受 `children`、字符串、数字、`true` 或 `null`，内�
 
 render 元素上非空值的 ID 优先于 slot props 的 ID；`id={undefined}` 或 `id={null}` 按未提供处理，保留 slot props 的 ID，或由语义节点生成 ID，确保 ARIA 引用与实际节点一致。
 
+部分组件属性还支持完整节点替换，例如 [Numeric 的独立插槽](/docs/design/numeric) 和 [Sheet 的遮罩与关闭节点](/docs/design/sheet)。这些属性直接接收 ReactNode 时会替换整个节点，不会像内容 `slots` 一样合并节点属性；具体配置规则见对应组件文档。
+
 ## 支持范围
 
 | 组件 | 内容字段 | 内容 slots |
@@ -108,18 +110,3 @@ const slots = {
 ```
 
 其他组件使用相同方式，例如 `PopoverProps["slots"]`、`AlertProps["slots"]` 或 `ToastProviderProps["slots"]`。组件还导出 `DialogContentSlots` 等节点类型映射；声明可直接传给组件的配置时，使用对应 Props 的 `slots` 类型。
-
-## 从旧属性迁移
-
-| 原写法 | 新写法 |
-| --- | --- |
-| Dialog / Popover `titleProps={props}` | `slots={{ title: props }}` |
-| Dialog / Popover `contentClassName="…"` | `slots={{ content: { className: "…" } }}` |
-| Dialog / Popover `headerClassName` 等内容区域样式 | 对应 `slots.header` / `title` / `description` / `footer` 的 `className` |
-| Drawer `content={{ className: "…" }}` | `slots={{ content: { className: "…" } }}`，现在只配置正文 |
-| Drawer / Sheet `title={<h3>标题</h3>}` 作为 render | `title="标题" slots={{ title: { render: <h3 /> } }}` |
-| Drawer / Sheet `footer` 的 render callback | `footer={内容}`，回调放到 `slots.footer.render` |
-| Alert `titleSlot={props}` 等 | `slots={{ title: props }}` 等 |
-| ToastProvider `close={{ label: "关闭" }}` 等 | `slots={{ close: { label: "关闭" } }}` 等 |
-
-部分组件属性还支持完整节点替换，例如 [Numeric 的独立插槽](/docs/design/numeric) 和 [Sheet 的遮罩与关闭节点](/docs/design/sheet)。这些属性直接接收 ReactNode 时会替换整个节点，不会像内容 `slots` 一样合并节点属性；具体配置规则见对应组件文档。

@@ -131,16 +131,6 @@ Hook **没有到期计时器**：到期不会单独触发重渲染，在下一�
 
 该约定不把传入实例中预填充的服务端数据当作 hydration 初值。需要展示服务端业务数据时，由页面通过 props 等方式传入并单独管理。
 
-## 从旧版迁移
-
-`initial` 选项及第二个默认值泛型已移除。旧实现只在首次读取时使用 `initial`，函数式更新却读取原始存储值，容易产生“显示 10，更新从 null 开始”的差异。现在展示回退值与更新基准都由调用方明确表达：
-
-```tsx
-const [stored, setStored] = useStoragefy(counter);
-const displayed = stored ?? 10;
-const increment = () => setStored((previous) => (previous ?? 10) + 1);
-```
-
 ## API
 
 ```ts
