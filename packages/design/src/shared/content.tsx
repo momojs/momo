@@ -4,6 +4,7 @@ import type { Key, ReactNode } from 'react';
 import { createElement, isValidElement } from 'react';
 
 import { useRender } from '@base-ui/react/use-render';
+import { isObjectType } from 'remeda';
 
 /** Content shared by composed surfaces. Values always describe children. */
 export interface ContentProps {
@@ -90,4 +91,10 @@ export function asContentSlots<
     resolved[name] = asContentSlot<Slots[typeof name]>(slots[name]);
   }
   return resolved;
+}
+
+export function toSlotProps<Props>(
+  arg?: false | ContentSlotProps<Props>,
+): Partial<ContentSlotProps<Props>> {
+  return isObjectType(arg) ? arg : {};
 }

@@ -28,6 +28,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import { isString } from 'remeda';
 
 import type { HighlightRegistrar } from '../hooks/index.js';
 import {
@@ -38,7 +39,7 @@ import {
 } from '../hooks/index.js';
 import { pose, useFeel } from '../motion/index.js';
 import type { ContentSlotConfig, ContentSlotProps } from '../shared/content.js';
-import { asContentSlots, hasContent } from '../shared/content.js';
+import { asContentSlots, hasContent, toSlotProps } from '../shared/content.js';
 import type { ControlOption, ControlSize } from '../shared/index.js';
 import { asClass } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
@@ -252,96 +253,108 @@ function ComboboxOption<T extends string | number>({
 export function Combobox<
   T extends string | number,
   Multiple extends boolean | undefined = false,
->(props: ComboboxProps<T, Multiple>) {
+>({
+  open,
+  multiple,
+  options,
+  className,
+  placeholder,
+  portalProps,
+  positionerProps,
+  popupProps,
+  listProps,
+  size = 'md',
+  side = 'bottom',
+  align = 'start',
+  clearable = false,
+  defaultOpen = false,
+  highlightItemOnHover = true,
+  emptyText = 'No results found.',
+  slots: _slots,
+  sideOffset = 6,
+  alignOffset = 0,
+  itemToStringLabel,
+  onItemHighlighted,
+  onOpenChange,
+  onValueChange,
+  onChange,
+  renderOption,
+  ...props
+}: ComboboxProps<T, Multiple>) {
+  const { disabled, readOnly } = props;
+
   const {
-    options,
-    size = 'md',
-    className,
-    placeholder,
-    clearable = false,
-    emptyText = 'No results found.',
-    renderOption,
-    slots: slotConfig,
-    portalProps,
-    positionerProps,
-    popupProps,
-    listProps,
-    side = 'bottom',
-    align = 'start',
-    sideOffset = 6,
-    alignOffset = 0,
-    open,
-    defaultOpen = false,
-    onOpenChange,
-    onValueChange,
-    onChange,
-    multiple,
-    itemToStringLabel,
-    highlightItemOnHover = true,
-    onItemHighlighted,
-    ...rootProps
-  } = props;
-  const slots = asContentSlots<ComboboxSlots>(slotConfig);
-  const control = slots.control || {};
-  const input = slots.input || {};
-  const item = slots.item || {};
-  const chip = slots.chip || {};
-  const empty = slots.empty || {};
-  const clear = slots.clear || {};
-  const trigger = slots.trigger || {};
+    clear,
+    input,
+    item,
+    chip,
+    empty,
+    trigger,
+    control,
+    chipRemove,
+    itemIndicator, //
+  } = asContentSlots<ComboboxSlots>(_slots);
+
   const [isOpen, setOpen] = useControllableValue({
     value: open,
     defaultValue: defaultOpen,
   });
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
-  const { disabled, readOnly } = rootProps;
-  const canClear = clearable && slots.clear !== false && !disabled && !readOnly;
+
   const { theme, transition, reduced, mode } = useFeel('ui');
-  const listRef = useRef<HTMLDivElement>(null);
+
+  const isClearable = clearable && clear !== false && !disabled && !readOnly;
+
+  const listLayer = useRef<HTMLDivElement>(null);
   const highlightLayer = useHighlightLayer<HTMLElement, HTMLDivElement>(
-    listRef,
+    listLayer,
   );
   const highlight = useHighlightRegistrar(highlightLayer);
   const mergedListRef = useMergedRefs<HTMLDivElement>(
-    listRef,
+    listLayer,
     listProps?.ref as Ref<HTMLDivElement> | undefined,
   );
-  const byValue = useMemo(
+
+  const map = useMemo(
     () => new Map(options.map((option) => [option.value, option])),
     [options],
   );
-  const items = useMemo(() => options.map(({ value }) => value), [options]);
+
+  const items = useMemo(
+    () => options.map(({ value }) => value), //
+    [options],
+  );
+
   const getLabel = useCallback(
     (value: T) => {
       if (itemToStringLabel) return itemToStringLabel(value);
-      const option = byValue.get(value);
-      return (
-        option?.textValue ??
-        (typeof option?.label === 'string' ? option.label : String(value))
-      );
+      const { label, textValue } = map.get(value) ?? {};
+      return textValue ?? (isString(label) ? label : String(value));
     },
-    [byValue, itemToStringLabel],
+    [map, itemToStringLabel],
   );
+
   // Same listbox entrance as Select: a short drop from the anchor plus scale.
   const closed = {
     opacity: 0,
     scale: reduced ? 1 : 0.98,
     y: reduced ? 0 : -theme.travel.hover,
   };
+
   const inputElement = (
     <BaseCombobox.Input
       placeholder={placeholder}
       {...input}
       data-slot='combobox-input'
-      className={asClass(variants.input(), input.className)}
+      className={asClass(variants.input(), toSlotProps(input).className)}
     />
   );
 
   return (
     <MotionConfig transition={transition}>
       <BaseCombobox.Root<T, Multiple>
-        {...rootProps}
+        {...props}
         multiple={multiple}
         items={items}
         itemToStringLabel={getLabel}
@@ -366,19 +379,19 @@ export function Combobox<
           {...control}
           // Touch taps also fire pointerenter; touch users reach clear via focus.
           onPointerEnter={(event) => {
-            control.onPointerEnter?.(event);
+            toSlotProps(control).onPointerEnter?.(event);
             if (event.pointerType === 'mouse') setHovered(true);
           }}
           onPointerLeave={(event) => {
-            control.onPointerLeave?.(event);
+            toSlotProps(control).onPointerLeave?.(event);
             setHovered(false);
           }}
           onFocus={(event) => {
-            control.onFocus?.(event);
+            toSlotProps(control).onFocus?.(event);
             setFocused(true);
           }}
           onBlur={(event) => {
-            control.onBlur?.(event);
+            toSlotProps(control).onBlur?.(event);
             const next = event.relatedTarget;
             if (!(next instanceof Node && event.currentTarget.contains(next))) {
               setFocused(false);
@@ -389,7 +402,7 @@ export function Combobox<
           className={asClass(
             variants.control({ size }),
             className,
-            control.className,
+            toSlotProps(control).className,
           )}
         >
           {multiple ? (
@@ -404,19 +417,22 @@ export function Combobox<
                       {...chip}
                       key={`${typeof value}:${value}`}
                       data-slot='combobox-chip'
-                      className={asClass(variants.chip(), chip.className)}
+                      className={asClass(
+                        variants.chip(),
+                        toSlotProps(chip).className,
+                      )}
                     >
                       <span className='truncate'>
-                        {byValue.get(value)?.label ?? getLabel(value)}
+                        {map.get(value)?.label ?? getLabel(value)}
                       </span>
-                      {slots.chipRemove !== false && (
+                      {chipRemove !== false && (
                         <BaseCombobox.ChipRemove
                           aria-label={`Remove ${getLabel(value)}`}
-                          {...slots.chipRemove}
+                          {...chipRemove}
                           data-slot='combobox-chip-remove'
                           className={asClass(
                             variants.action(),
-                            slots.chipRemove?.className,
+                            chipRemove?.className,
                           )}
                         >
                           <HugeiconsIcon
@@ -441,9 +457,9 @@ export function Combobox<
                 ? selected.length > 0
                 : selected != null;
               const action =
-                canClear && hasValue && (hovered || focused)
+                isClearable && hasValue && (hovered || focused)
                   ? 'clear'
-                  : slots.trigger !== false
+                  : trigger !== false
                     ? 'trigger'
                     : undefined;
               if (!action) return null;
@@ -463,7 +479,7 @@ export function Combobox<
                       className={asClass(
                         variants.action(),
                         'absolute inset-0',
-                        clear.className,
+                        toSlotProps(clear).className,
                       )}
                     >
                       {null}
@@ -476,7 +492,7 @@ export function Combobox<
                       className={asClass(
                         variants.action(),
                         'absolute inset-0',
-                        trigger.className,
+                        toSlotProps(trigger).className,
                       )}
                     >
                       {null}
@@ -539,7 +555,10 @@ export function Combobox<
                   <BaseCombobox.Empty
                     {...empty}
                     data-slot='combobox-empty'
-                    className={asClass(variants.empty(), empty.className)}
+                    className={asClass(
+                      variants.empty(),
+                      toSlotProps(empty).className,
+                    )}
                   >
                     {hasContent(emptyText) && emptyText}
                   </BaseCombobox.Empty>
@@ -555,15 +574,15 @@ export function Combobox<
                     />
                     <BaseCombobox.Collection>
                       {(value: T) => {
-                        const option = byValue.get(value);
+                        const option = map.get(value);
                         if (!option) return null;
                         return (
                           <ComboboxOption
                             key={`${typeof value}:${value}`}
                             option={option}
                             size={size}
-                            item={item}
-                            itemIndicator={slots.itemIndicator}
+                            item={toSlotProps(item)}
+                            itemIndicator={itemIndicator}
                             renderOption={renderOption}
                             highlight={highlight}
                           />
