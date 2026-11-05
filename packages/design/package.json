@@ -39,10 +39,6 @@
       "types": "./dist/components/button.d.ts",
       "import": "./dist/components/button.js"
     },
-    "./components/card": {
-      "types": "./dist/components/card.d.ts",
-      "import": "./dist/components/card.js"
-    },
     "./components/checkbox": {
       "types": "./dist/components/checkbox.d.ts",
       "import": "./dist/components/checkbox.js"
@@ -106,6 +102,10 @@
     "./components/ripples": {
       "types": "./dist/components/ripples.d.ts",
       "import": "./dist/components/ripples.js"
+    },
+    "./components/section": {
+      "types": "./dist/components/section.d.ts",
+      "import": "./dist/components/section.js"
     },
     "./components/select": {
       "types": "./dist/components/select.d.ts",

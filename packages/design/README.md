@@ -130,7 +130,7 @@ and Tailwind helpers. Focused entry points are also available:
 
 ```ts
 import { Drawer } from '@momots/design/components/drawer';
-import { Card } from '@momots/design/components/card';
+import { Section } from '@momots/design/components/section';
 import { Combobox } from '@momots/design/components/combobox';
 import { Highlight } from '@momots/design/components/highlight';
 import { Ripples } from '@momots/design/components/ripples';

@@ -10,15 +10,6 @@ import { createRoot } from 'react-dom/client';
 import { Alert, AlertRoot } from './components/alert';
 import { Badge } from './components/badge';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardRoot,
-  CardTitle,
-} from './components/card';
-import {
   Field,
   FieldCellValidity,
   FieldError,
@@ -31,6 +22,15 @@ import { Numeric } from './components/numeric';
 import { PickerDate } from './components/picker-date';
 import { PickerTime } from './components/picker-time';
 import { Rating } from './components/rating';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionFooter,
+  SectionHeader,
+  SectionRoot,
+  SectionTitle,
+} from './components/section';
 import { Select } from './components/select';
 import { TweenNumber } from './components/tween-number';
 import type { ControlOptions } from './hooks/use-controllable-value';
@@ -134,13 +134,6 @@ const api = {
   Alert,
   AlertRoot,
   Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardRoot,
-  CardTitle,
   Field,
   FieldCellValidity,
   FieldItem,
@@ -154,6 +147,13 @@ const api = {
   PickerDate,
   PickerTime,
   Rating,
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionFooter,
+  SectionHeader,
+  SectionRoot,
+  SectionTitle,
   Select,
   TweenNumber,
   SelectParts,

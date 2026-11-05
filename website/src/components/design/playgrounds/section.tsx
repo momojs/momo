@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 import { Badge } from '../../../../../packages/design/src/components/badge';
 import { Button } from '../../../../../packages/design/src/components/button';
-import type { CardVariant } from '../../../../../packages/design/src/components/card';
-import { Card } from '../../../../../packages/design/src/components/card';
+import type { SectionVariant } from '../../../../../packages/design/src/components/section';
+import { Section } from '../../../../../packages/design/src/components/section';
 import type { ControlSizeValue } from './shared';
 import {
   CheckboxControl,
@@ -16,13 +16,14 @@ import {
 } from './shared';
 
 const variantOptions = [
-  { value: 'default', label: 'Default' },
+  { value: 'muted', label: 'Muted' },
+  { value: 'raised', label: 'Raised' },
   { value: 'outline', label: 'Outline' },
   { value: 'ghost', label: 'Ghost' },
 ] as const;
 
-export function CardPlayground() {
-  const [variant, setVariant] = useState<CardVariant>('default');
+export function SectionPlayground() {
+  const [variant, setVariant] = useState<SectionVariant>('muted');
   const [size, setSize] = useState<ControlSizeValue>('md');
   const [title, setTitle] = useState('团队工作区');
   const [description, setDescription] = useState(
@@ -79,7 +80,7 @@ export function CardPlayground() {
         </>
       }
     >
-      <Card
+      <Section
         className='w-full max-w-sm'
         variant={variant}
         size={size}
@@ -115,7 +116,7 @@ export function CardPlayground() {
             </dl>
           </div>
         )}
-      </Card>
+      </Section>
     </PlaygroundFrame>
   );
 }

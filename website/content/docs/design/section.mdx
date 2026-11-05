@@ -1,0 +1,122 @@
+---
+title: Section
+description: 页面中带标题的内容分区，共享标题、说明、正文和页脚约定，标题自动为分区命名。
+icon: SquareStack
+---
+
+`Section` 表示页面的一部分：一组围绕同一主题的内容，例如设置页中的一个分组、仪表盘中的一块概览。它默认渲染原生 `<section>`，沿用 momo 的表面、圆角、文字与间距 token。内容 API 与 Drawer、Popover、Sheet、Dialog 一致：`title`、`description`、`children`、`footer` 提供内容，`slots` 配置节点。
+
+<SectionPlayground />
+
+## 基本用法
+
+```tsx
+import { Button } from '@momots/design/components/button';
+import { Section } from '@momots/design/components/section';
+
+<Section
+  title='通知'
+  description='选择需要提醒的事项。'
+  footer={<Button size='sm'>保存</Button>}
+>
+  <NotificationSettings />
+</Section>
+```
+
+只渲染有内容的区域。省略标题与说明时，不创建 header；省略正文或 footer 时，不创建对应节点，也不保留区域之间的空隙。与其他内容插槽一致，`0` 和空字符串是有效内容，`undefined`、`null`、`false` 表示缺省。
+
+## 外观与间距
+
+| 属性 | 默认值 | 说明 |
+| --- | --- | --- |
+| `variant` | `muted` | `muted` 为弱化表面、无边框，适合分组；`raised` 为主题表面、边框和轻阴影；`outline` 为透明背景与边框；`ghost` 为透明背景且不显示边框，只保留语义与间距 |
+| `size` | `md` | `sm` / `md` / `lg` 调整分区内边距与各区域间距，对应 `momo-space-sm` / `md` / `lg` |
+| `className` | — | 根节点样式，用于宽度、布局等定制 |
+| `render` | — | 根节点的元素或 `(props, state) => JSX` 回调 |
+| `slots` | — | header、标题、说明、正文和页脚的节点配置 |
+
+`size` 不限制分区宽高。用 `className` 中的布局类控制宽度，正文默认随内容自然增长，页脚中的操作可以换行。
+
+## 内容插槽
+
+```tsx
+<Section
+  title='工作区设置'
+  description='修改对外展示的信息。'
+  footer={<Button>保存</Button>}
+  slots={{
+    header: <header />,
+    title: { render: <h2 />, id: 'workspace-title' },
+    description: <p />,
+    content: { className: 'grid gap-momo-sm' },
+    footer: (props, _state) => <footer {...props} />,
+  }}
+>
+  <SettingsForm />
+</Section>
+```
+
+每个 slot 支持属性对象、元素简写、render 回调或 `false`；元素和回调也可以放在对象的 `render` 字段中。回调应转发 `props`（包含 ref 和 children），保留样式、事件与内容。
+
+| Slot | 默认节点 | 内容来源 |
+| --- | --- | --- |
+| `header` | `div` | 标题与说明的容器 |
+| `title` | `h3` | `title` |
+| `description` | `div` | `description`，支持富文本和块级内容 |
+| `content` | `div` | `children` |
+| `footer` | `div` | `footer` |
+
+`slots.header=false` 同时移除标题与说明。要改变标题层级，用 `slots.title={{ render: <h2 /> }}`，内容仍放在 `title`。不要将 `children` 放进 slot 配置中。完整约定见 [Content Slots](/docs/design/content-slots)。
+
+## 语义与可访问名称
+
+根节点默认是 `<section>`。渲染了标题时，Section 自动为标题生成 `id`，并在根节点上设置 `aria-labelledby`，使分区成为以标题命名的 `region` 地标。服务端渲染的标记中已经包含这一关联。
+
+| 情况 | 结果 |
+| --- | --- |
+| 渲染了标题 | `aria-labelledby` 指向标题；标题已有 `id` 时沿用该 `id` |
+| 没有标题，或 `slots.header` / `slots.title` 为 `false` | 不设置 `aria-labelledby`；未命名的 `<section>` 不构成地标 |
+| 显式传入 `aria-label` 或 `aria-labelledby` | 使用显式值，不再自动关联 |
+
+```tsx
+<Section title='隐私' slots={{ title: { id: 'privacy-title' } }}>
+  照片访问与数据导出。
+</Section>
+// <section aria-labelledby="privacy-title">…<h3 id="privacy-title">隐私</h3>…
+
+<Section aria-label='账户' title='登录信息'>
+  …
+</Section>
+```
+
+根 render 回调收到 `SectionState`，包含 `slot: 'section'`、`variant` 和 `size`；这些值也以 `data-slot`、`data-variant`、`data-size` 输出。内容节点的 render state 是空对象。
+
+Section 不添加可点击语义、Tab 停靠点或 live region。它描述的是页面结构，不是可操作的对象：分区内的按钮和链接各自负责交互。列表中可重复的独立条目（一条记录、一件商品）语义上是 `<article>` 或 `<li>`，不应作为页面分区；确需复用 Section 的外观时，用 `render={<article />}` 或 `render={<li />}` 改变根节点。
+
+## 自由组合
+
+需要自定义 header 或不同的内容顺序时，使用独立节点：
+
+```tsx
+import {
+  SectionRoot, SectionHeader, SectionTitle, SectionDescription,
+  SectionContent, SectionFooter,
+} from '@momots/design/components/section';
+
+<SectionRoot size='lg'>
+  <SectionHeader>
+    <SectionTitle render={<h2 />}>团队工作区</SectionTitle>
+    <SectionDescription>成员与项目一览。</SectionDescription>
+    <Badge>Pro</Badge>
+  </SectionHeader>
+  <SectionContent><ProjectList /></SectionContent>
+  <SectionFooter className='justify-between'>
+    <span>8 位成员</span>
+    <Button>管理成员</Button>
+  </SectionFooter>
+</SectionRoot>
+```
+
+所有独立节点都支持原生属性、ref 和 `render`。`SectionTitle` 会向最近的 `SectionRoot` 登记自己的 `id`，因此手动组合时同样自动命名分区；这一关联在挂载后建立，需要服务端标记中就带有 `aria-labelledby` 时，使用 `Section` 或显式设置 `aria-labelledby`。一个 `SectionRoot` 中只放一个 `SectionTitle`。
+
+`SectionRoot` 只提供表面与区域间距，直接渲染传入的 children；`Section` 则根据内容属性自动生成这套结构。嵌套分区各自使用自己的 `size`，标题也只命名各自所在的分区。
