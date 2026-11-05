@@ -63,6 +63,7 @@ export function SelectPlayground() {
     {
       value: 'apple' as const,
       label: 'Apple',
+      extra: 'Popular',
       icon: showIcons ? <Icon icon={Apple01Icon} /> : undefined,
     },
     {

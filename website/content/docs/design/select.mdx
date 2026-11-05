@@ -40,7 +40,24 @@ import { Select } from "@momots/design/components/select";
 ```
 
 `onChange` 是 momo 的简化回调，只在非空选项值变化时触发；需要完整 Base UI 事件信息或处理 `null` 值时，使用 `onValueChange`。
-`open` / `value` 都通过 momo 的 `useControllableValue` 处理，因此受控与非受控行为和其他表单组件保持一致。
+`open` 通过 momo 的 `useControllableValue` 处理；`value` / `defaultValue` 交由 Base UI 管理选中状态。
+
+## 选项布局
+
+选项与 Menu 使用相同的列顺序：`[图标或占位] [标题] [可选辅助信息] [指示器]`。`options[].icon` 显示在逻辑起点，`options[].extra` 显示在标题与指示器之间。两端的图标和指示器列始终保留固定宽度，因此没有图标、切换选中状态或设置 `itemIndicator={false}` 都不会改变标题起点。选中状态由末端勾选表达，不改变文字字重。
+
+```tsx
+<Select
+  options={[
+    { value: 'personal', label: '个人空间', extra: '免费' },
+    { value: 'team', label: '团队空间', icon: <TeamIcon />, extra: '专业版' },
+  ]}
+/>
+```
+
+标题与过长的辅助信息会省略显示；辅助信息最多占一行可用宽度的 40%。`extra` 保留可访问文本，装饰图标与勾选对辅助技术隐藏，选中状态通过 Base UI 的 `aria-selected` 表达。选中的触发器文本仍取自 `label`，不包含 `extra`。
+
+RTL 场景使用 Base UI 的 `DirectionProvider direction='rtl'` 并为应用容器设置 `dir='rtl'`；Portal 浮层会继承 provider 的方向，图标与勾选按照 start / end 镜像排列。
 
 ## 自定义弹层
 
@@ -87,7 +104,7 @@ const [fruits, setFruits] = useState<Fruit[]>(["apple", "cherry"]);
 | --- | --- | --- |
 | `value` | `T \| null`；多选为 `T[]` | 当前选中值 |
 | `defaultValue` | `T \| null`；多选为 `T[]` | 非受控默认值 |
-| `options` | `ControlOption<T>[]` | 简化选项列表，支持 `label`、`icon`、`disabled`、`className`、`style`、`textValue` |
+| `options` | `ControlOption<T>[]` | 简化选项列表，支持 `label`、`icon`、`extra`、`disabled`、`className`、`style`、`textValue` |
 | `items` | Base UI Root `items` | 传给内部 Root 的 value-label 映射；默认使用 `options` |
 | `children` | `ReactNode` | 自定义 `List` 内部内容，适合分组或自定义 item |
 | `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |

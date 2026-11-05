@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 
+import { useDirection } from '@base-ui/react/direction-provider';
 import type {
   SelectIconProps as BaseSelectIconProps,
   SelectItemIndicatorProps as BaseSelectItemIndicatorProps,
@@ -49,6 +50,7 @@ import {
   useHighlightTrigger,
 } from '../hooks/use-highlight.js';
 import { pose, useFeel } from '../motion/index.js';
+import { hasContent } from '../shared/content.js';
 import type {
   ControlOption,
   ControlValue,
@@ -77,7 +79,7 @@ const {
 
 const variants = {
   trigger: cva({
-    base: 'inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-momo-md border border-momo-border-input bg-momo-bg-canvas text-left text-momo-fg-default shadow-momo-sm outline-none transition-[background-color,border-color,box-shadow,color,transform] hover:border-momo-border-strong hover:bg-momo-bg-surface-raised focus-visible:border-momo-ring-focus focus-visible:ring-2 focus-visible:ring-momo-ring-focus/35',
+    base: 'inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-momo-md border border-momo-border-input bg-momo-bg-canvas text-start text-momo-fg-default shadow-momo-sm outline-none transition-[background-color,border-color,box-shadow,color,transform] hover:border-momo-border-strong hover:bg-momo-bg-surface-raised focus-visible:border-momo-ring-focus focus-visible:ring-2 focus-visible:ring-momo-ring-focus/35',
     variants: {
       size: {
         sm: 'h-8 px-2.5 text-sm',
@@ -132,22 +134,18 @@ const variants = {
     base: 'z-50 outline-none',
   }),
   popup: cva({
-    base: 'relative max-h-[min(var(--available-height),18rem)] min-w-[max(var(--anchor-width),12rem)] overflow-hidden rounded-momo-md border border-momo-border-default bg-momo-bg-overlay p-1 text-momo-fg-default shadow-lg outline-none [transform-origin:var(--transform-origin)]',
+    base: 'relative max-h-[min(var(--available-height),18rem)] min-w-[max(var(--anchor-width),12rem)] max-w-(--available-width) overflow-hidden rounded-momo-md border border-momo-border-default bg-momo-bg-overlay p-1 text-momo-fg-default shadow-lg outline-none [transform-origin:var(--transform-origin)]',
   }),
   list: cva({
     base: 'relative max-h-[inherit] overflow-y-auto overscroll-contain p-0.5',
   }),
   item: cva({
-    base: 'relative z-1 flex min-h-8 cursor-default select-none items-center gap-2 rounded-momo-sm py-1.5 pl-8 pr-2.5 text-momo-body-sm text-momo-fg-default outline-none transition-colors [&_svg]:size-4',
+    base: 'relative z-1 grid min-h-8 cursor-default select-none grid-cols-[--spacing(4)_minmax(0,1fr)_fit-content(40%)_--spacing(4)] items-center gap-momo-xs rounded-momo-sm px-momo-sm py-1.5 text-start text-momo-body-sm text-momo-fg-default outline-none transition-colors [&_svg]:size-4',
     variants: {
       size: {
         sm: 'min-h-7 py-1 text-xs',
         md: 'min-h-8 py-1.5 text-sm',
         lg: 'min-h-9 py-2 text-sm',
-      },
-      selected: {
-        true: 'font-medium',
-        false: '',
       },
       disabled: {
         true: 'pointer-events-none text-momo-fg-subtle opacity-50',
@@ -156,15 +154,14 @@ const variants = {
     },
     defaultVariants: {
       size: 'md',
-      selected: false,
       disabled: false,
     },
   }),
   itemIndicator: cva({
-    base: 'absolute left-2.5 grid size-4 place-items-center text-momo-fg-brand',
+    base: 'col-start-4 row-start-1 grid size-4 place-items-center text-momo-fg-brand',
   }),
   itemText: cva({
-    base: 'min-w-0 flex-1 truncate',
+    base: 'col-start-2 row-start-1 min-w-0 truncate',
   }),
   scrollArrow: cva({
     base: 'flex h-6 items-center justify-center rounded-momo-sm bg-momo-bg-overlay text-momo-fg-muted',
@@ -271,8 +268,10 @@ function SelectPositioner({
   sideOffset = 6,
   ...props
 }: SelectPositionerSlotProps) {
+  const direction = useDirection();
   return (
     <Positioner
+      dir={direction}
       {...asData('select-positioner')}
       alignItemWithTrigger={alignItemWithTrigger}
       sideOffset={sideOffset}
@@ -309,10 +308,7 @@ function SelectPopup({
           <motion.div
             transition={transition}
             initial={hidden}
-            animate={pose(
-              { opacity: 1, scale: 1, y: 0 },
-              mode,
-            )}
+            animate={pose({ opacity: 1, scale: 1, y: 0 }, mode)}
             exit={hidden}
             style={{ willChange: 'transform, opacity' }}
           />
@@ -349,7 +345,7 @@ function SelectItem({ className, size, ...props }: SelectItemSlotProps) {
       {...asData('select-item')}
       data-size={size}
       className={asClass<SelectItemState>(
-        ({ disabled, selected }) => variants.item({ size, selected, disabled }),
+        ({ disabled }) => variants.item({ size, disabled }),
         className,
       )}
       {...props}
@@ -385,6 +381,7 @@ function SelectItemIndicator({
   return (
     <ItemIndicator
       {...asData('select-item-indicator')}
+      aria-hidden
       className={asClass<SelectItemIndicatorState>(
         variants.itemIndicator(),
         className,
@@ -566,6 +563,7 @@ function OptionItem<T extends ControlValue>({
   size,
   className,
   icon,
+  extra,
   textValue,
   item: itemConfig,
   itemText: itemTextConfig,
@@ -598,10 +596,11 @@ function OptionItem<T extends ControlValue>({
     size,
     children: (
       <>
-        {icon && (
+        {hasContent(icon) && (
           <span
             {...asData('select-item-icon')}
-            className='grid size-4 shrink-0 place-items-center text-momo-fg-muted'
+            aria-hidden
+            className='col-start-1 row-start-1 grid size-4 place-items-center text-momo-fg-muted'
           >
             {icon}
           </span>
@@ -614,6 +613,14 @@ function OptionItem<T extends ControlValue>({
             itemTextClassName,
           ),
           label ?? value,
+        )}
+        {hasContent(extra) && (
+          <span
+            {...asData('select-item-extra')}
+            className='col-start-3 row-start-1 min-w-0 truncate text-momo-caption text-momo-fg-muted'
+          >
+            {extra}
+          </span>
         )}
         {render(
           SelectItemIndicator,
@@ -824,10 +831,6 @@ export function Select<
     value: open,
     defaultValue: defaultOpen,
   });
-  const [selected, setSelected] = useControllableValue({
-    value,
-    defaultValue,
-  });
   const resolvedSize = size ?? 'md';
 
   const configuredValue = configureValueSlot(
@@ -945,7 +948,8 @@ export function Select<
         required={required}
         items={items ?? options}
         open={isOpen}
-        value={selected ?? null}
+        value={value}
+        defaultValue={defaultValue}
         highlightItemOnHover={highlightItemOnHover}
         onValueChange={(next, details) => {
           onValueChange?.(
@@ -956,7 +960,6 @@ export function Select<
           );
           if (details.isCanceled) return;
 
-          setSelected(next);
           if (next !== null) {
             onChange?.(next as SelectChangeValue<T, Multiple>);
           }

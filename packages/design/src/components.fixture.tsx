@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { createElement, createRef } from 'react';
 
+import { DirectionProvider } from '@base-ui/react/direction-provider';
 import { Field as FieldParts } from '@base-ui/react/field';
 import { Form } from '@base-ui/react/form';
 import { Select as SelectParts } from '@base-ui/react/select';
@@ -132,6 +133,7 @@ const api = {
   click,
   slot,
   reduce,
+  DirectionProvider,
   Alert,
   AlertRoot,
   Badge,
