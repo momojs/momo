@@ -22,6 +22,7 @@ export * from './ripples.js';
 export * from './section.js';
 export * from './select.js';
 export * from './sheet.js';
+export * from './skeleton.js';
 export * from './slider.js';
 export * from './spinner.js';
 export * from './switch.js';

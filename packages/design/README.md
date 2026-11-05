@@ -125,6 +125,24 @@ import { Icon } from '@momots/design/components/icon';
 `morph={false}` to disable transitions. Filled, multicolor, and transformed
 artwork should keep its original renderer.
 
+`Skeleton` reserves the final layout of content that has not arrived yet:
+`variant` is `shimmer`, `pulse` or `solid`, `shape` picks a themed corner
+radius, and `SkeletonText` renders `lines` rows at the host's line height with
+an optional short final line. Both are `aria-hidden` by default and fall back
+to a static frame under reduced motion; put `aria-busy` on the element that
+owns the data.
+
+```tsx
+import {
+  Skeleton,
+  SkeletonReveal,
+  SkeletonText,
+} from '@momots/design/components/skeleton';
+
+<Skeleton shape='circle' className='size-14' />;
+<SkeletonText lines={2} lastLineRatio={0.5} className='text-momo-body-sm' />;
+```
+
 The root entry exports the supported components, hooks, shared types,
 and Tailwind helpers. Focused entry points are also available:
 
@@ -135,6 +153,11 @@ import { Combobox } from '@momots/design/components/combobox';
 import { Menu, MenuItem } from '@momots/design/components/menu';
 import { Highlight } from '@momots/design/components/highlight';
 import { Ripples } from '@momots/design/components/ripples';
+import {
+  Skeleton,
+  SkeletonReveal,
+  SkeletonText,
+} from '@momots/design/components/skeleton';
 import { Tooltip, TooltipProvider } from '@momots/design/components/tooltip';
 import {
   useAutoSize,

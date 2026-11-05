@@ -29,6 +29,7 @@
     "section",
     "select",
     "combobox",
+    "skeleton",
     "slider",
     "tabs",
     "picker-core",

@@ -119,6 +119,10 @@
       "types": "./dist/components/sheet.d.ts",
       "import": "./dist/components/sheet.js"
     },
+    "./components/skeleton": {
+      "types": "./dist/components/skeleton.d.ts",
+      "import": "./dist/components/skeleton.js"
+    },
     "./components/slider": {
       "types": "./dist/components/slider.d.ts",
       "import": "./dist/components/slider.js"

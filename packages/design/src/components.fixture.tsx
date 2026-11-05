@@ -32,6 +32,7 @@ import {
   SectionTitle,
 } from './components/section';
 import { Select } from './components/select';
+import { Skeleton, SkeletonReveal, SkeletonText } from './components/skeleton';
 import { TweenNumber } from './components/tween-number';
 import type { ControlOptions } from './hooks/use-controllable-value';
 import { useControllableValue } from './hooks/use-controllable-value';
@@ -155,6 +156,9 @@ const api = {
   SectionRoot,
   SectionTitle,
   Select,
+  Skeleton,
+  SkeletonReveal,
+  SkeletonText,
   TweenNumber,
   SelectParts,
   useControllableValue,

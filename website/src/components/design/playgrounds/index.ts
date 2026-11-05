@@ -23,6 +23,14 @@ export { RatingPlayground } from './rating';
 export { SectionPlayground } from './section';
 export { SelectPlayground } from './select';
 export { SheetPlayground } from './sheet';
+export { SkeletonPlayground } from './skeleton';
+export {
+  SkeletonArticleDemo,
+  SkeletonGalleryDemo,
+  SkeletonListDemo,
+  SkeletonProfileDemo,
+  SkeletonSectionDemo,
+} from './skeleton-scenes';
 export { SliderPlayground } from './slider';
 export { SwitchPlayground } from './switch';
 export { TabsPlayground } from './tabs';
