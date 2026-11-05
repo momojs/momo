@@ -1,5 +1,6 @@
 import { StrictMode, useState } from 'react';
 
+import { DirectionProvider } from '@base-ui/react/direction-provider';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
@@ -21,6 +22,7 @@ interface Config {
   cancelValue?: boolean;
   cancelOpen?: boolean;
   open?: boolean;
+  hideIndicator?: boolean;
 }
 let configure: (config: Config) => void;
 const changes: unknown[] = [];
@@ -38,6 +40,71 @@ declare global {
   }
 }
 window.comboboxFixture = api;
+
+function LayoutApp() {
+  const direction =
+    new URLSearchParams(location.search).get('direction') === 'rtl'
+      ? 'rtl'
+      : 'ltr';
+  const [values, setValues] = useState<string[]>(
+    scenario === 'long' ? ['long'] : [],
+  );
+  const [config, setConfig] = useState<Config>({});
+  configure = (next) => setConfig((previous) => ({ ...previous, ...next }));
+  const layoutOptions: ControlOption<string>[] =
+    scenario === 'long'
+      ? [
+          {
+            value: 'long',
+            label: 'An extremely long workspace title that needs truncation',
+            extra: 'An extremely long current value that needs truncation',
+            icon: <span aria-label='Decorative workspace icon'>★</span>,
+          },
+        ]
+      : [
+          {
+            value: 'team',
+            label: 'Team workspace',
+            extra: 'Pro',
+            icon: <span aria-label='Decorative workspace icon'>★</span>,
+          },
+          { value: 'personal', label: 'Personal workspace', extra: 0 },
+          { value: 'disabled', label: 'Unavailable', disabled: true },
+        ];
+  return (
+    <MotionUIThemeProvider theme={defineTheme({ reducedMotion: 'off' })}>
+      <DirectionProvider direction={direction}>
+        <div dir={direction} style={{ width: 280, maxWidth: '100%' }}>
+          <label htmlFor='fruit'>Fruit</label>
+          <Combobox
+            multiple
+            value={values}
+            options={layoutOptions}
+            slots={{
+              input: { id: 'fruit' },
+              itemIndicator: config.hideIndicator ? false : undefined,
+            }}
+            renderOption={
+              scenario === 'custom'
+                ? (option) => (
+                    <div data-testid='custom-option'>
+                      <strong>Custom {option.label}</strong>{' '}
+                      <span>Additional custom content</span>
+                    </div>
+                  )
+                : undefined
+            }
+            onChange={(next) => {
+              changes.push(next);
+              setValues(next);
+            }}
+          />
+          <output id='value'>{JSON.stringify(values)}</output>
+        </div>
+      </DirectionProvider>
+    </MotionUIThemeProvider>
+  );
+}
 
 function App() {
   const [value, setValue] = useState<string | number | null>(null);
@@ -120,6 +187,10 @@ function App() {
 type BaseInputProps = React.ComponentPropsWithRef<'input'>;
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {['layout', 'long', 'custom'].includes(scenario ?? '') ? (
+      <LayoutApp />
+    ) : (
+      <App />
+    )}
   </StrictMode>,
 );

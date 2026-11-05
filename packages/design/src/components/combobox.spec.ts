@@ -299,3 +299,182 @@ test('readonly and disabled controls keep the arrow even with a value', async ({
     page.getByRole('button', { name: 'Clear selection' }),
   ).toHaveCount(0);
 });
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  test(`keeps option columns and font weight stable across selection and hidden indicators in ${direction}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/combobox?case=layout&direction=${direction}`);
+    await page.getByRole('button', { name: 'Show options' }).click();
+    await expect(page.locator('[data-slot=combobox-popup]')).toHaveCSS(
+      'direction',
+      direction,
+    );
+    const measure = () =>
+      page.getByRole('option').evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const item = node.getBoundingClientRect();
+          const text = node.querySelector('[data-slot=combobox-item-text]')!;
+          const box = text.getBoundingClientRect();
+          return {
+            left: box.left - item.left,
+            right: item.right - box.right,
+            width: box.width,
+            height: item.height,
+            fontWeight: getComputedStyle(text).fontWeight,
+          };
+        }),
+      );
+    const before = await measure();
+    const start = direction === 'ltr' ? 'left' : 'right';
+    for (const box of before)
+      expect(box[start]).toBeCloseTo(before[0]![start], 1);
+    const team = page.getByRole('option', { name: 'Team workspace Pro' });
+    const personal = page.getByRole('option', { name: 'Personal workspace 0' });
+    await expect(team).toHaveAttribute('aria-selected', 'false');
+    await expect(
+      team.locator('[data-slot=combobox-item-icon]'),
+    ).toHaveAttribute('aria-hidden', 'true');
+    await expect(
+      personal.locator('[data-slot=combobox-item-icon]'),
+    ).toHaveCount(0);
+    await expect(
+      personal.locator('[data-slot=combobox-item-extra]'),
+    ).toHaveText('0');
+    await team.click();
+    await expect(team).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      team.locator('[data-slot=combobox-item-indicator]'),
+    ).toBeVisible();
+    expect(await measure()).toEqual(before);
+    const ordered = await team.evaluate((node, direction) => {
+      const boxes = ['icon', 'text', 'extra', 'indicator'].map((name) =>
+        node
+          .querySelector(`[data-slot=combobox-item-${name}]`)!
+          .getBoundingClientRect(),
+      );
+      return boxes.every(
+        (box, index) =>
+          index === 0 ||
+          (direction === 'ltr'
+            ? box.left > boxes[index - 1]!.right
+            : box.right < boxes[index - 1]!.left),
+      );
+    }, direction);
+    expect(ordered).toBe(true);
+    await team.click();
+    await expect(team).toHaveAttribute('aria-selected', 'false');
+    expect(await measure()).toEqual(before);
+    await page.evaluate(() =>
+      window.comboboxFixture.configure({ hideIndicator: true }),
+    );
+    await expect(
+      page.locator('[data-slot=combobox-item-indicator]'),
+    ).toHaveCount(0);
+    expect(await measure()).toEqual(before);
+    await personal.click();
+    await expect(personal).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#value')).toHaveText('["personal"]');
+    expect(await measure()).toEqual(before);
+  });
+
+  test(`truncates long labels and auxiliary content within the viewport in ${direction}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/combobox?case=long&direction=${direction}`);
+    await page.getByRole('button', { name: 'Show options' }).click();
+    const option = page.getByRole('option');
+    await expect(option).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      option.locator('[data-slot=combobox-item-indicator]'),
+    ).toBeVisible();
+    const result = await option.evaluate((node) => {
+      const text = node.querySelector('[data-slot=combobox-item-text]')!;
+      const extra = node.querySelector('[data-slot=combobox-item-extra]')!;
+      const indicator = node.querySelector(
+        '[data-slot=combobox-item-indicator]',
+      )!;
+      const itemBox = node.getBoundingClientRect();
+      const indicatorBox = indicator.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      const contentWidth =
+        itemBox.width -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight);
+      return {
+        fits: node.scrollWidth <= node.clientWidth,
+        textTruncated: text.scrollWidth > text.clientWidth,
+        extraTruncated: extra.scrollWidth > extra.clientWidth,
+        textOverflow: getComputedStyle(text).textOverflow,
+        extraOverflow: getComputedStyle(extra).textOverflow,
+        extraRatio: extra.getBoundingClientRect().width / contentWidth,
+        indicatorFits:
+          indicatorBox.left >= itemBox.left &&
+          indicatorBox.right <= itemBox.right,
+      };
+    });
+    expect(result).toMatchObject({
+      fits: true,
+      textTruncated: true,
+      extraTruncated: true,
+      textOverflow: 'ellipsis',
+      extraOverflow: 'ellipsis',
+      indicatorFits: true,
+    });
+    expect(result.extraRatio).toBeLessThanOrEqual(0.405);
+    const popup = await page
+      .locator('[data-slot=combobox-popup]')
+      .boundingBox();
+    expect(popup!.x).toBeGreaterThanOrEqual(0);
+    expect(popup!.x + popup!.width).toBeLessThanOrEqual(320);
+  });
+}
+
+test('custom option content replaces the default cells and retains selection', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/combobox?case=custom');
+  await page.getByRole('button', { name: 'Show options' }).click();
+  const option = page.getByRole('option', {
+    name: 'Custom Team workspace Additional custom content',
+  });
+  await expect(option.getByTestId('custom-option')).toHaveText(
+    'Custom Team workspace Additional custom content',
+  );
+  for (const name of ['icon', 'text', 'extra'])
+    await expect(
+      option.locator(`[data-slot=combobox-item-${name}]`),
+    ).toHaveCount(0);
+  await option.click();
+  await expect(option).toHaveAttribute('aria-selected', 'true');
+  await expect(
+    option.locator('[data-slot=combobox-item-indicator]'),
+  ).toBeVisible();
+  await expect(page.locator('#value')).toHaveText('["team"]');
+  const layout = await option.evaluate((node) => {
+    const item = node.getBoundingClientRect();
+    const content = node
+      .querySelector('[data-testid=custom-option]')!
+      .getBoundingClientRect();
+    const indicator = node
+      .querySelector('[data-slot=combobox-item-indicator]')!
+      .getBoundingClientRect();
+    return {
+      startsBeforeSecondColumn: content.left - item.left < indicator.width,
+      endsBeforeIndicator: content.right <= indicator.left,
+      sharesRow:
+        content.top < indicator.bottom && indicator.top < content.bottom,
+      fits: node.scrollWidth <= node.clientWidth,
+    };
+  });
+  expect(layout).toEqual({
+    startsBeforeSecondColumn: true,
+    endsBeforeIndicator: true,
+    sharesRow: true,
+    fits: true,
+  });
+});

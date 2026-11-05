@@ -35,6 +35,22 @@ const options = [
 
 输入框应有对应的 `label`、`Field.Label` 或 `slots.input['aria-label']`；placeholder 只提供输入提示。
 
+## 选项布局
+
+默认选项按逻辑方向排列为四列：`[图标或占位] [标题] [可选辅助信息] [末尾勾选]`。`icon` 位于逻辑起点，`extra` 位于标题与勾选之间；没有图标时仍保留图标列，未选中或 `slots.itemIndicator={false}` 时仍保留末尾列，因此标题起点不会随选项内容或选中状态改变。选中状态使用勾选表达，不增加文字字重。
+
+```tsx
+<Combobox
+  options={[
+    { value: 'personal', label: '个人空间', extra: '免费' },
+    { value: 'team', label: '团队空间', icon: <TeamIcon />, extra: '适合多人协作的专业版空间' },
+  ]}
+  slots={{ input: { 'aria-label': '选择空间' } }}
+/>
+```
+
+标题与过长的辅助信息使用单行省略显示，`extra` 最多占可用行宽的 40%，为标题保留空间。辅助信息的完整文本仍可由辅助技术读取；图标与勾选属于装饰内容，对辅助技术隐藏，选中状态由 Base UI 的 `aria-selected` 表达。搜索文本、单选输入框和多选标签的文字仍取自 `textValue` / `label`，不包含 `extra`。
+
 ## 受控与多选
 
 ```tsx
@@ -79,7 +95,7 @@ const [values, setValues] = useState<string[]>(['react']);
 />
 ```
 
-可配置 `control`、`input`、`trigger`、`clear`、`item`、`itemIndicator`、`chip`、`chipRemove`、`empty`。`trigger`、`clear`、`itemIndicator`、`chipRemove` 支持 `false` 隐藏。render 回调需转发传入的 props 和 ref，以保留语义、交互和定位。`renderOption` 只替换选项的可见内容。
+可配置 `control`、`input`、`trigger`、`clear`、`item`、`itemIndicator`、`chip`、`chipRemove`、`empty`。`trigger`、`clear`、`itemIndicator`、`chipRemove` 支持 `false` 隐藏。render 回调需转发传入的 props 和 ref，以保留语义、交互和定位。`renderOption` 替换默认的图标、标题和辅助信息，承载节点占据前三列，末尾勾选仍由 `itemIndicator` 管理；自定义内容的内部布局、截断与可访问文本由调用方负责。
 
 后缀区域只有一个图标位。`trigger` 与 `clear` 是覆盖在该位置上的透明按钮，图标由组件统一渲染，不读取它们的 `children`，所以 render 回调不需要提供图标或文字。同一时刻只挂载其中一个按钮：
 
@@ -93,6 +109,23 @@ const [values, setValues] = useState<string[]>(['react']);
 `slots` 遵循 [Content Slots](/docs/design/content-slots) 的配置规则；内容仍由顶层属性提供。`emptyText` 是空结果的内容，`slots.empty` 配置承载它的节点；`emptyText` 为 `undefined`、`null` 或 `false` 时不显示文字，但空结果节点保持挂载，以便读屏器播报结果变化。
 
 `className` 用于整个输入组。`portalProps`、`positionerProps`、`popupProps`、`listProps` 配置对应层；弹层的 render 由 Motion 管理。默认 Portal 挂载到 `body`，局部主题可用 `portalProps.container` 指定挂载位置。
+
+## RTL
+
+使用 Base UI 的 `DirectionProvider` 设置交互方向，并在应用容器设置对应的 `dir`。弹层会把 provider 的方向带入 Portal，即使默认挂载到 `body`，图标、辅助信息与末尾勾选也会按逻辑方向镜像排列。
+
+```tsx
+import { DirectionProvider } from '@base-ui/react/direction-provider';
+
+<DirectionProvider direction='rtl'>
+  <div dir='rtl'>
+    <Combobox
+      options={options}
+      slots={{ input: { 'aria-label': '选择框架' } }}
+    />
+  </div>
+</DirectionProvider>
+```
 
 ## 尺寸与定位
 

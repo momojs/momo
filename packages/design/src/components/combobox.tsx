@@ -20,6 +20,7 @@ import type {
   ComboboxTriggerProps,
 } from '@base-ui/react/combobox';
 import { Combobox as BaseCombobox } from '@base-ui/react/combobox';
+import { useDirection } from '@base-ui/react/direction-provider';
 import {
   Cancel01Icon,
   CheckIcon,
@@ -79,19 +80,18 @@ const variants = {
     base: 'px-momo-md py-momo-sm text-momo-body-sm text-momo-fg-muted empty:p-0',
   }),
   item: cva({
-    base: 'relative z-1 flex cursor-default select-none items-center gap-momo-xs rounded-momo-sm px-momo-sm py-momo-xs outline-none transition-colors',
+    base: 'relative z-1 grid cursor-default select-none grid-cols-[--spacing(4)_minmax(0,1fr)_fit-content(40%)_--spacing(4)] items-center gap-momo-xs rounded-momo-sm px-momo-sm py-momo-xs text-start outline-none transition-colors',
     variants: {
       size: {
         sm: 'min-h-7 text-xs',
         md: 'min-h-8 text-sm',
         lg: 'min-h-9 text-sm',
       },
-      selected: { true: 'font-medium' },
       disabled: { true: 'pointer-events-none text-momo-fg-subtle opacity-50' },
     },
   }),
   itemIndicator: cva({
-    base: 'grid size-4 shrink-0 place-items-center',
+    base: 'col-start-4 row-start-1 grid size-4 place-items-center',
     variants: {
       selected: { true: 'text-momo-fg-brand', false: 'invisible' },
     },
@@ -183,12 +183,12 @@ interface ComboboxOptionProps<T extends string | number> {
 
 /** Registers each item with the shared highlight layer, keeping slot refs. */
 function ComboboxOption<T extends string | number>({
-  option,
   size,
   item,
+  option,
+  highlight,
   itemIndicator,
   renderOption,
-  highlight,
 }: ComboboxOptionProps<T>) {
   const { value } = option;
   const ref = useMergedRefs<HTMLElement>(
@@ -205,15 +205,50 @@ function ComboboxOption<T extends string | number>({
       data-slot='combobox-item'
       data-size={size}
       className={asClass<BaseCombobox.Item.State>(
-        ({ selected, disabled }) => variants.item({ size, selected, disabled }),
+        ({ disabled }) => variants.item({ size, disabled }),
         item.className,
         option.className,
       )}
     >
+      {renderOption ? (
+        <div
+          data-slot='combobox-item-content'
+          className='col-span-3 col-start-1 row-start-1 min-w-0'
+        >
+          {renderOption(option)}
+        </div>
+      ) : (
+        <>
+          {hasContent(option.icon) && (
+            <span
+              data-slot='combobox-item-icon'
+              aria-hidden
+              className='col-start-1 row-start-1 grid size-4 place-items-center text-momo-fg-muted'
+            >
+              {option.icon}
+            </span>
+          )}
+          <span
+            data-slot='combobox-item-text'
+            className='col-start-2 row-start-1 min-w-0 truncate'
+          >
+            {option.label ?? value}
+          </span>
+          {hasContent(option.extra) && (
+            <span
+              data-slot='combobox-item-extra'
+              className='col-start-3 row-start-1 min-w-0 truncate text-momo-caption text-momo-fg-muted'
+            >
+              {option.extra}
+            </span>
+          )}
+        </>
+      )}
       {itemIndicator !== false && (
         <BaseCombobox.ItemIndicator
           {...itemIndicator}
           data-slot='combobox-item-indicator'
+          aria-hidden
           className={asClass<BaseCombobox.ItemIndicator.State>(
             ({ selected }) => variants.itemIndicator({ selected }),
             itemIndicator?.className,
@@ -222,24 +257,6 @@ function ComboboxOption<T extends string | number>({
         >
           <HugeiconsIcon icon={CheckIcon} size={14} aria-hidden />
         </BaseCombobox.ItemIndicator>
-      )}
-      {renderOption ? (
-        renderOption(option)
-      ) : (
-        <>
-          {option.icon && (
-            <span
-              data-slot='combobox-item-icon'
-              className='grid size-4 shrink-0 place-items-center text-momo-fg-muted'
-            >
-              {option.icon}
-            </span>
-          )}
-          <span className='min-w-0 flex-1 truncate'>
-            {option.label ?? value}
-          </span>
-          {option.extra}
-        </>
       )}
     </BaseCombobox.Item>
   );
@@ -281,6 +298,7 @@ export function Combobox<
   renderOption,
   ...props
 }: ComboboxProps<T, Multiple>) {
+  const dir = useDirection();
   const { disabled, readOnly } = props;
 
   const {
@@ -524,6 +542,7 @@ export function Combobox<
               data-slot='combobox-portal'
             >
               <BaseCombobox.Positioner
+                dir={dir}
                 side={side}
                 align={align}
                 sideOffset={sideOffset}

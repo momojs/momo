@@ -2,6 +2,9 @@
 
 import { useId, useState } from 'react';
 
+import { DirectionProvider } from '@base-ui/react/direction-provider';
+import { Code2 } from 'lucide-react';
+
 import { Combobox } from '../../../../../packages/design/src/components/combobox';
 import type { ControlSizeValue } from './shared';
 import {
@@ -13,9 +16,19 @@ import {
 } from './shared';
 
 const options = [
-  { value: 'react', label: 'React' },
-  { value: 'vue', label: 'Vue' },
-  { value: 'svelte', label: 'Svelte' },
+  {
+    value: 'react',
+    label: 'React',
+    icon: <Code2 className='size-4' aria-hidden />,
+    extra: '组件库',
+  },
+  { value: 'vue', label: 'Vue', extra: '渐进式框架' },
+  {
+    value: 'svelte',
+    label: 'Svelte',
+    icon: <Code2 className='size-4' aria-hidden />,
+    extra: '编译时优化与响应式组件开发',
+  },
   { value: 'solid', label: 'Solid', disabled: true },
   { value: 'angular', label: 'Angular' },
 ];
@@ -29,7 +42,9 @@ export function ComboboxPlayground() {
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [clearable, setClearable] = useState(true);
+  const [rtl, setRtl] = useState(false);
   const [placeholder, setPlaceholder] = useState('搜索框架…');
+  const direction = rtl ? 'rtl' : 'ltr';
   const shared = {
     options,
     size,
@@ -70,6 +85,7 @@ export function ComboboxPlayground() {
             checked={clearable}
             onChange={setClearable}
           />
+          <CheckboxControl label='RTL' checked={rtl} onChange={setRtl} />
           <TextControl
             label='Placeholder'
             value={placeholder}
@@ -78,30 +94,32 @@ export function ComboboxPlayground() {
         </>
       }
     >
-      <div className='grid w-full max-w-sm gap-momo-sm'>
-        <label htmlFor={id} className='text-momo-body-sm'>
-          选择框架
-        </label>
-        {multiple ? (
-          <Combobox
-            key='multiple'
-            {...shared}
-            multiple
-            value={values}
-            onChange={setValues}
-          />
-        ) : (
-          <Combobox
-            key='single'
-            {...shared}
-            value={value}
-            onChange={setValue}
-          />
-        )}
-        <output className='text-momo-caption text-momo-fg-muted'>
-          value: {JSON.stringify(multiple ? values : value)}
-        </output>
-      </div>
+      <DirectionProvider direction={direction}>
+        <div dir={direction} className='grid w-full max-w-sm gap-momo-sm'>
+          <label htmlFor={id} className='text-momo-body-sm'>
+            选择框架
+          </label>
+          {multiple ? (
+            <Combobox
+              key='multiple'
+              {...shared}
+              multiple
+              value={values}
+              onChange={setValues}
+            />
+          ) : (
+            <Combobox
+              key='single'
+              {...shared}
+              value={value}
+              onChange={setValue}
+            />
+          )}
+          <output className='text-momo-caption text-momo-fg-muted'>
+            value: {JSON.stringify(multiple ? values : value)}
+          </output>
+        </div>
+      </DirectionProvider>
     </PlaygroundFrame>
   );
 }
