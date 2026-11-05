@@ -1,4 +1,2 @@
-import { toErrorMessage } from './toErrorMessage.js';
-import { toErrorSummary } from './toErrorSummary.js';
-
-export { toErrorMessage, toErrorSummary };
+export * from './toErrorMessage.js';
+export * from './toErrorSummary.js';
