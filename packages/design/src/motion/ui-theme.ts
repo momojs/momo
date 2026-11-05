@@ -278,12 +278,6 @@ export const edition01Theme = defineTheme({
   inView: { amount: 0.5, once: true },
 });
 
-/** @deprecated Use easedTheme. */
-export const editorialTheme = easedTheme;
-
-/** @deprecated Use edition01Theme. */
-export const productTheme = edition01Theme;
-
 /** Stable names used by active preview controls and persisted URLs/state. */
 export const MOTION_UI_THEME_NAMES = ['motion', 'eased'] as const;
 
