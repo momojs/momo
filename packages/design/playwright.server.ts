@@ -8,6 +8,7 @@ import { BreakpointProbe } from './src/hooks/public-hooks.fixture';
 import { StorageHydrationProbe } from './src/hooks/use-storagefy.fixture';
 
 const entries = {
+  menu: './src/components/menu-browser.fixture.tsx',
   combobox: './src/components/combobox.fixture.tsx',
   components: './src/components.fixture.tsx',
   'field-feedback': './src/components/field-feedback.fixture.tsx',
@@ -84,7 +85,7 @@ const storageMarkup = renderToString(
 function html(fixture: Fixture) {
   let head = '';
   let body = '<div id="root"></div>';
-  if (fixture === 'components' || fixture === 'combobox')
+  if (fixture === 'components' || fixture === 'combobox' || fixture === 'menu')
     head = `<style>${css}\nbody { padding: 40px; }</style>`;
   if (fixture === 'tooltip') {
     head = `<style>${css}\n#root { padding: 120px; display: flex; gap: 24px; }</style>`;

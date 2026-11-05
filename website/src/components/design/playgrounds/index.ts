@@ -13,6 +13,7 @@ export { FieldPlayground } from './field';
 export { HighlightPlayground } from './highlight';
 export { IconPlayground } from './icon';
 export { InputPlayground } from './input';
+export { MenuPlayground } from './menu';
 export { NumericPlayground } from './numeric';
 export { PickerCorePlayground } from './picker-core';
 export { PickerDatePlayground } from './picker-date';

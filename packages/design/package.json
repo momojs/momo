@@ -71,6 +71,10 @@
       "types": "./dist/components/input.d.ts",
       "import": "./dist/components/input.js"
     },
+    "./components/menu": {
+      "types": "./dist/components/menu.d.ts",
+      "import": "./dist/components/menu.js"
+    },
     "./components/numeric": {
       "types": "./dist/components/numeric.d.ts",
       "import": "./dist/components/numeric.js"

@@ -14,6 +14,7 @@
     "dialog",
     "drawer",
     "popover",
+    "menu",
     "tooltip",
     "sheet",
     "field",

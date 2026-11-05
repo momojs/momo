@@ -10,6 +10,7 @@ export * from './field.js';
 export * from './highlight.js';
 export * from './icon.js';
 export * from './input.js';
+export * from './menu.js';
 export * from './numeric.js';
 export * from './picker-core.js';
 export * from './picker-date.js';
