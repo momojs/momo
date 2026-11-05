@@ -1,6 +1,6 @@
 {
   "name": "@momots/core",
-  "version": "0.1.0",
+  "version": "0.1.1-alpha.0",
   "description": "Functional utilities, type guards, and data transformations for TypeScript.",
   "keywords": [
     "momots",

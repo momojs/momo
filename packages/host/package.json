@@ -1,6 +1,6 @@
 {
   "name": "@momots/host",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0-beta.1",
   "description": "Web Platform utilities for storage, binary data, Fetch, CSS, and DOM APIs.",
   "keywords": [
     "momots",

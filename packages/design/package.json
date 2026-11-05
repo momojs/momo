@@ -1,6 +1,6 @@
 {
   "name": "@momots/design",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "React 19.2+ interface primitives combining Base UI, Motion, and Tailwind CSS v4.",
   "keywords": [
     "momots",
