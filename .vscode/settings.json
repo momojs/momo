@@ -39,6 +39,9 @@
   "search.exclude": {
     "**/*.gen.ts": true
   },
+  "search.useIgnoreFiles": true,
+  "search.useGlobalIgnoreFiles": true,
+  "explorer.excludeGitIgnore": true,
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.patterns": {
     "run.ts": "*.ts",
