@@ -49,10 +49,9 @@ export function SelectControl<T extends string>({
           label: option.label,
         }))}
         placeholder={label}
-        triggerClassName='min-w-28 text-xs'
-        popupClassName='text-xs'
-        itemClassName='text-xs'
-        triggerProps={{ 'aria-label': label }}
+        trigger={{ className: 'min-w-28 text-xs', 'aria-label': label }}
+        popup={{ className: 'text-xs' }}
+        item={{ className: 'text-xs' }}
         onChange={onChange}
       />
     </div>

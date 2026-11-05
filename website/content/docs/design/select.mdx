@@ -134,21 +134,3 @@ const [fruits, setFruits] = useState<Fruit[]>(["apple", "cherry"]);
 | `onChange` | `(value: T) => void`；多选为 `(value: T[]) => void` | 简化选中项变化回调，不包含 `null` |
 | `onValueChange` | Base UI callback | 完整值变化回调，包含 event details |
 | `onOpenChange` | Base UI callback | 弹层打开状态变化回调 |
-
-## Deprecated 兼容属性
-
-旧的 props 与 className 属性仍可使用，但已标记为 deprecated；新代码应改用对应 slot config。
-
-| Deprecated Prop | 替代项 |
-| --- | --- |
-| `className` / `triggerClassName` / `triggerProps` | `trigger` |
-| `valueClassName` / `valueProps` | `valueSlot` |
-| `iconClassName` | `icon` |
-| `portalProps` | `portal` |
-| `positionerClassName` / `positionerProps` | `positioner` |
-| `popupClassName` / `popupProps` | `popup` |
-| `listClassName` / `listProps` | `list` |
-| `itemClassName` / `itemProps` | `item` |
-| `itemTextClassName` | `itemText` |
-| `itemIndicatorClassName` | `itemIndicator` |
-| `scrollArrowClassName` / `scrollUpArrowProps` / `scrollDownArrowProps` | `scrollUpArrow` / `scrollDownArrow` |

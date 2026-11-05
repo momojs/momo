@@ -132,10 +132,9 @@ function SizeScenario({
               size='sm'
               value={scenario}
               options={scenarios.map(({ value, label }) => ({ value, label }))}
-              triggerClassName='w-full text-xs'
-              popupClassName='text-xs'
-              itemClassName='text-xs'
-              triggerProps={{ 'aria-label': '场景' }}
+              trigger={{ className: 'w-full text-xs', 'aria-label': '场景' }}
+              popup={{ className: 'text-xs' }}
+              item={{ className: 'text-xs' }}
               onChange={onScenarioChange}
             />
           </div>

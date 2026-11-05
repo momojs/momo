@@ -1,98 +1,120 @@
 import { expect, test } from '../../playwright.fixture';
 import type { SelectProps } from './select';
 
-test('renders the default slot structure, sizes, and popup exit motion', async ({
-  page,
-}) => {
-  const result = await page.evaluate(async () => {
-    const { h, mount, Select, slot, createRef, waitFor } = window.designFixture;
-    const actionsRef = createRef<{ unmount: () => void }>();
-    const options = [
-      {
+for (const slotMode of ['implicit', 'explicit true'] as const) {
+  test(`renders the default slot structure, sizes, and popup exit motion with ${slotMode} slots`, async ({
+    page,
+  }) => {
+    const result = await page.evaluate(async (slotMode) => {
+      const { h, mount, Select, slot, createRef, waitFor } =
+        window.designFixture;
+      const actionsRef = createRef<{ unmount: () => void }>();
+      const options = [
+        {
+          value: 'apple',
+          label: 'Apple',
+          textValue: 'Apple fruit',
+          className: 'option-item',
+        },
+        { value: 'banana', label: 'Banana', disabled: true },
+      ];
+      const slots: Partial<SelectProps<string>> =
+        slotMode === 'explicit true'
+          ? {
+              trigger: true,
+              valueSlot: true,
+              icon: true,
+              portal: true,
+              positioner: true,
+              popup: true,
+              list: true,
+              item: true,
+              itemText: true,
+              itemIndicator: true,
+            }
+          : {};
+      const props = {
+        ...slots,
         value: 'apple',
-        label: 'Apple',
-        textValue: 'Apple fruit',
-        className: 'option-item',
-      },
-      { value: 'banana', label: 'Banana', disabled: true },
-    ];
-    const props = {
-      value: 'apple',
-      options,
-      actionsRef,
-      scrollUpArrow: { keepMounted: true },
-      scrollDownArrow: { keepMounted: true },
-    };
-    mount(h(Select<string>, { ...props, open: true }));
-    await waitFor(() => !!document.querySelector('[data-slot="select-popup"]'));
-    const popup = slot('select-popup');
-    const initial = getComputedStyle(popup);
-    const initialScale = new DOMMatrix(initial.transform).a;
-    const structure = [
-      'trigger',
-      'value',
-      'icon',
-      'portal',
-      'positioner',
-      'popup',
-      'list',
-      'item-text',
-      'item-indicator',
-      'scroll-up-arrow',
-      'scroll-down-arrow',
-    ].map((name) => slot(`select-${name}`).dataset.slot);
-    const items = [
-      ...document.querySelectorAll<HTMLElement>('[data-slot="select-item"]'),
-    ];
-    await waitFor(
-      () =>
-        getComputedStyle(popup).opacity === '1' &&
-        getComputedStyle(popup).transform === 'none',
+        options,
+        actionsRef,
+        scrollUpArrow: { keepMounted: true },
+        scrollDownArrow: { keepMounted: true },
+      };
+      mount(h(Select<string>, { ...props, open: true }));
+      await waitFor(
+        () => !!document.querySelector('[data-slot="select-popup"]'),
+      );
+      const popup = slot('select-popup');
+      const initial = getComputedStyle(popup);
+      const initialScale = new DOMMatrix(initial.transform).a;
+      const structure = [
+        'trigger',
+        'value',
+        'icon',
+        'portal',
+        'positioner',
+        'popup',
+        'list',
+        'item-text',
+        'item-indicator',
+        'scroll-up-arrow',
+        'scroll-down-arrow',
+      ].map((name) => slot(`select-${name}`).dataset.slot);
+      const items = [
+        ...document.querySelectorAll<HTMLElement>('[data-slot="select-item"]'),
+      ];
+      await waitFor(
+        () =>
+          getComputedStyle(popup).opacity === '1' &&
+          getComputedStyle(popup).transform === 'none',
+      );
+      const triggerBox = slot('select-trigger').getBoundingClientRect();
+      const popupBox = popup.getBoundingClientRect();
+      const actions = typeof actionsRef.current?.unmount;
+      mount(h(Select<string>, { ...props, open: false }));
+      const retained = popup.isConnected;
+      await waitFor(() => !popup.isConnected);
+      return {
+        structure,
+        count: items.length,
+        triggerClass: slot('select-trigger').className,
+        itemClass: items[0]!.className,
+        initialScale,
+        offset: popupBox.top - triggerBox.bottom,
+        actions,
+        retained,
+        removed: !popup.isConnected,
+      };
+    }, slotMode);
+    expect(result.structure).toEqual(
+      [
+        'trigger',
+        'value',
+        'icon',
+        'portal',
+        'positioner',
+        'popup',
+        'list',
+        'item-text',
+        'item-indicator',
+        'scroll-up-arrow',
+        'scroll-down-arrow',
+      ].map((name) => `select-${name}`),
     );
-    const triggerBox = slot('select-trigger').getBoundingClientRect();
-    const popupBox = popup.getBoundingClientRect();
-    const actions = typeof actionsRef.current?.unmount;
-    mount(h(Select<string>, { ...props, open: false }));
-    const retained = popup.isConnected;
-    await waitFor(() => !popup.isConnected);
-    return {
-      structure,
-      count: items.length,
-      triggerClass: slot('select-trigger').className,
-      itemClass: items[0]!.className,
-      initialScale,
-      offset: popupBox.top - triggerBox.bottom,
-      actions,
-      retained,
-      removed: !popup.isConnected,
-    };
+    expect(result.count).toBe(2);
+    expect(result.triggerClass).toContain('h-9');
+    expect(result.itemClass).toContain('min-h-8');
+    expect(result.itemClass.split(' ')).toContain('option-item');
+    expect(result.initialScale).toBeLessThan(1);
+    expect(result.offset).toBeCloseTo(6, 0);
+    expect(result).toMatchObject({
+      actions: 'function',
+      retained: true,
+      removed: true,
+    });
   });
-  expect(result.structure).toEqual(
-    [
-      'trigger',
-      'value',
-      'icon',
-      'portal',
-      'positioner',
-      'popup',
-      'list',
-      'item-text',
-      'item-indicator',
-      'scroll-up-arrow',
-      'scroll-down-arrow',
-    ].map((name) => `select-${name}`),
-  );
-  expect(result.count).toBe(2);
-  expect(result.triggerClass).toContain('h-9');
-  expect(result.itemClass).toContain('min-h-8');
-  expect(result.initialScale).toBeLessThan(1);
-  expect(result.offset).toBeCloseTo(6, 0);
-  expect(result).toMatchObject({
-    actions: 'function',
-    retained: true,
-    removed: true,
-  });
-});
+}
 
 test('keeps popup travel and scale still when reduced motion is preferred', async ({
   page,
@@ -172,7 +194,7 @@ test('resolves trigger, value, and icon state through direct cva classes', async
     expect(Object.values(result).join(' ')).not.toContain(selector);
 });
 
-test('resolves item state and merges slot, legacy, and option classes', async ({
+test('resolves item state and merges slot and option classes', async ({
   page,
 }) => {
   const result = await page.evaluate(async () => {
@@ -182,7 +204,6 @@ test('resolves item state and merges slot, legacy, and option classes', async ({
         open: true,
         value: 'apple',
         size: 'lg',
-        itemClassName: 'legacy-item',
         item: {
           className: (state) =>
             state.selected ? 'slot-selected' : 'slot-idle',
@@ -201,7 +222,7 @@ test('resolves item state and merges slot, legacy, and option classes', async ({
     );
     return { selected: items[0]!.className, disabled: items[1]!.className };
   });
-  for (const name of ['min-h-9', 'legacy-item', 'option-item', 'slot-selected'])
+  for (const name of ['min-h-9', 'option-item', 'slot-selected'])
     expect(result.selected.split(' ')).toContain(name);
   for (const name of [
     'pointer-events-none',
@@ -214,46 +235,76 @@ test('resolves item state and merges slot, legacy, and option classes', async ({
   expect(result.disabled).not.toContain('data-[disabled]');
 });
 
-test('composes slot configs with legacy prop and class aliases', async ({
+test('composes top-level slot configs, refs and render state', async ({
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { h, mount, Select, slot, waitFor } = window.designFixture;
+    const { h, mount, Select, slot, waitFor, createRef } = window.designFixture;
+    const triggerRef = createRef<HTMLButtonElement>();
+    const popupRef = createRef<HTMLDivElement>();
+    const itemRef = createRef<HTMLDivElement>();
     mount(
       h(Select<string>, {
         open: true,
         value: 'apple',
         options: [{ value: 'apple', label: 'Apple' }],
-        className: 'legacy-trigger',
-        valueClassName: 'legacy-value',
-        iconClassName: 'legacy-icon',
-        positionerClassName: 'legacy-positioner',
-        popupClassName: 'legacy-popup',
-        listClassName: 'legacy-list',
-        itemTextClassName: 'legacy-item-text',
-        itemIndicatorClassName: 'legacy-item-indicator',
-        scrollArrowClassName: 'legacy-scroll-arrow',
-        triggerProps: { 'aria-label': 'Legacy trigger' },
-        valueProps: { 'aria-live': 'polite' },
-        positionerProps: { align: 'end' },
-        popupProps: { finalFocus: false },
-        listProps: { 'aria-label': 'Legacy list' },
-        itemProps: { 'aria-label': 'Legacy item' },
-        scrollUpArrowProps: { 'aria-label': 'Legacy scroll up' },
-        scrollDownArrowProps: { 'aria-label': 'Legacy scroll down' },
         indicator: h('span', { 'data-custom-indicator': '' }),
-        trigger: { 'data-config': 'trigger' },
-        valueSlot: { 'data-config': 'value' },
-        icon: { 'data-config': 'icon' },
+        trigger: {
+          'data-config': 'trigger',
+          'aria-label': 'Configured trigger',
+          className: 'slot-trigger',
+          ref: triggerRef,
+          render: (props, state) =>
+            h('button', { ...props, 'data-render-open': state.open }),
+        },
+        valueSlot: {
+          'data-config': 'value',
+          'aria-live': 'polite',
+          className: 'slot-value',
+        },
+        icon: { 'data-config': 'icon', className: 'slot-icon' },
         portal: { 'data-config': 'portal' },
-        positioner: { 'data-config': 'positioner' },
-        popup: { 'data-config': 'popup' },
-        list: { 'data-config': 'list' },
-        item: { 'data-config': 'item' },
-        itemText: { 'data-config': 'item-text' },
-        itemIndicator: { 'data-config': 'item-indicator' },
-        scrollUpArrow: { 'data-config': 'scroll-up', keepMounted: true },
-        scrollDownArrow: { 'data-config': 'scroll-down', keepMounted: true },
+        positioner: {
+          'data-config': 'positioner',
+          align: 'end',
+          className: 'slot-positioner',
+        },
+        popup: {
+          'data-config': 'popup',
+          finalFocus: false,
+          className: 'slot-popup',
+          ref: popupRef,
+        },
+        list: {
+          'data-config': 'list',
+          'aria-label': 'Configured list',
+          className: 'slot-list',
+        },
+        item: {
+          'data-config': 'item',
+          'aria-label': 'Configured item',
+          className: 'slot-item',
+          ref: itemRef,
+          render: (props, state) =>
+            h('div', { ...props, 'data-render-selected': state.selected }),
+        },
+        itemText: { 'data-config': 'item-text', className: 'slot-item-text' },
+        itemIndicator: {
+          'data-config': 'item-indicator',
+          className: 'slot-item-indicator',
+        },
+        scrollUpArrow: {
+          'data-config': 'scroll-up',
+          'aria-label': 'Configured scroll up',
+          className: 'slot-scroll-up-arrow',
+          keepMounted: true,
+        },
+        scrollDownArrow: {
+          'data-config': 'scroll-down',
+          'aria-label': 'Configured scroll down',
+          className: 'slot-scroll-down-arrow',
+          keepMounted: true,
+        },
       } as SelectProps<string>),
     );
     await waitFor(
@@ -288,6 +339,13 @@ test('composes slot configs with legacy prop and class aliases', async ({
       indicator: !!slot('select-item-indicator').querySelector(
         '[data-custom-indicator]',
       ),
+      refs: [
+        triggerRef.current === slot('select-trigger'),
+        popupRef.current === slot('select-popup'),
+        itemRef.current === slot('select-item'),
+      ],
+      renderOpen: slot('select-trigger').dataset.renderOpen,
+      renderSelected: slot('select-item').dataset.renderSelected,
     };
   });
   expect(result.slots.map(({ config }) => config)).toEqual([
@@ -305,24 +363,81 @@ test('composes slot configs with legacy prop and class aliases', async ({
     'scroll-down',
   ]);
   for (const { name, className } of result.slots) {
-    if (name === 'portal' || name === 'item') continue;
-    expect(className).toContain(
-      name.includes('scroll-') ? 'legacy-scroll-arrow' : `legacy-${name}`,
-    );
+    if (name === 'portal') continue;
+    expect(className).toContain(`slot-${name}`);
   }
   expect(
     result.slots.filter(({ label }) => label).map(({ label }) => label),
   ).toEqual([
-    'Legacy trigger',
-    'Legacy list',
-    'Legacy item',
-    'Legacy scroll up',
-    'Legacy scroll down',
+    'Configured trigger',
+    'Configured list',
+    'Configured item',
+    'Configured scroll up',
+    'Configured scroll down',
   ]);
   expect(result).toMatchObject({
     live: 'polite',
     align: 'end',
     indicator: true,
+    refs: [true, true, true],
+    renderOpen: 'true',
+    renderSelected: 'true',
+  });
+});
+
+test('hides optional slots while preserving generated option selection', async ({
+  page,
+}) => {
+  const result = await page.evaluate(async () => {
+    const { h, mount, Select, slot, click, waitFor } = window.designFixture;
+    const changes: string[] = [];
+    mount(
+      h(Select<string>, {
+        open: true,
+        defaultValue: 'apple',
+        options: [
+          { value: 'apple', label: 'Apple' },
+          { value: 'banana', label: 'Banana' },
+        ],
+        trigger: { 'aria-label': 'Fruit' },
+        valueSlot: false,
+        icon: false,
+        itemIndicator: false,
+        scrollUpArrow: false,
+        scrollDownArrow: false,
+        onChange: (value) => changes.push(value),
+      }),
+    );
+    await waitFor(
+      () => document.querySelectorAll('[data-slot="select-item"]').length === 2,
+    );
+    const hidden = [
+      'value',
+      'icon',
+      'item-indicator',
+      'scroll-up-arrow',
+      'scroll-down-arrow',
+    ].map(
+      (name) =>
+        document.querySelectorAll(`[data-slot="select-${name}"]`).length,
+    );
+    const items = document.querySelectorAll<HTMLElement>(
+      '[data-slot="select-item"]',
+    );
+    click(items[1]!);
+    await waitFor(() => changes.length === 1);
+    return {
+      hidden,
+      changes,
+      triggerLabel: slot('select-trigger').getAttribute('aria-label'),
+      selected: [...items].map((item) => item.getAttribute('aria-selected')),
+    };
+  });
+  expect(result).toEqual({
+    hidden: [0, 0, 0, 0, 0],
+    changes: ['banana'],
+    triggerLabel: 'Fruit',
+    selected: ['false', 'true'],
   });
 });
 
@@ -332,7 +447,7 @@ test('leaves unmounting to Base UI without the default popup motion', async ({
   const result = await page.evaluate(async () => {
     const { h, mount, Select, waitFor } = window.designFixture;
     const options = [{ value: 'apple', label: 'Apple' }];
-    mount(h(Select<string>, { options, open: false, portal: false }));
+    mount(h(Select<string>, { options, open: true, portal: false }));
     const withoutPortal = !document.querySelector(
       '[data-slot="select-portal"]',
     );

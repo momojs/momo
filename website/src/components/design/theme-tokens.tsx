@@ -549,10 +549,9 @@ export function ThemeColorTokens() {
             value={theme}
             options={themeOptions}
             placeholder='Theme'
-            triggerClassName='min-w-28 text-xs'
-            popupClassName='text-xs'
-            itemClassName='text-xs'
-            triggerProps={{ 'aria-label': 'Theme' }}
+            trigger={{ className: 'min-w-28 text-xs', 'aria-label': 'Theme' }}
+            popup={{ className: 'text-xs' }}
+            item={{ className: 'text-xs' }}
             onChange={setTheme}
           />
         </div>

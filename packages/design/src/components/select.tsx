@@ -24,7 +24,6 @@ import type {
   SelectItemTextState,
   SelectListState,
   SelectPopupState,
-  SelectPortalState,
   SelectPositionerState,
   SelectRootActions,
   SelectScrollDownArrowState,
@@ -55,7 +54,6 @@ import type {
   ControlOption,
   ControlValue,
   SlotBaseConfig,
-  SlotBaseProps,
 } from '../shared/index.js';
 import { asClass, asData, isReactNode, render } from '../shared/index.js';
 import { cva } from '../tailwind/index.js';
@@ -463,73 +461,6 @@ function SelectScrollDown({
   );
 }
 
-interface ClassNameSlotProps<TState> extends SlotBaseProps {
-  className?: string | ((state: TState) => string | undefined);
-}
-
-function configureSlot<TState, TProps extends ClassNameSlotProps<TState>>(
-  config: SlotBaseConfig<TProps> | undefined,
-  legacyProps?: Partial<TProps>,
-  legacyClassName?: string,
-  trailingClassName?: string,
-): SlotBaseConfig<TProps> {
-  if (config === undefined || config === true) {
-    return {
-      ...legacyProps,
-      className: asClass<TState>(
-        legacyClassName,
-        legacyProps?.className,
-        trailingClassName,
-      ),
-    } as TProps;
-  }
-
-  if (!isReactNode(config)) {
-    return {
-      ...legacyProps,
-      ...config,
-      className: asClass<TState>(
-        legacyClassName,
-        legacyProps?.className,
-        config.className,
-        trailingClassName,
-      ),
-    };
-  }
-
-  return config;
-}
-
-function configureValueSlot(
-  config: SelectValueSlotConfig | undefined,
-  legacyProps?: SelectValueSlotProps,
-  legacyClassName?: string,
-): SelectValueSlotConfig {
-  if (config === undefined || config === true) {
-    return {
-      ...legacyProps,
-      className: asClass<SelectValueState>(
-        legacyClassName,
-        legacyProps?.className,
-      ),
-    };
-  }
-
-  if (!isReactNode(config)) {
-    return {
-      ...legacyProps,
-      ...config,
-      className: asClass<SelectValueState>(
-        legacyClassName,
-        legacyProps?.className,
-        config.className,
-      ),
-    };
-  }
-
-  return config;
-}
-
 function renderValueSlot(
   config: SelectValueSlotConfig,
   props: Pick<SelectValueSlotProps, 'placeholder'>,
@@ -544,13 +475,6 @@ interface OptionItemProps<T extends ControlValue> extends ControlOption<T> {
   item: SlotBaseConfig<SelectItemSlotProps>;
   itemText: SlotBaseConfig<SelectItemTextSlotProps>;
   itemIndicator: SlotBaseConfig<SelectItemIndicatorSlotProps>;
-  itemClassName?: string;
-  itemIndicatorClassName?: string;
-  itemTextClassName?: string;
-  itemProps?: Omit<
-    BaseSelectItemProps,
-    'children' | 'className' | 'disabled' | 'label' | 'style' | 'value'
-  >;
   indicator?: ReactNode;
   highlightTrigger?: HighlightTrigger<HTMLElement>;
 }
@@ -568,19 +492,16 @@ function OptionItem<T extends ControlValue>({
   item: itemConfig,
   itemText: itemTextConfig,
   itemIndicator: itemIndicatorConfig,
-  itemClassName,
-  itemIndicatorClassName,
-  itemTextClassName,
-  itemProps,
   indicator,
   highlightTrigger,
 }: OptionItemProps<T>) {
-  const configuredItem = configureSlot<SelectItemState, SelectItemSlotProps>(
-    itemConfig,
-    itemProps,
-    itemClassName,
-    className,
-  );
+  const itemSlot = itemConfig === true ? {} : itemConfig;
+  const configuredItem = isReactNode(itemSlot)
+    ? itemSlot
+    : {
+        ...itemSlot,
+        className: asClass<SelectItemState>(itemSlot.className, className),
+      };
   const triggerProps =
     highlightTrigger && !isReactNode(configuredItem)
       ? highlightTrigger.getReferenceProps(configuredItem)
@@ -605,15 +526,7 @@ function OptionItem<T extends ControlValue>({
             {icon}
           </span>
         )}
-        {render(
-          SelectItemText,
-          configureSlot<SelectItemTextState, SelectItemTextSlotProps>(
-            itemTextConfig,
-            undefined,
-            itemTextClassName,
-          ),
-          label ?? value,
-        )}
+        {render(SelectItemText, itemTextConfig, label ?? value)}
         {hasContent(extra) && (
           <span
             {...asData('select-item-extra')}
@@ -624,11 +537,7 @@ function OptionItem<T extends ControlValue>({
         )}
         {render(
           SelectItemIndicator,
-          configureSlot<SelectItemIndicatorState, SelectItemIndicatorSlotProps>(
-            itemIndicatorConfig,
-            undefined,
-            itemIndicatorClassName,
-          ),
+          itemIndicatorConfig,
           indicator === undefined ? undefined : { children: indicator },
         )}
       </>
@@ -658,8 +567,6 @@ export interface SelectProps<
   items?: BaseSelectRootProps<T, Multiple>['items'];
   /** Replaces the generated option items inside the list. */
   children?: ReactNode;
-  /** @deprecated Use `trigger.className`. */
-  className?: string;
   /** Content displayed when no value is selected. */
   placeholder?: ReactNode;
   /** Configures or replaces the trigger slot. */
@@ -692,61 +599,6 @@ export interface SelectProps<
   onChange?: (value: SelectChangeValue<T, Multiple>) => void;
   /** Base UI's full, cancelable value-change callback. */
   onValueChange?: BaseSelectRootProps<T, Multiple>['onValueChange'];
-  /** @deprecated Use `trigger.className`. */
-  triggerClassName?: string;
-  /** @deprecated Use `valueSlot.className`. */
-  valueClassName?: string;
-  /** @deprecated Use `icon.className`. */
-  iconClassName?: string;
-  /** @deprecated Use `positioner.className`. */
-  positionerClassName?: string;
-  /** @deprecated Use `popup.className`. */
-  popupClassName?: string;
-  /** @deprecated Use `list.className`. */
-  listClassName?: string;
-  /** @deprecated Use `item.className`. */
-  itemClassName?: string;
-  /** @deprecated Use `itemIndicator.className`. */
-  itemIndicatorClassName?: string;
-  /** @deprecated Use `itemText.className`. */
-  itemTextClassName?: string;
-  /** @deprecated Use the scroll-arrow slot class names. */
-  scrollArrowClassName?: string;
-  /** @deprecated Use `trigger`. */
-  triggerProps?: Omit<
-    BaseSelectTriggerProps,
-    'children' | 'className' | 'disabled' | 'render'
-  >;
-  /** @deprecated Use `valueSlot`. */
-  valueProps?: Omit<
-    BaseSelectValueProps,
-    'children' | 'className' | 'placeholder'
-  > & {
-    children?: BaseSelectValueProps['children'];
-  };
-  /** @deprecated Use `portal`. */
-  portalProps?: BaseSelectPortalProps;
-  /** @deprecated Use `positioner`. */
-  positionerProps?: Omit<BaseSelectPositionerProps, 'children' | 'className'>;
-  /** @deprecated Use `popup`. */
-  popupProps?: Omit<BaseSelectPopupProps, 'children' | 'className' | 'render'>;
-  /** @deprecated Use `list`. */
-  listProps?: Omit<BaseSelectListProps, 'children' | 'className'>;
-  /** @deprecated Use `item`. */
-  itemProps?: Omit<
-    BaseSelectItemProps,
-    'children' | 'className' | 'disabled' | 'label' | 'style' | 'value'
-  >;
-  /** @deprecated Use `scrollUpArrow`. */
-  scrollUpArrowProps?: Omit<
-    BaseSelectScrollUpArrowProps,
-    'children' | 'className'
-  >;
-  /** @deprecated Use `scrollDownArrow`. */
-  scrollDownArrowProps?: Omit<
-    BaseSelectScrollDownArrowProps,
-    'children' | 'className'
-  >;
 }
 
 /**
@@ -762,42 +614,22 @@ export function Select<
     options = [],
     items,
     children,
-    className,
     placeholder = 'Select...',
-    trigger: triggerConfig,
-    valueSlot: valueConfig,
-    icon: iconConfig,
-    portal: portalConfig,
-    positioner: positionerConfig,
-    popup: popupConfig,
-    list: listConfig,
-    item: itemConfig,
-    itemText: itemTextConfig,
-    itemIndicator: itemIndicatorConfig,
-    scrollUpArrow: scrollUpArrowConfig,
-    scrollDownArrow: scrollDownArrowConfig,
-    triggerClassName,
-    valueClassName,
-    iconClassName,
-    positionerClassName,
-    popupClassName,
-    listClassName,
-    itemClassName,
-    itemIndicatorClassName,
-    itemTextClassName,
-    scrollArrowClassName,
+    trigger: triggerConfig = {},
+    valueSlot: valueConfig = {},
+    icon: iconConfig = {},
+    portal: portalConfig = {},
+    positioner: positionerConfig = {},
+    popup: popupConfig = {},
+    list: listConfig = {},
+    item: itemConfig = {},
+    itemText: itemTextConfig = {},
+    itemIndicator: itemIndicatorConfig = {},
+    scrollUpArrow: scrollUpArrowConfig = {},
+    scrollDownArrow: scrollDownArrowConfig = {},
     disabled,
     readOnly,
     required,
-    triggerProps,
-    valueProps,
-    portalProps,
-    positionerProps,
-    popupProps,
-    listProps,
-    itemProps,
-    scrollUpArrowProps,
-    scrollDownArrowProps,
     indicator,
     highlightItemOnHover = true,
     size = 'md',
@@ -833,67 +665,23 @@ export function Select<
   });
   const resolvedSize = size ?? 'md';
 
-  const configuredValue = configureValueSlot(
-    valueConfig,
-    valueProps,
-    valueClassName,
-  );
-  const configuredIcon = configureSlot<SelectIconState, SelectIconSlotProps>(
-    iconConfig,
-    undefined,
-    iconClassName,
-  );
-  const configuredPortal = configureSlot<
-    SelectPortalState,
-    SelectPortalSlotProps
-  >(portalConfig, portalProps);
-  const configuredPositioner = configureSlot<
-    SelectPositionerState,
-    SelectPositionerSlotProps
-  >(positionerConfig, positionerProps, positionerClassName);
-  const configuredPopup = configureSlot<SelectPopupState, SelectPopupSlotProps>(
-    popupConfig,
-    popupProps,
-    popupClassName,
-  );
-  const configuredList = configureSlot<SelectListState, SelectListSlotProps>(
-    listConfig,
-    listProps,
-    listClassName,
-  );
-  const configuredItem = configureSlot<SelectItemState, SelectItemSlotProps>(
-    itemConfig,
-  );
-  const configuredItemText = configureSlot<
-    SelectItemTextState,
-    SelectItemTextSlotProps
-  >(itemTextConfig);
-  const configuredItemIndicator = configureSlot<
-    SelectItemIndicatorState,
-    SelectItemIndicatorSlotProps
-  >(itemIndicatorConfig);
   const usesDefaultPopupMotion =
-    !isReactNode(configuredPortal) &&
-    !isReactNode(configuredPositioner) &&
-    !isReactNode(configuredPopup) &&
-    (configuredPopup.render === undefined || configuredPopup.render === null);
+    (portalConfig === true || !isReactNode(portalConfig)) &&
+    (positionerConfig === true || !isReactNode(positionerConfig)) &&
+    (popupConfig === true ||
+      (!isReactNode(popupConfig) &&
+        (popupConfig.render === undefined || popupConfig.render === null)));
   const rootActionsRef =
     actionsRef ?? (usesDefaultPopupMotion ? internalActionsRef : undefined);
 
-  const popupContent = render(SelectPortal, configuredPortal, {
+  const popupContent = render(SelectPortal, portalConfig, {
     key: 'portal',
-    children: render(SelectPositioner, configuredPositioner, {
-      children: render(SelectPopup, configuredPopup, {
+    children: render(SelectPositioner, positionerConfig, {
+      children: render(SelectPopup, popupConfig, {
         children: (
           <>
-            {render(
-              SelectScrollUp,
-              configureSlot<
-                SelectScrollUpArrowState,
-                SelectScrollUpArrowSlotProps
-              >(scrollUpArrowConfig, scrollUpArrowProps, scrollArrowClassName),
-            )}
-            {render(SelectList, configuredList, {
+            {render(SelectScrollUp, scrollUpArrowConfig)}
+            {render(SelectList, listConfig, {
               ref: listRef,
               children: (
                 <>
@@ -907,13 +695,9 @@ export function Select<
                         key={`${typeof option.value}:${String(option.value)}`}
                         {...option}
                         size={resolvedSize}
-                        item={configuredItem}
-                        itemText={configuredItemText}
-                        itemIndicator={configuredItemIndicator}
-                        itemClassName={itemClassName}
-                        itemIndicatorClassName={itemIndicatorClassName}
-                        itemTextClassName={itemTextClassName}
-                        itemProps={itemProps}
+                        item={itemConfig}
+                        itemText={itemTextConfig}
+                        itemIndicator={itemIndicatorConfig}
                         indicator={indicator}
                         highlightTrigger={highlightTrigger}
                       />
@@ -921,17 +705,7 @@ export function Select<
                 </>
               ),
             })}
-            {render(
-              SelectScrollDown,
-              configureSlot<
-                SelectScrollDownArrowState,
-                SelectScrollDownArrowSlotProps
-              >(
-                scrollDownArrowConfig,
-                scrollDownArrowProps,
-                scrollArrowClassName,
-              ),
-            )}
+            {render(SelectScrollDown, scrollDownArrowConfig)}
           </>
         ),
       }),
@@ -972,24 +746,16 @@ export function Select<
           setOpen(next);
         }}
       >
-        {render(
-          SelectTrigger,
-          configureSlot<SelectTriggerState, SelectTriggerSlotProps>(
-            triggerConfig,
-            triggerProps,
-            triggerClassName ?? className,
+        {render(SelectTrigger, triggerConfig, {
+          size: resolvedSize,
+          disabled,
+          children: (
+            <>
+              {renderValueSlot(valueConfig, { placeholder })}
+              {render(SelectIcon, iconConfig)}
+            </>
           ),
-          {
-            size: resolvedSize,
-            disabled,
-            children: (
-              <>
-                {renderValueSlot(configuredValue, { placeholder })}
-                {render(SelectIcon, configuredIcon)}
-              </>
-            ),
-          },
-        )}
+        })}
 
         {usesDefaultPopupMotion ? (
           <AnimatePresence
