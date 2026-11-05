@@ -1,43 +1,57 @@
 import { expect, test } from '../../playwright.fixture';
+import type { NumericProps } from './numeric';
 
-test('renders the default accessible slot structure and size metadata', async ({
-  page,
-}) => {
-  const result = await page.evaluate(() => {
-    const { h, mount, Numeric, slot } = window.designFixture;
-    mount(h(Numeric, { label: 'Amount' }));
-    const label = slot<HTMLLabelElement>('numeric-label');
-    const input = slot<HTMLInputElement>('numeric-input');
-    return {
-      size: slot('numeric').dataset.size,
-      linked: label.htmlFor === input.id && input.id.length > 0,
-      label: label.textContent,
-      slots: ['scrub-area', 'group', 'decrement', 'input', 'increment'].map(
-        (name) => slot(`numeric-${name}`).dataset.slot,
-      ),
-      scrubSize: slot('numeric-scrub-area').dataset.size,
-      groupSize: slot('numeric-group').dataset.size,
-      decrement: slot('numeric-decrement').tagName,
-      increment: slot('numeric-increment').tagName,
-    };
+for (const slotMode of ['implicit', 'explicit true'] as const) {
+  test(`renders the default accessible slot structure and size metadata with ${slotMode} slots`, async ({
+    page,
+  }) => {
+    const result = await page.evaluate((slotMode) => {
+      const { h, mount, Numeric, slot } = window.designFixture;
+      const slots: Partial<NumericProps> =
+        slotMode === 'explicit true'
+          ? {
+              scrubArea: true,
+              scrubAreaCursor: true,
+              group: true,
+              input: true,
+              decrement: true,
+              increment: true,
+            }
+          : {};
+      mount(h(Numeric, { ...slots, label: 'Amount' }));
+      const label = slot<HTMLLabelElement>('numeric-label');
+      const input = slot<HTMLInputElement>('numeric-input');
+      return {
+        size: slot('numeric').dataset.size,
+        linked: label.htmlFor === input.id && input.id.length > 0,
+        label: label.textContent,
+        slots: ['scrub-area', 'group', 'decrement', 'input', 'increment'].map(
+          (name) => slot(`numeric-${name}`).dataset.slot,
+        ),
+        scrubSize: slot('numeric-scrub-area').dataset.size,
+        groupSize: slot('numeric-group').dataset.size,
+        decrement: slot('numeric-decrement').tagName,
+        increment: slot('numeric-increment').tagName,
+      };
+    }, slotMode);
+    expect(result).toEqual({
+      size: 'md',
+      linked: true,
+      label: 'Amount',
+      slots: [
+        'numeric-scrub-area',
+        'numeric-group',
+        'numeric-decrement',
+        'numeric-input',
+        'numeric-increment',
+      ],
+      scrubSize: 'md',
+      groupSize: 'md',
+      decrement: 'BUTTON',
+      increment: 'BUTTON',
+    });
   });
-  expect(result).toEqual({
-    size: 'md',
-    linked: true,
-    label: 'Amount',
-    slots: [
-      'numeric-scrub-area',
-      'numeric-group',
-      'numeric-decrement',
-      'numeric-input',
-      'numeric-increment',
-    ],
-    scrubSize: 'md',
-    groupSize: 'md',
-    decrement: 'BUTTON',
-    increment: 'BUTTON',
-  });
-});
+}
 
 test('uses reduced-motion-aware press feedback for default steppers', async ({
   page,
@@ -95,7 +109,7 @@ test('removes stepper press scaling when reduced motion is preferred', async ({
   expect(result).toEqual(['none', 'none']);
 });
 
-test('merges state-aware slot classes with semantic and legacy classes', async ({
+test('preserves semantic styles while resolving state-aware slot classes', async ({
   page,
 }) => {
   const result = await page.evaluate(async () => {
@@ -105,29 +119,23 @@ test('merges state-aware slot classes with semantic and legacy classes', async (
       label: 'Amount',
       className: (state: { focused: boolean }) =>
         state.focused ? 'root-focused' : 'root-unfocused',
-      labelClassName: 'legacy-label',
       labelProps: { className: 'slot-label' },
-      scrubAreaClassName: 'legacy-scrub-area',
       scrubArea: {
         className: (state: { scrubbing: boolean }) =>
           state.scrubbing ? 'slot-scrubbing' : 'slot-not-scrubbing',
       },
-      groupClassName: 'legacy-group',
       group: {
         className: (state: { valid: boolean | null }) =>
           state.valid === false ? 'slot-group-invalid' : 'slot-group-valid',
       },
-      inputClassName: 'legacy-input',
       input: {
         className: (state: { focused: boolean }) =>
           state.focused ? 'slot-input-focused' : 'slot-input-idle',
       },
-      decrementClassName: 'legacy-decrement',
       decrement: {
         className: (state: { disabled: boolean }) =>
           state.disabled ? 'slot-decrement-disabled' : 'slot-decrement-ready',
       },
-      incrementClassName: 'legacy-increment',
       increment: {
         className: (state: { readOnly: boolean }) =>
           state.readOnly ? 'slot-increment-readonly' : 'slot-increment-ready',
@@ -176,17 +184,16 @@ test('merges state-aware slot classes with semantic and legacy classes', async (
   });
   for (const name of ['root-focused', 'group/numeric'])
     expect(result.root).toContain(name);
-  for (const name of ['legacy-label', 'slot-label'])
-    expect(result.label).toContain(name);
-  for (const name of ['legacy-group', 'slot-group-invalid'])
+  expect(result.label).toContain('slot-label');
+  for (const name of ['border-momo-border-input', 'slot-group-invalid'])
     expect(result.group).toContain(name);
-  for (const name of ['legacy-input', 'slot-input-focused'])
+  for (const name of ['font-momo-mono', 'slot-input-focused'])
     expect(result.input).toContain(name);
-  expect(result.scrub).toContain('legacy-scrub-area');
+  expect(result.scrub).toContain('text-momo-fg-muted');
   expect(result.scrub).toContain('slot-scrubbing');
-  for (const name of ['legacy-decrement', 'slot-decrement-disabled'])
+  for (const name of ['bg-momo-bg-surface-muted', 'slot-decrement-disabled'])
     expect(result.decrement).toContain(name);
-  for (const name of ['legacy-increment', 'slot-increment-readonly'])
+  for (const name of ['bg-momo-bg-surface-muted', 'slot-increment-readonly'])
     expect(result.increment).toContain(name);
 });
 

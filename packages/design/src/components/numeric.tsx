@@ -31,9 +31,9 @@ import type { HTMLMotionProps } from 'motion/react';
 import { MotionConfig, motion } from 'motion/react';
 
 import { useFeel } from '../motion/index.js';
-import type { SlotBaseConfig, SlotBaseProps } from '../shared/index.js';
-import { asClass, asData, isReactNode, render } from '../shared/index.js';
-import { cva, cx } from '../tailwind/index.js';
+import type { SlotBaseConfig } from '../shared/index.js';
+import { asClass, asData, render } from '../shared/index.js';
+import { cva } from '../tailwind/index.js';
 
 const { Root, Input, Group, Increment, Decrement, ScrubArea, ScrubAreaCursor } =
   BaseNumberField;
@@ -342,28 +342,6 @@ function NumericIncrement({
   );
 }
 
-interface ClassNameSlotProps<TState> extends SlotBaseProps {
-  className?: string | ((state: TState) => string | undefined);
-}
-
-function configureSlot<TState, TProps extends ClassNameSlotProps<TState>>(
-  config: SlotBaseConfig<TProps>,
-  legacyClassName?: string,
-): SlotBaseConfig<TProps> {
-  if (config === undefined || config === true) {
-    return { className: legacyClassName } as TProps;
-  }
-
-  if (!isReactNode(config)) {
-    return {
-      ...config,
-      className: asClass<TState>(legacyClassName, config.className),
-    };
-  }
-
-  return config;
-}
-
 /** Props for the themed Base UI number field. */
 export interface NumericProps
   extends Omit<NumberFieldRootProps, 'children' | 'className'>,
@@ -386,20 +364,6 @@ export interface NumericProps
   decrement?: SlotBaseConfig<NumericDecrementProps>;
   /** Configures or replaces the increment button. */
   increment?: SlotBaseConfig<NumericIncrementProps>;
-  /** @deprecated Use `scrubArea.className`. */
-  scrubAreaClassName?: string;
-  /** @deprecated Use `labelProps.className`. */
-  labelClassName?: string;
-  /** @deprecated Use `scrubAreaCursor.className`. */
-  scrubAreaCursorClassName?: string;
-  /** @deprecated Use `group.className`. */
-  groupClassName?: string;
-  /** @deprecated Use `input.className`. */
-  inputClassName?: string;
-  /** @deprecated Use `decrement.className`. */
-  decrementClassName?: string;
-  /** @deprecated Use `increment.className`. */
-  incrementClassName?: string;
   /** Called after Base UI accepts a value change. */
   onChange?: (value: number | null) => void;
 }
@@ -428,19 +392,12 @@ export function Numeric(props: NumericProps) {
     labelProps,
     size,
     className,
-    scrubArea: scrubAreaConfig,
-    scrubAreaCursor: scrubAreaCursorConfig,
-    group: groupConfig,
-    input: inputConfig,
-    decrement: decrementConfig,
-    increment: incrementConfig,
-    scrubAreaClassName,
-    labelClassName,
-    scrubAreaCursorClassName,
-    groupClassName,
-    inputClassName,
-    decrementClassName,
-    incrementClassName,
+    scrubArea: scrubAreaConfig = {},
+    scrubAreaCursor: scrubAreaCursorConfig = {},
+    group: groupConfig = {},
+    input: inputConfig = {},
+    decrement: decrementConfig = {},
+    increment: incrementConfig = {},
     onChange,
     onValueChange,
     ...rootProps
@@ -464,74 +421,32 @@ export function Numeric(props: NumericProps) {
           if (!details.isCanceled) onChange?.(value);
         }}
       >
-        {render(
-          NumericScrubArea,
-          configureSlot<NumberFieldScrubAreaState, NumericScrubAreaProps>(
-            scrubAreaConfig,
-            scrubAreaClassName,
+        {render(NumericScrubArea, scrubAreaConfig, {
+          size: resolvedSize,
+          children: (
+            <>
+              <NumericLabel {...labelProps} htmlFor={id}>
+                {label}
+              </NumericLabel>
+              {render(NumericScrubAreaCursor, scrubAreaCursorConfig)}
+            </>
           ),
-          {
-            size: resolvedSize,
-            children: (
-              <>
-                <NumericLabel
-                  {...labelProps}
-                  htmlFor={id}
-                  className={cx(labelClassName, labelProps?.className)}
-                >
-                  {label}
-                </NumericLabel>
-                {render(
-                  NumericScrubAreaCursor,
-                  configureSlot<
-                    NumberFieldScrubAreaCursorState,
-                    NumericScrubAreaCursorProps
-                  >(scrubAreaCursorConfig, scrubAreaCursorClassName),
-                  {},
-                )}
-              </>
-            ),
-          },
-        )}
+        })}
 
-        {render(
-          NumericGroup,
-          configureSlot<NumberFieldGroupState, NumericGroupProps>(
-            groupConfig,
-            groupClassName,
+        {render(NumericGroup, groupConfig, {
+          size: resolvedSize,
+          children: (
+            <>
+              {render(NumericDecrement, decrementConfig, {
+                size: resolvedSize,
+              })}
+              {render(NumericInput, inputConfig, { size: resolvedSize })}
+              {render(NumericIncrement, incrementConfig, {
+                size: resolvedSize,
+              })}
+            </>
           ),
-          {
-            size: resolvedSize,
-            children: (
-              <>
-                {render(
-                  NumericDecrement,
-                  configureSlot<
-                    NumberFieldDecrementState,
-                    NumericDecrementProps
-                  >(decrementConfig, decrementClassName),
-                  { size: resolvedSize },
-                )}
-                {render(
-                  NumericInput,
-                  configureSlot<NumberFieldInputState, NumericInputProps>(
-                    inputConfig,
-                    inputClassName,
-                  ),
-                  { size: resolvedSize },
-                )}
-                {render(
-                  NumericIncrement,
-                  configureSlot<
-                    NumberFieldIncrementState,
-                    NumericIncrementProps
-                  >(incrementConfig, incrementClassName),
-                  { size: resolvedSize },
-                )}
-              </>
-            ),
-          },
-        )}
+        })}
       </Root>
     </MotionConfig>
   );

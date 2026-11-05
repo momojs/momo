@@ -120,7 +120,7 @@ import { Numeric } from "@momots/design/components/numeric";
 />
 ```
 
-直接传入 ReactNode 会完整替换对应 slot。此时调用方需要自行保留必要的 Base UI primitive、事件和 `aria` 语义；一般的样式或原生属性调整应优先使用 props object。原有的 `*ClassName` 属性继续可用，适合只追加 Tailwind class 的场景。
+直接传入 ReactNode 会完整替换对应 slot。此时调用方需要自行保留必要的 Base UI primitive、事件和 `aria` 语义；一般的样式或原生属性调整应优先使用 props object。
 
 默认加减按钮使用 motion `whileTap` 提供按压缩放，并通过 `MotionConfig reducedMotion="user"` 遵循系统的减少动态效果设置。用 ReactNode 替换按钮 slot 时，默认的按压动画也会一并被替换。
 
@@ -150,10 +150,6 @@ import { Numeric } from "@momots/design/components/numeric";
 | `group` / `input` | `NumericProps['group']` / `NumericProps['input']` | 配置或替换输入组合与可见输入框；input 额外支持 `nativeSize` |
 | `decrement` / `increment` | `NumericProps['decrement']` / `NumericProps['increment']` | 配置或替换减少、增加按钮 |
 | `className` | `string \| ((state) => string)` | 根容器追加样式，可读取 Number Field state |
-| `scrubAreaClassName` / `labelClassName` | `string` | 兼容的拖拽区域与标签样式；新代码优先使用 slot / `labelProps` |
-| `scrubAreaCursorClassName` | `string` | 兼容的拖拽 cursor 样式；新代码优先使用 `scrubAreaCursor` |
-| `groupClassName` / `inputClassName` | `string` | 兼容的组合与输入框样式；新代码优先使用对应 slot |
-| `decrementClassName` / `incrementClassName` | `string` | 兼容的按钮样式；新代码优先使用对应 slot |
 | `id` | `string` | 可见输入框 id；内部 label 会自动与其关联 |
 | `inputRef` | `React.Ref<HTMLInputElement>` | 获取 Base UI 用于表单与校验的隐藏 input |
 | `render` | Base UI render prop | 组合或替换 Root 的底层 div |
