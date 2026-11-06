@@ -33,6 +33,11 @@ for (const prefix of ['', ...i18n.languages]) {
     home.includes(`${base}assets/`),
     `Missing assets in ${prefix || '/'} homepage`,
   );
+  const localeScript = home.indexOf('id="momo-locale-entry"');
+  assert(
+    localeScript > -1 && localeScript < home.indexOf('</head>'),
+    'Locale selection must run in the head before the homepage can paint',
+  );
   assert(
     home.includes(`lang="${locale}"`),
     `Wrong homepage language: ${prefix}`,

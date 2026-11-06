@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
-
 import {
   createRootRoute,
   HeadContent,
   Outlet,
+  redirect,
   Scripts,
   useLocation,
   useNavigate,
@@ -11,16 +10,25 @@ import {
 } from '@tanstack/react-router';
 
 import { MotionUIThemeProvider } from '@momots/design/motion';
+import { isSSR } from '@momots/host';
 import { i18nProvider } from 'fumadocs-ui/i18n';
 import { RootProvider } from 'fumadocs-ui/provider/tanstack';
 
 import SearchDialog from '@/components/search';
-import { detectLocale, localizeHref, resolveLocale } from '@/lib/i18n';
+import { i18n, localizeHref, resolveLocale } from '@/lib/i18n';
+import { getLocaleEntryPath, localeEntryScript } from '@/lib/locale-entry';
 import { translations } from '@/lib/ui-translations';
 import motionTheme from '@/motion.theme';
 import appCss from '@/styles/app.css?url';
 
 export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    if (isSSR()) return;
+    const to = getLocaleEntryPath(location.pathname, '/', i18n);
+    if (to) {
+      throw redirect({ to, search: true, hash: true, replace: true });
+    }
+  },
   head: () => ({
     meta: [
       {
@@ -45,30 +53,15 @@ function RootComponent() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Static entry points render in English, then use the browser's language.
-  // Explicit locale URLs always win and are stable during hydration.
-  useEffect(() => {
-    if (lang || !/^(?:\/|\/docs(?:\/.*)?)$/.test(location.pathname)) return;
-    let preferred: string | null = null;
-    try {
-      preferred = localStorage.getItem('momo-locale');
-    } catch {
-      /* Storage may be unavailable. */
-    }
-    const target = preferred
-      ? resolveLocale(preferred)
-      : detectLocale(navigator.languages);
-    void navigate({
-      to: localizeHref(location.pathname, target),
-      search: true,
-      hash: true,
-      replace: true,
-    });
-  }, [lang, location.pathname, navigate]);
-
   return (
     <html lang={locale} className='theme-neutral' suppressHydrationWarning>
       <head>
+        <script
+          id='momo-locale-entry'
+          dangerouslySetInnerHTML={{
+            __html: localeEntryScript(import.meta.env.BASE_URL),
+          }}
+        />
         <HeadContent />
       </head>
       <body className='flex flex-col min-h-screen'>
