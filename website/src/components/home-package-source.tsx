@@ -4,6 +4,8 @@ import { lazy, Suspense } from 'react';
 
 import { Code2 } from 'lucide-react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../packages/design/src/components/button';
 import { Dialog } from '../../../packages/design/src/components/dialog';
 
@@ -26,12 +28,13 @@ export function HomePackageSource({
   code,
   lang,
 }: HomePackageSourceProps) {
+  const t = useSiteTranslations();
   return (
     <Dialog
       size='lg'
-      title={`momo/${name} · 关键用法`}
+      title={t('momo/{0} · 关键用法', name)}
       description={title}
-      closeLabel='关闭代码'
+      closeLabel={t('关闭代码')}
       className='max-w-3xl'
       closeClassName='size-11'
       slots={{
@@ -46,7 +49,7 @@ export function HomePackageSource({
           className='py-1.5 text-fd-muted-foreground'
         >
           <Code2 className='size-4' aria-hidden />
-          关键用法
+          {t('关键用法')}
         </Button>
       }
     >
@@ -65,7 +68,7 @@ export function HomePackageSource({
             className:
               'rounded-none border-x-0 border-b-0 shadow-none [&>div:first-child]:h-11 [&_button]:size-11',
             viewportProps: {
-              'aria-label': `momo/${name} 用法示例`,
+              'aria-label': t('momo/{0} 用法示例', name),
               className: 'max-h-[65dvh]',
             },
           }}

@@ -1,0 +1,176 @@
+---
+title: 开始
+description: "@momots/drive 适用的场景、安装方式，以及快捷方法、exec() 与 request() 的选择。"
+icon: Rocket
+---
+
+`@momots/drive` 是基于 Fetch API 的 HTTP 客户端。请求和响应仍使用 `Headers`、
+`Response`、`AbortSignal`、`ReadableStream` 等 Fetch 类型；鉴权、日志、错误转换等
+多个接口共用的规则写成中间件，按路径挂到客户端上，不必在每个接口函数里重复。
+
+## 它解决什么问题
+
+接口变多以后，难维护的往往是每个接口都要重复的外围规则：哪些接口需要令牌、哪些
+响应需要审计、哪个业务域用哪套规则，以及何时需要读取状态码或流。
+
+Drive 把这些规则和接口函数分开写：
+
+- **接口函数**：写明请求地址、数据放在哪个通道、期望什么结果；
+- **客户端**：用中间件决定哪些请求加鉴权、日志、错误处理或重复发送。
+
+本文把共享同一组传输规则的请求集合称为“服务边界”。同一域名、同一后端服务或同一套
+认证规则，都可以构成这样的边界。
+
+Drive 适合有多个接口或多个业务域的应用。若项目只有少量互不相关的请求，
+直接使用原生 `fetch` 往往更清楚。
+
+## 设计思路
+
+使用 Drive 时要做三个选择。
+
+### 1. 明确数据要去哪里
+
+对象式调用用三个字段区分请求数据的去向：
+
+| 字段 | 目的 | 接受的值 |
+| --- | --- | --- |
+| `query` | 写入 URL 查询参数 | `URLSearchParams` |
+| `json` | 发送 JSON | 任意可被当前 stringifier 序列化为字符串的值 |
+| `body` | 使用 Fetch 原生请求体 | `BodyInit \| null` |
+
+`json` 与 `body` 不能同时出现。`query` 只改变 URL，不会创建请求体；URL 中已有的查询
+参数和 fragment 会保留，但 fragment 不会进入 HTTP 请求。
+
+对象式请求、`request()` 与 `exec()` 也接受 `data`。快捷方法的位置式
+`get(api, data, init)`（其他方法同理）只是把第二参映射到同一个自动通道：
+
+- `URLSearchParams` 进入 query；
+- 普通对象与数组按 JSON 发送；
+- 支持的原生 body 对象原样交给 Fetch。
+
+两种写法能力相同。对象式在调用处写明数据去向；位置式更短，适合参数含义一眼就能看出
+的调用。`data` 和显式字段不能指向同一个通道，例如同时传 `json` 和普通对象 `data`
+会在发送前以 `TypeError` 拒绝。
+
+### 2. 按需要选择返回结果
+
+| 入口 | 适用目的 | 返回值 |
+| --- | --- | --- |
+| `get`、`post` 等快捷方法 | 只关心解析后的响应体 | `Promise<T>` |
+| `exec` | 使用自定义 HTTP 方法，但仍只关心响应体 | `Promise<T>` |
+| `request` | 需要状态码、响应头、原始响应或响应流 | `Promise<DriveFetchedContext<T>>` |
+
+快捷方法与 `exec()` 的泛型 `T` 只是调用方对响应格式的假设，Drive 不在运行时校验。已知响应为空
+时使用 `void`；响应体可能不存在时使用 `T | undefined`；需要亲自判断时使用
+`request()`，因为它的 `res.body` 始终是可选字段。默认响应解析器（parser）根据响应头
+和响应内容选择解析方式，`T` 不参与这项选择。
+
+### 3. 用中间件处理公共规则
+
+中间件通过路径或谓词选择要处理的请求，按洋葱模型执行：`await next()` 之前的代码
+处理请求，之后的代码处理响应。
+
+```mermaid
+flowchart LR
+  A["业务 API 函数"] --> B["匹配的中间件"]
+  B --> C["Fetch 请求与响应"]
+  C --> D["body 或完整 Context"]
+```
+
+Drive 默认不把 `4xx` 或 `5xx` 当作异常，也不缓存或重复发送请求。不同协议和业务对
+“失败”的定义不同，这些规则可以写在中间件或 `repeat` 里，也可以交给 TanStack Query、
+Effect 等上层工具。
+
+## 如何开始
+
+### 安装
+
+当前版本为 alpha：
+
+```bash
+bun add @momots/drive@alpha @momots/core@alpha remeda
+```
+
+`@momots/core` 与 `remeda` 是 peer dependencies，需要由应用一并安装。
+
+Drive 面向提供现代 Fetch 与 Stream API 的运行时，主要包括 Bun、现代浏览器和现代
+Node.js。若运行时缺少相应 Web API，应由应用提供兼容层。
+
+Drive 不提供 `baseURL`，也不会自行解析相对地址。浏览器通常可以按当前 origin 发送
+`/api/...`；Bun 与 Node.js 通常需要绝对 URL。下方网站示例假设运行在浏览器同源环境，
+未定义的 `getToken()` 等标识符代表应用侧依赖。
+
+### 创建客户端
+
+建议每个服务边界创建一个 Drive 实例，再按业务域导出 API 函数。
+
+```ts
+import { Drive } from "@momots/drive";
+
+export const drive = new Drive().use("/api/**", async (context, next) => {
+  context.req.headers.set("Authorization", `Bearer ${getToken()}`);
+  await next();
+});
+
+type User = { id: string; name: string };
+
+export const UserApi = {
+  list: (page: number) =>
+    drive.get<User[]>({
+      api: "/api/users",
+      query: new URLSearchParams({ page: String(page) }),
+    }),
+  create: (name: string) =>
+    drive.post<User>({ api: "/api/users", json: { name } }),
+  remove: (id: string) =>
+    drive.delete<void>({ api: `/api/users/${id}` }),
+};
+```
+
+页面和业务逻辑只调用 `UserApi`；令牌、日志和错误处理写在 `drive` 的中间件里。
+
+### 在需要元数据时升级到 `request()`
+
+```ts
+async function findUser(id: string): Promise<User | undefined> {
+  const context = await drive.request<User>({
+    api: `/api/users/${id}`,
+    method: "GET",
+  });
+
+  if (context.res.status === 404) return undefined;
+  if (context.res.status >= 400) {
+    throw new Error(`HTTP ${context.res.status}`);
+  }
+  return context.res.body;
+}
+```
+
+`request()` 成功返回时，`raw`、`status` 与 `headers` 一定存在；parser 是否得到 body
+则取决于响应内容和解析策略。
+
+## Drive 处理与不处理的事
+
+Drive 负责：
+
+- 组织 Fetch 请求参数和响应元数据；
+- 解析常见 JSON、文本与附件响应；
+- 按路径或谓词组合中间件；
+- 在调用方明确要求时提供流进度和 `repeat` 重复发送。
+
+Drive 不负责：
+
+- 推断后端业务模型或校验泛型 `T`；
+- 自动将 HTTP 状态码转换成业务异常；
+- 自动判断写请求是否可以安全重放；
+- 代替缓存、服务端状态或 UI 加载状态工具。
+
+## 下一步读什么
+
+| 你的问题 | 阅读 |
+| --- | --- |
+| 为什么采用中间件、Context 和显式数据通道？ | [理念](/docs/drive/philosophy) |
+| 如何建立一个可用的客户端？ | [教程](/docs/drive/tutorial) |
+| 常见任务如何写？ | [示例](/docs/drive/examples) |
+| 如何为 cookie 会话请求附加 CSRF token？ | [Recipes：CSRF](/docs/drive/recipes#csrf) |
+| 某个字段、重载或类型的精确含义是什么？ | [API 参考](/docs/drive/guide) |

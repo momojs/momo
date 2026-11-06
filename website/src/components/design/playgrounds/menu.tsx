@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { Copy01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 
+import { withBasePath } from '@/lib/shared';
+import { useSiteLocale, useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import type { MenuProps } from '../../../../../packages/design/src/components/menu';
 import {
@@ -39,6 +42,8 @@ const alignOptions = [
 ] as const;
 
 export function MenuPlayground() {
+  const t = useSiteTranslations();
+  const locale = useSiteLocale();
   const [open, setOpen] = useState(false);
   const [size, setSize] = useState<NonNullable<MenuProps['size']>>('md');
   const [side, setSide] =
@@ -51,7 +56,7 @@ export function MenuPlayground() {
   const [disabled, setDisabled] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [sort, setSort] = useState('date');
-  const [action, setAction] = useState('尚未执行操作');
+  const [action, setAction] = useState(t('尚未执行操作'));
 
   return (
     <PlaygroundFrame
@@ -108,10 +113,10 @@ export function MenuPlayground() {
           showArrow={showArrow}
           disabled={disabled}
           className='w-56'
-          trigger={<Button variant='outline'>项目操作</Button>}
-          title='当前项目'
-          description='管理项目与视图偏好。'
-          footer='↑↓ 选择 · Enter 执行 · Esc 关闭'
+          trigger={<Button variant='outline'>{t('项目操作')}</Button>}
+          title={t('当前项目')}
+          description={t('管理项目与视图偏好。')}
+          footer={t('↑↓ 选择 · Enter 执行 · Esc 关闭')}
           slots={{
             header: showHeader ? <header /> : false,
             title: <h3 />,
@@ -121,22 +126,22 @@ export function MenuPlayground() {
           }}
         >
           <MenuGroup>
-            <MenuGroupLabel>工作区</MenuGroupLabel>
+            <MenuGroupLabel>{t('工作区')}</MenuGroupLabel>
             <MenuItem
               shortcut='⌘E'
-              description='修改名称与项目资料'
+              description={t('修改名称与项目资料')}
               slots={{ shortcut: <kbd /> }}
-              onClick={() => setAction('编辑项目')}
+              onClick={() => setAction(t('编辑项目'))}
             >
-              编辑项目
+              {t('编辑项目')}
             </MenuItem>
             <MenuItem
               icon={<HugeiconsIcon icon={Copy01Icon} size={16} />}
-              onClick={() => setAction('复制链接')}
+              onClick={() => setAction(t('复制链接'))}
             >
-              复制链接
+              {t('复制链接')}
             </MenuItem>
-            <MenuItem disabled>归档项目</MenuItem>
+            <MenuItem disabled>{t('归档项目')}</MenuItem>
           </MenuGroup>
           <MenuSeparator />
           <MenuCheckboxItem
@@ -145,27 +150,31 @@ export function MenuPlayground() {
             shortcut='⌘⇧N'
             slots={{ shortcut: <kbd /> }}
           >
-            接收通知
+            {t('接收通知')}
           </MenuCheckboxItem>
           <MenuSubmenu
-            label='排序方式'
-            title='排序依据'
-            triggerProps={{ extra: sort === 'date' ? '最近更新' : '项目名称' }}
+            label={t('排序方式')}
+            title={t('排序依据')}
+            triggerProps={{
+              extra: sort === 'date' ? t('最近更新') : t('项目名称'),
+            }}
           >
             <MenuRadioGroup value={sort} onValueChange={setSort}>
-              <MenuRadioItem value='date'>最近更新</MenuRadioItem>
-              <MenuRadioItem value='name'>项目名称</MenuRadioItem>
+              <MenuRadioItem value='date'>{t('最近更新')}</MenuRadioItem>
+              <MenuRadioItem value='name'>{t('项目名称')}</MenuRadioItem>
             </MenuRadioGroup>
           </MenuSubmenu>
-          <MenuLinkItem href='/docs/design'>组件文档</MenuLinkItem>
+          <MenuLinkItem href={withBasePath(`/${locale}/docs/design`)}>
+            {t('组件文档')}
+          </MenuLinkItem>
           <MenuSeparator />
           <MenuItem
             variant='danger'
             onClick={() =>
-              setAction('已选择删除；实际应用中可继续打开确认对话框。')
+              setAction(t('已选择删除；实际应用中可继续打开确认对话框。'))
             }
           >
-            删除项目
+            {t('删除项目')}
           </MenuItem>
         </Menu>
         <p

@@ -1,14 +1,14 @@
 ---
 title: Drawer
-description: 支持方向、滑动关闭和停靠点的抽屉。
+description: A drawer with directional opening, swipe dismissal, and snap points.
 icon: PanelBottomOpen
 ---
 
-`Drawer` 基于 Base UI Drawer 封装，提供焦点管理、滑动关闭、四个展开方向和纵向停靠点。标题、说明、触发器、内容与底部操作均可通过 slot 组合。
+`Drawer` wraps Base UI Drawer with focus management, swipe dismissal, four directions, and vertical snap points. Compose headings, descriptions, triggers, body, and footer actions through slots.
 
 <DrawerPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Button } from "@momots/design/components/button";
@@ -19,27 +19,27 @@ import {
 
 <Drawer
   direction="down"
-  trigger={<Button>通知设置</Button>}
-  title="通知设置"
-  description="选择工作区接收通知的方式。"
+  trigger={<Button>Notification settings</Button>}
+  title="Notification settings"
+  description="Choose how the workspace receives notifications."
   slots={{ content: { className: "min-h-0" } }}
   footer={
     <div className="w-full p-4 pt-2">
       <DrawerClose render={<Button className="w-full" />}>
-        完成
+        Done
       </DrawerClose>
     </div>
   }
 >
   <div className="min-h-0 flex-1 overflow-y-auto p-4">
-    抽屉正文
+    Drawer body
   </div>
 </Drawer>
 ```
 
-`title` 应始终存在，为抽屉提供可访问名称。它和 `description` 都接受 ReactNode 内容；节点渲染方式通过 `slots.title.render` 与 `slots.description.render` 配置。`DrawerClose` 必须放在当前 Drawer 内。
+Always provide `title` for the drawer's accessible name. Both `title` and `description` accept ReactNode content; configure node rendering through `slots.title.render` and `slots.description.render`. `DrawerClose` must be inside its Drawer.
 
-## 滑动与停靠点
+## Swiping and snap points
 
 ```tsx
 const points = [0.35, 0.7, 1];
@@ -54,55 +54,55 @@ const points = [0.35, 0.7, 1];
 </Drawer>
 ```
 
-停靠点仅适用于 `up` 和 `down`。不大于 `1` 的数字表示视口高度比例，大于 `1` 的数字表示像素，也可以传入 `px` 或 `rem` 字符串。需要受控时组合 `snapPoint` 与 `onSnapPointChange`。
+Snap points apply only to `up` and `down`. Numbers at most `1` are viewport-height fractions; larger numbers are pixels. `px` and `rem` strings are also accepted. Combine `snapPoint` with `onSnapPointChange` for controlled snapping.
 
-`swipe` 只控制内置拖动手柄是否显示，默认 `true`；Base UI 的滑动手势仍由 Drawer Root 管理。`direction` 同时决定展开方向与关闭手势方向。
+`swipe` only controls visibility of the built-in drag handle and defaults to `true`; Base UI swipe gestures remain managed by Drawer Root. `direction` determines both opening and dismissal gesture direction.
 
 ## Modal
 
-- `modal={true}` 会圈定焦点、锁定页面滚动、阻止外部指针交互并显示遮罩。
-- `modal={false}` 允许与页面其余部分交互，不显示遮罩。
-- `modal="trap-focus"` 只圈定焦点，不锁定滚动或阻止外部指针交互。
+- `modal={true}` traps focus, locks scrolling, blocks outside pointer interaction, and displays a backdrop.
+- `modal={false}` allows interaction with the rest of the page and shows no backdrop.
+- `modal="trap-focus"` only traps focus, without locking scrolling or blocking outside pointer interaction.
 
-模态 Drawer 应提供标题和可见的 `DrawerClose`。可通过 `disablePointerDismissal` 阻止外部点击关闭；需要检查关闭原因或取消关闭时使用 `onOpenChange` 的 details 参数。
+Modal Drawers should have a title and visible `DrawerClose`. Use `disablePointerDismissal` to prevent outside-click dismissal, or `onOpenChange` details to inspect/cancel dismissal reasons.
 
 ## Slots
 
-Drawer 采用共享的 [Content Slots](/docs/design/content-slots) 约定：`title`、`description`、`children`、`footer` 是内容，`slots.header`、`slots.title`、`slots.description`、`slots.content`、`slots.footer` 配置对应节点。
+Drawer follows [Content Slots](/docs/design/content-slots): `title`, `description`, `children`, and `footer` supply content; `slots.header`, `slots.title`, `slots.description`, `slots.content`, and `slots.footer` configure nodes.
 
 ```tsx
 <Drawer
-  title="通知设置"
+  title="Notification settings"
   slots={{
     header: { render: <header /> },
     title: { render: <h3 /> },
     content: { className: "gap-3" },
     footer: { className: "p-4" },
   }}
-  footer={<DrawerClose render={<Button />}>完成</DrawerClose>}
+  footer={<DrawerClose render={<Button />}>Done</DrawerClose>}
 >
-  抽屉正文
+  Drawer body
 </Drawer>
 ```
 
-`slots.content` 只配置正文，不包含手柄、标题和底部操作。内部 Base UI Content 容器负责滑动和嵌套状态，不受正文 slot 的替换或隐藏影响。`trigger` 仍接受 Base UI render 元素或回调。
+`slots.content` configures only the body, excluding the handle, heading, and footer. The internal Base UI Content container handles swiping and nesting, unaffected by body-slot replacement or hiding. `trigger` still accepts a Base UI render element or callback.
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `open` | `boolean` | 受控打开状态 |
-| `defaultOpen` | `boolean` | 非受控初始状态，默认 `false` |
-| `onOpenChange` | Base UI callback | 状态变化回调，details 包含关闭原因并可取消 |
-| `onOpenChangeComplete` | `(open: boolean) => void` | 打开或关闭动画完成后的回调 |
-| `direction` | `"up" \| "down" \| "left" \| "right"` | 展开与滑动关闭方向，默认 `"down"` |
-| `swipe` | `boolean` | 是否显示内置拖动手柄，默认 `true` |
-| `modal` | `boolean \| "trap-focus"` | 焦点、滚动锁定与外部交互策略，默认 `true` |
-| `disablePointerDismissal` | `boolean` | 是否阻止外部点击关闭 |
-| `snapPoints` | `(number \| string)[]` | 纵向 Drawer 的停靠点 |
-| `snapPoint` / `defaultSnapPoint` | `number \| string \| null` | 受控或非受控停靠点 |
-| `onSnapPointChange` | Base UI callback | 停靠点变化回调 |
-| `snapToSequentialPoints` | `boolean` | 是否只移动到相邻停靠点 |
-| `children` | `ReactNode` | Drawer 正文 |
+| `open` | `boolean` | Controlled open state |
+| `defaultOpen` | `boolean` | Uncontrolled initial state; defaults to `false` |
+| `onOpenChange` | Base UI callback | State change callback; details include dismissal reason and cancellation |
+| `onOpenChangeComplete` | `(open: boolean) => void` | Called after opening or closing animation completes |
+| `direction` | `"up" \| "down" \| "left" \| "right"` | Opening and swipe-dismissal direction; defaults to `"down"` |
+| `swipe` | `boolean` | Shows the built-in drag handle; defaults to `true` |
+| `modal` | `boolean \| "trap-focus"` | Focus, scroll-locking, and outside interaction policy; defaults to `true` |
+| `disablePointerDismissal` | `boolean` | Prevents outside-click dismissal |
+| `snapPoints` | `(number \| string)[]` | Snap points for vertical Drawers |
+| `snapPoint` / `defaultSnapPoint` | `number \| string \| null` | Controlled or uncontrolled snap point |
+| `onSnapPointChange` | Base UI callback | Snap-point change callback |
+| `snapToSequentialPoints` | `boolean` | Restricts movement to adjacent snap points |
+| `children` | `ReactNode` | Drawer body |
 
-其余 Base UI Drawer Root 属性会透传到内部 Root。
+Other Base UI Drawer Root props are forwarded to the internal Root.

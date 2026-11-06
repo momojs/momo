@@ -1,25 +1,25 @@
 ---
 title: Field
-description: 统一标签、控件、说明与校验错误的字段容器。
+description: A field container combining labels, controls, descriptions, and validation errors.
 icon: ListChecks
 ---
 
-`Field` 基于 Base UI Field 封装，把可访问标签、实际控件与 validity state 组合成一个字段。`cell` 通过提示按钮按需展示说明或错误，`stacked` 直接显示这些内容。Field 可以独立使用；放在 `ToastProvider` 内时，`cell` 的提示会自动使用 Toast。组件保留原生表单提交、受控与非受控校验、`actionsRef`、`render` 和 ref，同时使用 momo semantic token 统一视觉状态。
+`Field` wraps Base UI Field to combine an accessible label, control, and validity state. `cell` exposes descriptions or errors through a hint button; `stacked` displays them inline. Field works independently; inside `ToastProvider`, `cell` hints automatically use Toast. It preserves native submission, controlled/uncontrolled validation, `actionsRef`, `render`, and ref, while momo semantic tokens unify visual states.
 
 <FieldPlayground />
 
-## 使用
+## Usage
 
-不传 `children` 时，Field 会渲染带 momo 样式的原生输入控件。通过 `control` slot 配置它：
+Without `children`, Field renders a native input with momo styles. Configure it through the `control` slot:
 
 ```tsx
 import { Field } from "@momots/design/components/field";
 
 <Field
   name="email"
-  label="邮箱"
+  label="Email"
   variant="stacked"
-  description="用于接收工作区通知。"
+  description="Used for workspace notifications."
   control={{
     type: "email",
     placeholder: "name@example.com",
@@ -28,11 +28,11 @@ import { Field } from "@momots/design/components/field";
 />
 ```
 
-`label` 始终通过 Base UI `Field.Label` 渲染。两种变体的说明与错误都保留在字段内部，通过 Base UI 自动关联到控件的 `aria-describedby`。placeholder 只是输入提示，不能替代 `label`。
+`label` always renders through Base UI `Field.Label`. Both variants retain description and error semantics inside the field, automatically associated with the control's `aria-describedby`. A placeholder is an input hint, not a replacement for a label.
 
-## 组合自定义控件
+## Composing custom controls
 
-传入 `children` 时，它会直接替换内建原生输入，而不是成为 `<input>` 的子节点。momo `Input` 以及 Base UI 可感知 Field context 的控件会自动接收 disabled、focused、dirty、touched、filled 与 valid 状态：
+`children` replaces the built-in native input instead of becoming its child. momo `Input` and Base UI controls that understand Field context automatically receive disabled, focused, dirty, touched, filled, and valid states:
 
 ```tsx
 import { Field } from "@momots/design/components/field";
@@ -40,17 +40,17 @@ import { Input } from "@momots/design/components/input";
 
 <Field
   name="workspace"
-  label="工作区名称"
+  label="Workspace name"
   variant="stacked"
-  description="团队成员可以看到这个名称。"
+  description="Team members can see this name."
 >
   <Input required minLength={3} placeholder="Momo Studio" />
 </Field>
 ```
 
-当 `children` 存在时，`control` slot 不会渲染，避免向同一个 Field 注册两份控件。
+When `children` exists, the `control` slot is not rendered, preventing two controls from registering with the same Field.
 
-Select 等由 button 触发的控件不应使用原生 `<label>` 行为。需要这类细粒度配置时，可以使用导出的 primitives 组合，并将 `nativeLabel` 关闭：
+Button-triggered controls such as Select should not use native `<label>` behavior. For this configuration, compose exported primitives and disable `nativeLabel`:
 
 ```tsx
 import { Field as BaseField } from "@base-ui/react/field";
@@ -60,71 +60,71 @@ import {
 } from "@momots/design/components/field";
 
 <BaseField.Root name="region">
-  <FieldLabel nativeLabel={false}>区域</FieldLabel>
+  <FieldLabel nativeLabel={false}>Region</FieldLabel>
   <Select options={regions} />
-  <FieldDescription>用于计算数据驻留位置。</FieldDescription>
+  <FieldDescription>Used to determine data residency.</FieldDescription>
 </BaseField.Root>
 ```
 
-## 校验
+## Validation
 
-### 原生约束
+### Native constraints
 
-内建 Control 支持 `required`、`minLength`、`pattern`、`type` 等原生约束。`validationMode` 决定触发校验的时机，默认行为由 Base UI Form 决定：
+The built-in Control supports native constraints including `required`, `minLength`, `pattern`, and `type`. `validationMode` controls when validation runs; Base UI Form determines the default behavior:
 
 ```tsx
 <Field
   name="username"
-  label="用户名"
+  label="Username"
   variant="stacked"
   validationMode="onBlur"
   control={{ required: true, minLength: 3 }}
-  error="用户名至少需要 3 个字符。"
+  error="The username must contain at least 3 characters."
 />
 ```
 
-不传 `error` 或传入 `undefined` 时，Error 会使用浏览器、`validate` 或 Base UI Form 提供的错误文本，`cell` 的错误提示也会使用这些内容。显式传入 `null` 时，两种变体都保留空内容，不回退到默认错误文本，也不改变字段的校验状态。`cell` 的错误图标由实际校验状态决定，预设 `error` 文案不会让有效字段显示错误图标。需要只匹配 `tooShort` 等单个 `ValidityState` 时，请使用 `FieldError` primitive 的 `match` 属性。
+Omitting `error` or passing `undefined` uses error text from the browser, `validate`, or Base UI Form, including `cell` hints. Explicit `null` retains empty content in both variants without falling back or changing validity. The `cell` error icon follows actual validity; preset error text does not mark a valid field invalid. To match an individual `ValidityState`, such as `tooShort`, use the `FieldError` primitive's `match` prop.
 
-### 自定义校验
+### Custom validation
 
-`validate` 可以同步或异步返回字符串、字符串数组或 `null`：
+`validate` can synchronously or asynchronously return a string, an array of strings, or `null`:
 
 ```tsx
 <Field
   name="slug"
-  label="项目标识"
+  label="Project slug"
   validationMode="onChange"
   validationDebounceTime={250}
   validate={async (value) => {
     if (typeof value !== "string" || value.length < 3) {
-      return "至少输入 3 个字符。";
+      return "Enter at least 3 characters.";
     }
 
-    return (await isSlugAvailable(value)) ? null : "这个标识已被使用。";
+    return (await isSlugAvailable(value)) ? null : "This slug is already in use.";
   }}
   control={{ required: true }}
 />
 ```
 
-外部表单库控制错误状态时，把 `invalid` 传给 Root，并为固定错误文本设置 `match: true`：
+When an external form library controls errors, pass `invalid` to Root and set `match: true` for fixed error text:
 
 ```tsx
 <Field
   name="email"
-  label="邮箱"
+  label="Email"
   variant="stacked"
   invalid
-  error="这个邮箱已被注册。"
+  error="This email is already registered."
 >
   <Input type="email" />
 </Field>
 ```
 
-需要自定义反馈时，`validity` 接收 Base UI 的完整 validity state，但不会添加额外 DOM：
+For custom feedback, `validity` receives the full Base UI validity state without adding DOM:
 
 ```tsx
 <Field
-  label="密码"
+  label="Password"
   control={{ type: "password", required: true, minLength: 8 }}
   validity={({ validity, value }) => (
     <PasswordStrength value={String(value ?? "")} invalid={validity.tooShort} />
@@ -132,22 +132,22 @@ import {
 />
 ```
 
-## 视觉变体
+## Visual variants
 
-- `cell` 是默认的紧凑双列布局，在标签旁提供说明或错误提示按钮。
-- `stacked` 使用 surface、边框与阴影，并显示说明和错误；聚焦和错误状态由 Base UI state 回调映射到 CVA，而不是依赖 `data-*` 选择器。
+- `cell` is the default compact two-column layout, with a description/error hint button beside the label.
+- `stacked` uses a surface, border, and shadow and displays descriptions and errors. Base UI state callbacks map focus and error states to CVA without relying on `data-*` selectors.
 
 ```tsx
 <Field
   variant="stacked"
-  label="输入 DELETE 以继续"
+  label="Type DELETE to continue"
   control={{ required: true, pattern: "DELETE" }}
 />
 ```
 
-### 自动接入 Toast
+### Automatic Toast integration
 
-`cell` 的提示按钮通过 `useToast({ strict: false })` 读取最近一层 `ToastProvider`，不需要额外配置 Field：
+The `cell` hint button reads the nearest `ToastProvider` through `useToast({ strict: false })`, requiring no additional Field configuration:
 
 ```tsx
 import { Field } from "@momots/design/components/field";
@@ -155,42 +155,42 @@ import { ToastProvider } from "@momots/design/components/toast";
 
 <ToastProvider>
   <Field
-    label="邮箱"
-    description="用于接收工作区通知。"
+    label="Email"
+    description="Used for workspace notifications."
     control={{ type: "email", required: true }}
   />
 </ToastProvider>
 ```
 
-没有 `ToastProvider` 时，Field 仍然可以正常渲染；触发提示按钮只会通过 `console.warn` 提醒缺少 Provider，不会展开内容。有 Provider 时，触发提示会展示 Toast。错误提示由实际校验状态决定，并优先于说明；通知不会自动随每次校验弹出。
+Without `ToastProvider`, Field still renders normally; activating the hint button only logs a missing-provider `console.warn` without expanding content. With a provider, it displays a Toast. Errors depend on actual validity and take priority over descriptions; notifications do not automatically appear on every validation.
 
-提示按钮通过 `onTap` 原样遵循 Motion 的 tap 手势：指针或触摸完成轻触，以及按钮聚焦后使用 Enter 键；手势取消时不弹出 Toast。原生 Space 键产生的 click 与 `HTMLElement.click()` 不会被转换为 tap。
+The hint button's `onTap` follows Motion tap gestures: completed pointer/touch taps and Enter on a focused button. Canceled gestures do not show a Toast. Native Space-generated clicks and `HTMLElement.click()` are not converted into taps.
 
-提示按钮保留原生按钮语义。当前提示的语义节点保留在所属 Field 内并关联到控件，Toast 只接收解析后的展示内容。`stacked` 始终使用内联反馈。
+The hint button retains native button semantics. The current hint's semantic nodes stay in their Field and remain associated with the control; Toast receives only the resolved display content. `stacked` always uses inline feedback.
 
 ## Control slot
 
-`control` 遵循 momo 的 slot 约定：
+`control` follows the momo slot convention:
 
-- `undefined` 使用默认 slot。
-- props object 配置默认 primitive，并保留 Base UI 的状态回调和可访问语义。
-- ReactNode 完整替换 slot。
-- `false` 移除 slot。
+- `undefined` uses the default slot.
+- A props object configures the default primitive, retaining Base UI state callbacks and accessibility semantics.
+- ReactNode replaces the entire slot.
+- `false` removes the slot.
 
 ```tsx
 <Field
-  label="邮箱"
+  label="Email"
   variant="stacked"
   control={{ size: "lg", type: "email" }}
-  description="只用于登录。"
+  description="Used only for sign-in."
 />
 ```
 
-传入 `children` 时，它始终优先于 `control`。需要配置 Label、Description 或 Error 的底层属性时，请使用下方导出的 primitives 手动组合。
+`children` always takes priority over `control`. To configure underlying Label, Description, or Error props, compose the exported primitives below.
 
-## 独立 primitives
+## Standalone primitives
 
-同一入口还导出 `FieldLabel`、`FieldControl`、`FieldDescription`、`FieldError`、`FieldItem` 与 `FieldValidity`。`FieldItem` 只用于 checkbox / radio group 中的单个选项，不会被高层 `Field` 自动渲染。
+The same entry exports `FieldLabel`, `FieldControl`, `FieldDescription`, `FieldError`, `FieldItem`, and `FieldValidity`. `FieldItem` represents one checkbox/radio-group option and is not automatically rendered by the high-level `Field`.
 
 ```tsx
 import { CheckboxGroup } from "@base-ui/react/checkbox-group";
@@ -205,57 +205,57 @@ import {
 
 <BaseField.Root>
   <Fieldset.Root render={<CheckboxGroup />}>
-    <Fieldset.Legend>备份计划</Fieldset.Legend>
+    <Fieldset.Legend>Backup schedule</Fieldset.Legend>
     <FieldItem>
       <Checkbox value="daily" />
       <div>
-        <FieldLabel>每天</FieldLabel>
-        <FieldDescription>每天 00:00 运行。</FieldDescription>
+        <FieldLabel>Daily</FieldLabel>
+        <FieldDescription>Runs every day at 00:00.</FieldDescription>
       </div>
     </FieldItem>
   </Fieldset.Root>
 </BaseField.Root>
 ```
 
-这些 primitives 需要位于 Base UI Field context 内；一般单行字段优先使用高层 `Field`。
+These primitives require Base UI Field context. Prefer the high-level `Field` for ordinary single fields.
 
 ## Props
 
 ### Field
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `label` | `ReactNode` | 可访问标签；未提供时应为实际控件补充 `aria-label` 或 `aria-labelledby` |
-| `children` | `ReactNode` | 自定义实际控件；存在时替换内建 Control |
-| `size` | `"sm" \| "md" \| "lg"` | 标签和内建 Control 的视觉尺寸，默认 `"md"` |
-| `description` | `ReactNode` | 自动关联到控件的说明；`cell` 按需展示，`stacked` 内联显示 |
-| `error` | `ReactNode` | 校验错误内容；省略时使用 Base UI 生成的错误，`cell` 按需展示 |
-| `variant` | `"cell" \| "stacked"` | 视觉变体，默认 `"cell"` |
-| `control` | slot config | 配置、替换或移除内建 Control |
-| `validity` | `(state) => ReactNode` | 读取完整 validity state |
-| `name` | `string` | 表单字段名；优先于内层控件的 name |
-| `disabled` / `invalid` / `dirty` / `touched` | `boolean` | 控制或覆盖 Field state |
-| `validate` | Base UI validate callback | 同步或异步自定义校验 |
-| `validationMode` | `"onSubmit" \| "onBlur" \| "onChange"` | 校验时机 |
-| `validationDebounceTime` | `number` | onChange 校验防抖毫秒数 |
-| `actionsRef` | Base UI Field actions ref | 调用命令式 `validate()` |
-| `className` | `string \| ((state) => string)` | 根容器追加样式，可读取 Field state |
-| `render` / `ref` | Base UI props | 替换或获取 Root 元素 |
+| `label` | `ReactNode` | Accessible label; if omitted, give the control `aria-label` or `aria-labelledby` |
+| `children` | `ReactNode` | Custom control that replaces the built-in Control |
+| `size` | `"sm" \| "md" \| "lg"` | Visual size of the label and built-in Control; defaults to `"md"` |
+| `description` | `ReactNode` | Automatically associated description; shown on demand by `cell`, inline by `stacked` |
+| `error` | `ReactNode` | Validation error content; defaults to Base UI-generated errors; shown on demand by `cell` |
+| `variant` | `"cell" \| "stacked"` | Visual variant; defaults to `"cell"` |
+| `control` | Slot config | Configures, replaces, or removes the built-in Control |
+| `validity` | `(state) => ReactNode` | Access to full validity state |
+| `name` | `string` | Form field name; takes priority over the inner control's name |
+| `disabled` / `invalid` / `dirty` / `touched` | `boolean` | Controls or overrides Field state |
+| `validate` | Base UI validate callback | Synchronous or asynchronous custom validation |
+| `validationMode` | `"onSubmit" \| "onBlur" \| "onChange"` | Validation timing |
+| `validationDebounceTime` | `number` | Debounce duration in milliseconds for onChange validation |
+| `actionsRef` | Base UI Field actions ref | Calls imperative `validate()` |
+| `className` | `string \| ((state) => string)` | Additional root styles with access to Field state |
+| `render` / `ref` | Base UI props | Replaces or accesses the Root element |
 
 ### FieldControl
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `size` | `"sm" \| "md" \| "lg"` | 视觉尺寸，默认 `"md"` |
-| `nativeSize` | `number` | 映射到原生 input 的字符宽度提示 |
-| `onValueChange` | `(value, details) => void` | Base UI 值变化回调 |
-| `className` | `string \| ((state) => string)` | 追加样式，可读取 Field state |
-| `...props` | Base UI Field Control props | 其余输入、表单、render 与 ref 属性 |
+| `size` | `"sm" \| "md" \| "lg"` | Visual size; defaults to `"md"` |
+| `nativeSize` | `number` | Native input character-width hint |
+| `onValueChange` | `(value, details) => void` | Base UI value change callback |
+| `className` | `string \| ((state) => string)` | Additional styles with access to Field state |
+| `...props` | Base UI Field Control props | Other input, form, render, and ref props |
 
-## 可访问性
+## Accessibility
 
-- 不要用 placeholder 代替标签。视觉上隐藏标签时，请使用 `FieldLabel` primitive 并设置 `className="sr-only"`。
-- 两种变体的 `description` 与 Error 都会自动登记到控件的 `aria-describedby`，`cell` 收起内容或使用 Toast 时也保留此关联。
-- `disabled` 应优先传给 Field Root，让标签、说明与实际控件共享状态。
-- `stacked` 只改变布局和视觉层级，不改变校验规则或错误严重程度。
-- 动态服务端错误若需要即时播报，可通过 `FieldError` primitive 显式添加 `role="alert"` 或 `aria-live="polite"`；组件不会默认为所有按键校验强制播报。
+- Do not replace labels with placeholders. For visually hidden labels, use `FieldLabel` with `className="sr-only"`.
+- Both variants automatically register descriptions and errors with the control's `aria-describedby`, including when `cell` hides content or uses Toast.
+- Prefer `disabled` on Field Root so the label, description, and control share state.
+- `stacked` changes layout and visual hierarchy without changing validation rules or error severity.
+- To announce dynamic server errors immediately, explicitly add `role="alert"` or `aria-live="polite"` through `FieldError`. The component does not force announcements for every keystroke validation.

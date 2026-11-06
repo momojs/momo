@@ -1,53 +1,53 @@
 ---
 title: useAutoSize
-description: 把内容宽高变成稳定的动画目标，支持单轴或双轴动画、面板切换和延迟挂载。
+description: Turn content dimensions into stable animation targets, supporting one or both axes, panel switching, and delayed mounting.
 icon: Maximize
 ---
 
-`useAutoSize` 持续测量当前内容的布局尺寸，提供稳定的 `width` 和 `height` 动画目标。调用方可以只动画宽度、只动画高度，或同时动画宽高；Motion 负责从当前显示尺寸移动到新目标。它适用于按内容定宽的紧凑面板、浮层，以及只需调整高度的 Tabs、动态详情和日历。
+`useAutoSize` continuously measures the current content's layout dimensions and provides stable `width` and `height` animation targets. Animate width, height, or both; Motion moves from the currently displayed size to the new target. It suits compact content-sized panels, floating surfaces, and height-only transitions for Tabs, dynamic details, and calendars.
 
-## 为什么需要它
+## Why use it
 
-假设一个详情面板最初只有两行摘要，接口返回后增加了图片和说明；用户缩窄窗口，文字又多换了几行。如果只在“展开”时读一次高度，后续内容可能被裁掉。如果为不同内容写死高度，又容易留下大块空白。
+Suppose a details panel initially has a two-line summary, then gains images and descriptions after an API response. The user narrows the window, causing more text wrapping. Measuring height only when opening can clip later content, while hardcoding a height for each content variation can leave large gaps.
 
-切换面板还会带来另一个问题：旧面板已经卸载，新面板尚未挂载，此时“没有测量结果”并不表示内容真的变成了零高。直接把高度归零，会让容器先收起再展开。
+Panel switching adds another issue: the old panel has unmounted while the new one has not yet mounted. Having no measurement does not mean the content has zero height. Resetting height to zero would make the container collapse before expanding again.
 
-| 遇到的问题 | Hook 提供的行为 |
+| Problem | Hook behavior |
 | --- | --- |
-| 简要状态切换为详情，需要同时变宽、变高 | 一次测量同步更新宽高目标，交给 `animate={{ width, height }}` |
-| 内容加载后变高，原来的高度不够用 | 持续观察当前目标的自然尺寸，并更新数值高度 |
-| 宽度变化导致换行，依赖项却没有改变 | 尺寸变化由 `ResizeObserver` 捕获，无需手动维护内容依赖列表 |
-| 不同面板高度不同，切换时页面突然跳动 | 按 key 注册并激活面板，把目标高度交给同一个 Motion 容器 |
-| 新面板尚未挂载，容器不应突然塌下去 | 进入 `pending`，保留上一次宽高目标 |
-| 空内容确实为零高，或者业务上需要收起 | 有效的零高直接返回 `0`；主动收起使用 `clear()` |
-| 动画没结束，用户就再次操作 | 更新同一个容器的目标，由 Motion 从当前显示高度继续运动 |
+| Switching a brief status to details requires both width and height changes | One measurement updates both targets for `animate={{ width, height }}` |
+| Loaded content becomes taller than the original height | Continuously observe the active target's natural size and update the numeric height |
+| A width change causes wrapping without changing dependencies | `ResizeObserver` detects the size change without a manually maintained content dependency list |
+| Panels have different heights, causing jumps when switching | Register and activate panels by key, passing the target height to one Motion container |
+| The new panel has not mounted and the container must not collapse | Enter `pending` and preserve the previous width and height targets |
+| Empty content really has zero height, or the application needs to collapse | Valid zero height returns `0`; explicitly collapse with `clear()` |
+| The user interacts again before the animation finishes | Update the same container's target so Motion continues from the currently displayed height |
 
-如果只是固定内容的一次展开、收起，可以直接使用 Motion 的 `height: 0` 与 `height: "auto"`。当需要持续响应尺寸变化，或管理多个测量目标时，再使用这个 Hook。它负责测量和目标选择，动画参数由调用方决定。
+For a one-time expand/collapse transition with fixed content, use Motion's `height: 0` and `height: "auto"` directly. Use this hook when you need to respond continuously to size changes or manage multiple measurement targets. It handles measurement and target selection; callers decide the animation parameters.
 
-## 先观察：测量状态与动画目标
+## Observe measurement state and animation targets
 
-默认场景展示紧凑面板同时变宽、变高。切换到其他场景可以观察仅高度动画。切换场景或点击“重新开始”会重建演示；系统开启减少动态效果时，尺寸立即更新。
+The default scenario shows a compact panel changing both width and height. Other scenarios demonstrate height-only animation. Switching scenarios or clicking “Restart” recreates the demo; reduced motion causes immediate size updates.
 
 <UseAutoSizePlayground />
 
-以下操作都从对应场景的初始状态开始。具体像素取决于字体和可用宽度，重点看变化关系：
+Start each operation below from its scenario's initial state. Exact pixels depend on fonts and available width; focus on how values change:
 
-| 场景与操作 | 测量与目标如何变化 | 界面行为 |
+| Scenario and operation | Measurement and target changes | UI behavior |
 | --- | --- | --- |
-| 紧凑面板 → 显示同步详情 → 显示简要状态 | 宽高同时更新，`ready` | 外层跟随内容固有宽高变化，可中途改向 |
-| 紧凑面板 → `clear()` → 重新激活 | 宽高目标都先归零，再恢复有效测量 | 内层保持挂载，收起后仍可展开 |
-| 内容增减 → 添加补充内容 → 移除补充内容 | `ready`，高度先增大再减小 | 容器跟随内容展开、收回 |
-| 内容增减 → 缩窄内容 | 换行增多时，测得高度随之增大 | 无需再次调用 `activate` |
-| 面板切换 → 显示详情 → 立即显示摘要 | 目标从详情高度改为摘要高度 | 同一容器在动画中途改向 |
-| 面板切换 → 拒绝切换请求 → 显示详情 | 激活目标仍为 `summary` | 内容和高度都保持在摘要 |
-| 等待挂载 → 等待新内容 → 挂载新内容 | `ready → pending → ready` | 等待时保留旧高度，挂载后移向新高度 |
-| 等待挂载 → 真实零高 | `ready`，有效测量高度与动画目标均为 `0` | 收至零高，外层边框仍在 |
-| 等待挂载 → `clear()` → 重新激活 | `idle → ready`，动画目标先为 `0` 再恢复 | 注册的内容仍可被重新激活 |
-| 多月布局 → 纵向排列 | 测得整个区域的新高度 | 月份、间距、标题和底部说明一起计入 |
+| Compact panel → Show sync details → Show brief status | Width and height update together; `ready` | The outer container follows intrinsic content dimensions and can reverse mid-transition |
+| Compact panel → `clear()` → Reactivate | Both targets first become zero, then return to valid measurements | The inner content remains mounted and can expand again |
+| Content changes → Add extra content → Remove extra content | `ready`; height increases, then decreases | The container expands and contracts with its content |
+| Content changes → Narrow content | More wrapping increases measured height | No additional `activate` call is needed |
+| Panel switching → Show details → Immediately show summary | The target changes from the details height to the summary height | The same container reverses during animation |
+| Panel switching → Reject switch requests → Show details | The active target remains `summary` | Both content and height stay on the summary |
+| Waiting for mount → Wait for new content → Mount new content | `ready → pending → ready` | Keep the old height while waiting, then move to the new height after mounting |
+| Waiting for mount → Real zero height | `ready`; valid measured height and animation target are both `0` | Collapse to zero height while the outer border remains |
+| Waiting for mount → `clear()` → Reactivate | `idle → ready`; target is first `0`, then restored | Registered content can still be reactivated |
+| Multiple-month layout → Stack vertically | Measure the entire region's new height | Months, spacing, heading, and footer all contribute |
 
-## 场景一：紧凑面板同时调整宽高
+## Scenario 1: resizing a compact panel on both axes
 
-下面的状态卡片使用内容固有宽度。内层 `w-max` 对应 `width: max-content`，其宽度不会跟随动画容器每一帧的宽度，因此能提供稳定的终点。装饰放在外层，内容留白放在测量区域内。
+The following status card uses the content's intrinsic width. The inner `w-max` corresponds to `width: max-content`, so its width does not follow each animated frame of the container and can provide a stable endpoint. Put decoration outside and content padding inside the measured region.
 
 ```tsx
 import { useLayoutEffect } from "react";
@@ -71,11 +71,11 @@ function CompactStatus({ expanded }: { expanded: boolean }) {
         className="overflow-hidden"
       >
         <div ref={register("content")} className="grid w-max gap-2 p-4">
-          <p>{expanded ? "全部内容已保存" : "已保存"}</p>
+          <p>{expanded ? "All content saved" : "Saved"}</p>
           {expanded && (
             <>
-              <p>图片、说明与标签均已同步。</p>
-              <p>可以继续编辑。</p>
+              <p>Images, descriptions, and tags are synchronized.</p>
+              <p>You can keep editing.</p>
             </>
           )}
         </div>
@@ -85,19 +85,19 @@ function CompactStatus({ expanded }: { expanded: boolean }) {
 }
 ```
 
-只需宽度动画时，改为 `animate={{ width }}`；高度将继续参与自然布局。只需高度动画时，使用 `animate={{ height }}`。Hook 不设置元素样式，也不要求两个轴一起使用。
+For width-only animation, use `animate={{ width }}`; height continues to follow natural layout. For height-only animation, use `animate={{ height }}`. The hook does not set element styles or require using both axes.
 
-### 宽度需要独立的布局依据
+### Width needs an independent layout basis
 
-普通块元素的 `width: auto` 通常跟随父容器。将它测得的宽度再写回父容器，会把流式宽度固定为像素值，或让动画的中间宽度不断影响测量结果。仅仅分成内外两层并不足以解决这个依赖。
+A normal block's `width: auto` usually follows its parent. Writing that measured width back to the parent can freeze fluid width at a pixel value or let intermediate animation widths repeatedly affect measurements. Merely separating the outer and inner elements does not remove this dependency.
 
-宽度动画适合使用短内容的固有宽度、明确的目标宽度，或独立测量区域。上面的 `max-content` 适合紧凑状态卡；长文本需要由调用方根据可用空间确定目标宽度，再测量换行后的高度。不要把动画容器自身作为可用宽度的来源；`max-width: 100%` 等百分比约束也可能重新引入依赖。
+Width animation works well with short content's intrinsic width, an explicit target width, or an independently measured region. The `max-content` example suits compact status cards. For long text, callers should determine the target width from available space, then measure the wrapped height. Do not derive available width from the animated container itself; percentage constraints such as `max-width: 100%` can also reintroduce the dependency.
 
-宽高动画会影响布局；需要随父容器伸缩的 Tabs 和日历应继续只使用高度目标。后续场景演示这一用法。
+Width and height animation affects layout. Tabs and calendars that stretch with their parent should continue to use only the height target, as the following scenarios demonstrate.
 
-## 场景二：详情内容增加或减少
+## Scenario 2: adding or removing details
 
-Hook 从 `@momots/design/hooks` 导入。动画容器和测量目标必须是两个独立元素：
+Import the hook from `@momots/design/hooks`. The animation container and measurement target must be separate elements:
 
 ```tsx
 import type { ReactNode } from "react";
@@ -130,9 +130,9 @@ function HeightRegion({ children }: { children: ReactNode }) {
 }
 ```
 
-这三层各有职责：最外层负责边框、背景和额外留白；中间层只负责高度动画与裁剪；内层保持自然布局，作为测量来源。首屏和 SSR 尚未测量时，`height` 为 `"auto"`，不会先把内容压成零高。
+The three layers have distinct roles: the outermost handles borders, background, and extra spacing; the middle handles only height animation and clipping; the inner keeps natural layout and supplies measurements. Before the first measurement, including during SSR, `height` is `"auto"` so content is not initially compressed to zero height.
 
-后续示例中的 `HeightRegion` 都复用上面的实现。只要让新增内容参与内层的正常布局，就能持续跟随高度：
+Later `HeightRegion` examples reuse the implementation above. As long as added content participates in the inner element's normal layout, height continues to track it:
 
 ```tsx
 import { useState } from "react";
@@ -143,14 +143,14 @@ function ProductDetails() {
   return (
     <>
       <button onClick={() => setExpanded((previous) => !previous)}>
-        {expanded ? "收起说明" : "展开说明"}
+        {expanded ? "Collapse details" : "Expand details"}
       </button>
       <HeightRegion>
-        <p>商品摘要。</p>
+        <p>Product summary.</p>
         {expanded && (
           <div className="grid gap-3">
-            <p>补充的使用方式。</p>
-            <p>更多规格和配送说明。</p>
+            <p>Additional usage instructions.</p>
+            <p>More specifications and shipping details.</p>
           </div>
         )}
       </HeightRegion>
@@ -159,13 +159,13 @@ function ProductDetails() {
 }
 ```
 
-点击展开时，内层先按内容自然变高，Hook 发布新高度，Motion 驱动外层跟随；收起时流程相同。接口返回后插入内容、图片加载后撑开布局，也会沿着相同路径更新，不需要额外调用测量函数。
+When expanded, the inner content first grows naturally, the hook publishes the new height, and Motion makes the outer container follow. Collapsing follows the same process. Content inserted after an API response or images expanding the layout after loading use the same update path, with no additional measurement call.
 
-如果图片已通过宽高或 `aspect-ratio` 预留空间，加载完成后布局尺寸没有变化，Hook 就不会产生新的尺寸更新。
+If image dimensions or `aspect-ratio` already reserve space and loading does not change layout size, the hook does not publish another size update.
 
-## 场景三：容器变窄，文字重新换行
+## Scenario 3: narrowing the container and rewrapping text
 
-内容字符串不变，不代表高度不变。侧栏展开、窗口变窄或字体变化，都可能让文本多占几行。测量的是浏览器实际布局，因此不需要把这些因素逐个写进 Hook 的依赖数组：
+An unchanged content string does not imply unchanged height. An expanded sidebar, narrower window, or different font can add lines. The hook measures actual browser layout, so these factors do not need individual entries in its dependency array:
 
 ```tsx
 function ResponsiveDetails() {
@@ -174,11 +174,11 @@ function ResponsiveDetails() {
   return (
     <>
       <button onClick={() => setNarrow((previous) => !previous)}>
-        切换可用宽度
+        Toggle available width
       </button>
       <div style={{ width: narrow ? 220 : 360, maxWidth: "100%" }}>
         <HeightRegion>
-          <p>同一段说明在不同宽度下自然换行，高度目标随实际布局更新。</p>
+          <p>The same description wraps naturally at different widths, and the height target follows the actual layout.</p>
         </HeightRegion>
       </div>
     </>
@@ -186,13 +186,13 @@ function ResponsiveDetails() {
 }
 ```
 
-只变宽度、没有改变高度时，`state.rect.width` 和动画目标 `width` 会更新，`height` 则保持不变。这里仅传入 `animate={{ height }}`，因此实际宽度继续由外部布局决定。宽高数值都相同时，不会发布重复测量。
+If only width changes, `state.rect.width` and the `width` animation target update while `height` stays unchanged. This example passes only `animate={{ height }}`, so the actual width remains controlled by external layout. Identical width and height values do not produce duplicate measurements.
 
-## 场景四：切换摘要与详情，允许中途改向
+## Scenario 4: switching between summary and details mid-transition
 
-多个逻辑目标使用不同 key 注册，通过 `activate` 选择当前目标。注册只表示“这个节点存在”，不会自动选中它。
+Register logical targets with different keys and select the current target with `activate`. Registration only says that a node exists; it does not automatically select it.
 
-下面的组件由父组件决定显示哪个面板。按钮只提出切换请求，effect 根据已经提交的 `value` 激活测量：
+In the following component, the parent decides which panel is shown. Buttons only request a switch, and an effect activates measurement based on the committed `value`:
 
 ```tsx
 type Panel = "summary" | "details";
@@ -213,8 +213,8 @@ function PanelRegion({
 
   return (
     <>
-      <button onClick={() => onChange("summary")}>显示摘要</button>
-      <button onClick={() => onChange("details")}>显示详情</button>
+      <button onClick={() => onChange("summary")}>Show summary</button>
+      <button onClick={() => onChange("details")}>Show details</button>
       <motion.div
         initial={false}
         animate={{ height }}
@@ -223,12 +223,12 @@ function PanelRegion({
       >
         <div key={value} ref={register(value)} className="flow-root">
           {value === "summary" ? (
-            <p>一段摘要。</p>
+            <p>A summary.</p>
           ) : (
             <div className="grid gap-3">
-              <p>第一段详情。</p>
-              <p>第二段详情。</p>
-              <p>第三段详情。</p>
+              <p>First details paragraph.</p>
+              <p>Second details paragraph.</p>
+              <p>Third details paragraph.</p>
             </div>
           )}
         </div>
@@ -238,11 +238,11 @@ function PanelRegion({
 }
 ```
 
-从矮面板切向高面板，再在动画结束前切回来，Hook 只提供新的目标高度；Motion 在同一个容器上接续当前显示高度。`height` 是终点，不是每一帧正在显示的高度。
+When switching from a short panel to a tall one and back before animation completes, the hook supplies only a new target height. Motion continues from the current displayed height on the same container. `height` is the endpoint, not the height displayed in each animation frame.
 
-这里 `key={value}` 只放在内容节点上。不要把它放到 `motion.div` 上，否则每次切换都会重建动画容器，无法接续上一次动画。
+Here, `key={value}` belongs only on the content node. Putting it on `motion.div` would recreate the animated container on every switch and prevent continuation of the previous animation.
 
-### 父组件拒绝切换时
+### When the parent rejects a switch
 
 ```tsx
 <PanelRegion
@@ -254,13 +254,13 @@ function PanelRegion({
 />
 ```
 
-如果父组件拒绝 `details`，`value` 仍是 `summary`，测量应继续跟随摘要。不要在 `onChange` 请求处理函数中提前执行 `activate(requested)`，否则界面显示旧内容，却在等待或测量新面板。这个约定与 [useControllableValue 的受控请求](/docs/design/use-controllable-value)一致。
+If the parent rejects `details`, `value` remains `summary` and measurement should continue following the summary. Do not call `activate(requested)` early in the `onChange` request handler, or the UI will show old content while waiting for or measuring the new panel. This follows the same convention as [controlled requests in useControllableValue](/docs/design/use-controllable-value).
 
-已有的 [Tabs](/docs/design/tabs) 组件已经接入这套高度策略，使用 Tabs 时无需再包一层同样的测量逻辑。
+The existing [Tabs](/docs/design/tabs) component already uses this height strategy, so using Tabs does not require another wrapper with the same measurement logic.
 
-## 场景五：新面板尚未挂载
+## Scenario 5: the new panel has not mounted
 
-异步加载、条件渲染或分步流程中，可以先表达“接下来需要这个目标”，再等待它挂载。下面的 `ready` 由数据加载状态决定：
+For asynchronous loading, conditional rendering, or multi-step flows, you can declare the next target before it mounts. The following `ready` value comes from data loading state:
 
 ```tsx
 function DeferredPanel({
@@ -286,13 +286,13 @@ function DeferredPanel({
     >
       {selected === "summary" && (
         <div ref={register("summary")} className="flow-root">
-          <p>已加载的摘要。</p>
+          <p>The loaded summary.</p>
         </div>
       )}
       {selected === "details" && ready && (
         <div ref={register("details")} className="flow-root">
-          <p>异步返回的详情。</p>
-          <p>更多内容。</p>
+          <p>Asynchronously loaded details.</p>
+          <p>More content.</p>
         </div>
       )}
     </motion.div>
@@ -300,52 +300,52 @@ function DeferredPanel({
 }
 ```
 
-假设摘要已测得 `80px`，详情挂载后实际为 `240px`：
+Suppose the measured summary height is `80px` and the mounted details height is `240px`:
 
-| 时刻 | 当前目标 | `state.status` | `state.rect` | `height` |
+| Moment | Current target | `state.status` | `state.rect` | `height` |
 | --- | --- | --- | --- | --- |
-| 显示摘要 | `summary` | `ready` | 摘要尺寸 | `80` |
-| 已选择详情，但 `ready` 为 `false` | `details` | `pending` | `null` | 保留 `80` |
-| `ready` 变为 `true`，详情挂载并完成测量 | `details` | `ready` | 详情尺寸 | `240` |
-| 详情随后暂时卸载 | `details` | `pending` | `null` | 保留 `240` |
+| Summary displayed | `summary` | `ready` | Summary dimensions | `80` |
+| Details selected, but `ready` is `false` | `details` | `pending` | `null` | Keep `80` |
+| `ready` becomes `true`; details mount and are measured | `details` | `ready` | Details dimensions | `240` |
+| Details temporarily unmount afterward | `details` | `pending` | `null` | Keep `240` |
 
-等待期间保留的是上一次**目标高度**，不是暂停在某一帧；如果动画尚未结束，它仍可继续向保留的目标运动。没有任何历史测量时，`pending` 的高度仍为 `"auto"`。
+The preserved value is the previous **target height**, not a paused animation frame. An unfinished animation may continue toward that target. Without any earlier measurement, the height during `pending` remains `"auto"`.
 
-Hook 保留空间，不保留已卸载的内容，也不自动显示加载状态。需要 skeleton、旧内容留屏或过渡时的占位时，由调用方安排；如果 skeleton 注册为当前目标，就会测量 skeleton 自己的高度。
+The hook preserves space, not unmounted content, and does not display a loading state automatically. Callers arrange skeletons, retained old content, or transition placeholders. Registering a skeleton as the current target measures the skeleton's own height.
 
-切换目标时旧目标停止被观察，迟到的旧通知不会覆盖新目标。同一 key 重新挂载时会接入新节点，旧挂载的清理也不会删除替代节点。
+When switching targets, observation of the old target stops, and late notifications cannot overwrite the new target. Remounting the same key attaches the new node; cleanup from the old mount cannot remove its replacement.
 
-## 场景六：真实零高与主动收起
+## Scenario 6: real zero height and explicit collapse
 
-“等着新内容出现”“内容确实为空”“已经没有选中项”是三种不同状态：
+Waiting for new content, content being genuinely empty, and having no selected item are three different states:
 
-| 意图 | 如何表达 | 状态与结果 |
+| Intent | How to express it | State and result |
 | --- | --- | --- |
-| 新内容还没挂载 | `activate("details")`，稍后注册目标 | `pending`，保留上次目标高度 |
-| 当前内容实际高度为零 | 激活已挂载、没有内容和留白的节点 | `ready`，`state.rect.height` 与 `height` 都是 `0` |
-| 业务上取消选择，容器应收起 | `clear()` | `idle`，`state.rect` 为 `null`，`height` 为 `0` |
+| New content has not mounted | `activate("details")`, then register the target later | `pending`; keep the previous target height |
+| Current content really has zero height | Activate a mounted node without content or spacing | `ready`; both `state.rect.height` and `height` are `0` |
+| The application clears selection and the container should collapse | `clear()` | `idle`; `state.rect` is `null` and `height` is `0` |
 
-例如，受控的步骤选择允许“没有选中项”，就明确区分选中与清空：
+For example, if a controlled step selection permits no selected item, explicitly distinguish selection from clearing:
 
 ```tsx
-// selected 的类型为 string | undefined。
+// selected has type string | undefined.
 useLayoutEffect(() => {
   if (selected === undefined) clear();
   else activate(selected);
 }, [selected, activate, clear]);
 ```
 
-`clear()` 撤销激活意图，但不会删除仍挂载的注册项。之后调用 `activate` 可以重新测量它们；如果目标已经卸载，则会重新进入 `pending`。刚清空后再等待目标挂载，保留的宽高都是 `0`。只传 `height` 的调用方仍然只收起高度。
+`clear()` cancels activation intent without deleting registrations that remain mounted. Calling `activate` later measures them again; an unmounted target reenters `pending`. Waiting for a target immediately after clearing preserves `0` for both dimensions. Callers using only `height` still collapse only vertically.
 
-key 支持 `string`、`number` 和 `null`，其中 `0`、`"0"`、`null` 是三个不同目标。`activate(null)` 会选择 key 为 `null` 的目标，不能代替 `clear()`。
+Keys support `string`, `number`, and `null`; `0`, `"0"`, and `null` identify three different targets. `activate(null)` selects the target keyed by `null` and is not a replacement for `clear()`.
 
-高度为 `0` 只描述动画容器，不会移除外层边框与 padding，也不会自动卸载内容或管理键盘焦点。收起包含交互控件的区域时，调用方还应同步处理内容的可见性和可访问性。
+A height of `0` describes only the animated container. It does not remove outer borders or padding, unmount content, or manage keyboard focus. When collapsing an area with interactive controls, callers should also manage content visibility and accessibility.
 
-## 场景七：一个月变成多个月，测量整体布局
+## Scenario 7: measuring the full layout across multiple months
 
-日历或卡片组经常既能横排，也能纵排。把每个子项的高度相加，只对部分纵排结构有效；横排时应该看整行高度，还需要计入标题、间距和底部内容。
+Calendars and card groups often support both horizontal and vertical layouts. Summing child heights works only for some vertical structures. A horizontal layout requires the full row height, including headings, spacing, and footer content.
 
-最直接的做法是把整个区域作为一个自然布局目标。下面的 `months` 可以传入现有日历生成的月份节点：
+The most direct approach is to measure the entire region as one natural-layout target. The following `months` prop can contain month nodes generated by an existing calendar:
 
 ```tsx
 function MonthLayout({
@@ -358,7 +358,7 @@ function MonthLayout({
   return (
     <HeightRegion>
       <div className="grid gap-4">
-        <header>选择日期</header>
+        <header>Select a date</header>
         <div
           className="grid gap-4"
           style={{
@@ -371,18 +371,18 @@ function MonthLayout({
             <div key={month.id}>{month.content}</div>
           ))}
         </div>
-        <footer>可在不同月份之间选择日期。</footer>
+        <footer>Select dates across different months.</footer>
       </div>
     </HeightRegion>
   );
 }
 ```
 
-横排时，两个月份共同撑起整行；纵排时，月份和间距依次占据高度。切换布局、月份数或每月周数后，Hook 都读取整个包装区域的实际尺寸。接入 DayPicker 等现有日历时，也应测量包住整个日历的自然布局区域，避免逐月求和或只取其中一个月份。
+Horizontally, both months determine the row height together; vertically, months and gaps each contribute height. After changes to layout, month count, or weeks per month, the hook reads the entire wrapper's actual dimensions. With an existing calendar such as DayPicker, measure the natural-layout region around the whole calendar rather than summing months or measuring just one.
 
-## 场景八：减少动态效果，仍然跟随内容
+## Scenario 8: following content with reduced motion
 
-测量与动画分开之后，可以保留同一套尺寸逻辑，只调整过渡策略：
+Separating measurement from animation lets you keep the same sizing logic while changing only the transition strategy:
 
 ```tsx
 const reduced = useReducedMotion();
@@ -396,31 +396,31 @@ const reduced = useReducedMotion();
       : { type: "spring", bounce: 0, duration: 0.45 }
   }
 >
-  {/* 独立的自然内容测量节点 */}
+  {/* Independent node measuring natural content size */}
 </motion.div>
 ```
 
-开启减少动态效果后，内容增减、目标切换和等待挂载的规则保持一致，只是高度直接更新。演示中的“立即更新尺寸”也使用这条路径。
+With reduced motion enabled, content changes, target switching, and waiting for mounts follow the same rules; only height updates become immediate. The demo's “Update size immediately” option uses this path too.
 
-## 当前测量与动画目标
+## Current measurements and animation targets
 
-`state` 描述当前目标是否具有有效测量，`width` 和 `height` 则描述动画应前往的尺寸。等待新目标挂载时，测量失效，但动画目标仍然保留：
+`state` describes whether the current target has a valid measurement, while `width` and `height` describe the animation destination. While waiting for a new target to mount, the current measurement is invalid but the animation targets are retained:
 
-| 场景 | `state.status` | `state.rect` | `width` / `height` |
+| Scenario | `state.status` | `state.rect` | `width` / `height` |
 | --- | --- | --- | --- |
-| 初次渲染，尚未激活 | `idle` | `null` | `"auto"` |
-| 已激活，但目标尚未挂载或暂时卸载 | `pending` | `null` | 各自保留上一次目标尺寸；没有历史值则为 `"auto"` |
-| 已激活，但目标使用不支持的布局 | `pending` | `null` | 同样各自保留上一次目标尺寸，不把无效测量当成 `0` |
-| 已获得当前目标的尺寸 | `ready` | `{ width, height }` | 当前测得宽高，包括真实的 `0` |
-| 显式调用 `clear()` | `idle` | `null` | `0` |
+| Initial render, before activation | `idle` | `null` | `"auto"` |
+| Activated, but not yet mounted or temporarily unmounted | `pending` | `null` | Each retains its previous target dimension, or `"auto"` if none exists |
+| Activated, but using an unsupported layout | `pending` | `null` | Each retains its previous target dimension; invalid measurements are not treated as `0` |
+| Current target dimensions obtained | `ready` | `{ width, height }` | Current measured dimensions, including genuine `0` values |
+| Explicit `clear()` call | `idle` | `null` | `0` |
 
-`pending` 和 `ready` 还包含激活的 `value`。当前尺寸只通过 `state.rect` 提供：`idle` 和 `pending` 时为 `null`，表示没有有效测量；`ready` 时为 `{ width, height }`，其中宽度或高度为 `0` 仍是有效测量。读取尺寸前先判断 `state.status === "ready"`，不要用零值代替尚未获得的测量。
+`pending` and `ready` also include the activated `value`. Current dimensions are available only through `state.rect`: it is `null` in `idle` and `pending`, meaning no valid measurement, and `{ width, height }` in `ready`, where zero width or height is still valid. Check `state.status === "ready"` before reading dimensions; do not substitute zero for measurements that are not yet available.
 
-有效测量被接受时，当前尺寸和用于后续 `pending` 的宽高目标会在同一次状态更新中确定，宽高作为一个快照原子更新。目标切换或测量失效只清除当前测量；`clear()` 则同时清除测量并把宽高都设为 `0`。已经过期的通知不会更新当前尺寸，也不会覆盖保留的任一维度。
+When a valid measurement is accepted, the current dimensions and targets retained for future `pending` states are determined in the same state update. Width and height update atomically as one snapshot. Switching targets or invalidating a measurement clears only the current measurement; `clear()` also sets both targets to `0`. Stale notifications cannot update current dimensions or overwrite either retained dimension.
 
-保留的是最近一次有效的**目标尺寸**，不是动画此刻在屏幕上的尺寸；实时显示值及动画衔接仍由 Motion 管理。
+The retained value is the latest valid **target size**, not the size currently displayed on screen. Motion still manages live displayed values and animation continuity.
 
-不要使用 `state.rect?.height || "auto"`：真实零高不是未测量，目标切换期间也不应退回自然高度。两个轴都应直接使用对应的 `width` / `height` 动画目标；切换途中更新目标时，由 Motion 接续当前显示值。
+Do not use `state.rect?.height || "auto"`: real zero height is not an absent measurement, and switching targets should not restore natural height. Use the corresponding `width` / `height` animation targets directly for each axis. When a target changes mid-transition, Motion continues from the current displayed value.
 
 ## API
 
@@ -428,58 +428,58 @@ const reduced = useReducedMotion();
 function useAutoSize<T extends HTMLElement = HTMLDivElement>(): AutoSizeApi<T>;
 ```
 
-Hook 无需传入内容依赖、轴选项或动画参数。始终测量宽高，由调用方选择 `animate={{ width }}`、`animate={{ height }}` 或 `animate={{ width, height }}`。返回值如下：
+The hook takes no content dependencies, axis options, or animation parameters. It always measures both dimensions; callers choose `animate={{ width }}`, `animate={{ height }}`, or `animate={{ width, height }}`. It returns:
 
-| 返回值 | 类型 | 用途 |
+| Return value | Type | Purpose |
 | --- | --- | --- |
-| `register` | `(value: ControlValue) => React.RefCallback<T>` | 注册可观察的自然布局盒，同一 key 返回稳定的 callback ref |
-| `activate` | `(value: ControlValue) => void` | 选择测量目标，允许先激活后挂载 |
-| `clear` | `() => void` | 取消激活并把宽高目标都设为 `0` |
-| `width` | `number \| "auto"` | 宽度动画目标：初始为 `"auto"`，等待期间保留，清空后为 `0` |
-| `height` | `number \| "auto"` | 高度动画目标，与 `width` 采用相同规则 |
-| `state` | `AutoSizeState` | 区分 `idle`、`pending` 和有效测量的 `ready` |
+| `register` | `(value: ControlValue) => React.RefCallback<T>` | Register an observable natural-layout box; returns a stable callback ref for the same key |
+| `activate` | `(value: ControlValue) => void` | Select a measurement target, including before it mounts |
+| `clear` | `() => void` | Cancel activation and set both dimension targets to `0` |
+| `width` | `number \| "auto"` | Width animation target: initially `"auto"`, retained while waiting, and `0` after clearing |
+| `height` | `number \| "auto"` | Height animation target; follows the same rules as `width` |
+| `state` | `AutoSizeState` | Distinguishes `idle`, `pending`, and `ready` with a valid measurement |
 
-相关导出类型包括 `AutoSizeApi<T>` 与 `AutoSizeState`。`ControlValue` 为 `string | number | null`。
+Related exported types include `AutoSizeApi<T>` and `AutoSizeState`. `ControlValue` is `string | number | null`.
 
-### 注册与激活约定
+### Registration and activation conventions
 
-- `register(value)` 返回稳定的 React callback ref，只登记 DOM，不代表选中。
-- `activate(value)` 表达需要测量哪个目标。可以先激活再挂载；等待期间旧目标停止被观察，旧通知不会覆盖新目标。
-- `clear()` 撤销激活意图并将动画目标设为零，但不丢弃仍挂载的注册项。之后可直接重新激活。
-- key 支持 `string`、`number` 和 `null`；`0`、`"0"`、`null` 是不同目标。不要用 `activate(null)` 表达清空。
-- 同一 key 的新注册替换旧注册；旧挂载的清理不会删除替代节点。不同的并存逻辑目标应使用不同 key。
+- `register(value)` returns a stable React callback ref that registers DOM nodes without selecting them.
+- `activate(value)` declares which target to measure. Activation may precede mounting; while waiting, the old target stops being observed and its notifications cannot overwrite the new target.
+- `clear()` cancels activation intent and sets animation targets to zero without discarding mounted registrations. They can be reactivated directly afterward.
+- Keys support `string`, `number`, and `null`; `0`, `"0"`, and `null` are different targets. Do not use `activate(null)` to clear selection.
+- A new registration replaces an old registration with the same key; cleanup from the old mount cannot delete the replacement. Coexisting logical targets should use different keys.
 
-受控组件应根据**已提交的值**激活目标，不能在变更请求回调里提前激活：父组件可能拒绝请求。如果业务上已经没有选中项，应调用 `clear()`；只有等待目标挂载时才保留 `pending`。
+Controlled components should activate targets from the **committed value**, not early inside a change-request callback: the parent may reject that request. Call `clear()` when the application has no selected item; retain `pending` only while waiting for a target to mount.
 
-## 测量边界与多月布局
+## Measurement boundaries and multi-month layouts
 
-尺寸统一使用未受 CSS transform 缩放影响的布局 **border box**，包含目标自身的 padding 和 border，不包含它自身的 margin。`ResizeObserver` 持续响应内容、padding、border 和宽度引起的尺寸变化；宽高数值都不变时不会发布新测量。
+Dimensions use the layout **border box**, unaffected by CSS transform scaling. They include the target's own padding and border but exclude its margin. `ResizeObserver` responds to size changes caused by content, padding, border, and width; unchanged width and height do not publish a new measurement.
 
-### 测量目标必须是可观察的布局盒
+### Targets must be observable layout boxes
 
-布局盒是元素自身参与排版、具有可测宽高的区域。测量目标应使用 `block`、`inline-block`、`flow-root`、`flex`、`grid` 等可以正常观察尺寸的布局；`inline-flex`、`inline-grid` 也可使用。
+A layout box is an element's own region participating in layout with measurable width and height. Use layouts whose dimensions can be observed normally, such as `block`, `inline-block`, `flow-root`, `flex`, or `grid`; `inline-flex` and `inline-grid` are also supported.
 
-普通 `span` 等**非替换型 inline 元素**不满足这个约束：它们的可见尺寸不能作为有效的 ResizeObserver 测量。`display: contents` 同样不支持，因为元素自身不生成布局盒。应把 ref 放到独立包装层，而不是让 Hook 修改调用方的 CSS：
+**Non-replaced inline elements**, such as an ordinary `span`, do not satisfy this constraint: their visible dimensions are not valid ResizeObserver measurements. `display: contents` is also unsupported because the element creates no layout box of its own. Attach the ref to a separate wrapper instead of asking the hook to change caller-owned CSS:
 
 ```tsx
 <div ref={register("content")} className="flow-root">
-  <span>需要测量的内容</span>
+  <span>Content to measure</span>
 </div>
 ```
 
-`img`、`video` 等由图像或媒体内容形成独立尺寸的**替换元素**不受普通 inline 元素的限制；它们的可观察 inline 盒仍可直接注册。约束针对实际布局，不是禁止使用 `span` 标签：为 `span` 设置 `inline-block` 或 `block` 后，也可以作为目标。
+**Replaced elements** such as `img` and `video`, whose image or media content establishes independent dimensions, are not subject to the ordinary inline restriction. Their observable inline boxes can be registered directly. The constraint concerns actual layout, not the `span` tag itself: a `span` with `inline-block` or `block` is also a valid target.
 
-Hook 在首次测量和后续 ResizeObserver 通知中检查目标布局。发现不受支持的布局时，当前测量失效，`state` 保持或进入 `pending`，`width` 和 `height` 保留上一目标尺寸；尚无历史值时保持 `"auto"`。开发构建中，每个观察周期最多给出一次警告；生产构建同样拒绝无效测量，但不输出该警告。观察关系保留，修正布局并收到新的尺寸通知后会恢复，不需要重新注册或激活。
+The hook checks target layout during the initial measurement and later ResizeObserver notifications. Unsupported layout invalidates the current measurement and keeps or moves `state` to `pending`; `width` and `height` retain their previous targets, or `"auto"` if no earlier values exist. Development builds warn at most once per observation cycle. Production builds also reject invalid measurements but omit the warning. Observation remains active, and fixing the layout restores measurement on the next size notification without registering or activating again.
 
-调用方应保证目标在测量期间保持受支持的布局。**真实零高仍然有效**：空内容、目标或祖先暂时 `display: none` 都可以得到 `ready` 的零尺寸；不要通过忽略所有 `0` 来规避不支持的布局。
+Callers should keep targets in a supported layout while measuring. **Real zero height remains valid**: empty content or temporarily applying `display: none` to a target or ancestor can produce `ready` with zero dimensions. Do not ignore every `0` as a workaround for unsupported layouts.
 
-### 多月布局与其他约束
+### Multi-month layouts and other constraints
 
-Tabs 测量当前选中面板；Calendar 测量包住整个 DayPicker 的自然布局区域。多月日历不逐月相加，也不选某一个月份代替整体：纵排的月份、间距、横排的整体高度，以及导航、footer 和根节点留白，均以浏览器实际布局为准。
+Tabs measures the selected panel; Calendar measures the natural-layout region around the entire DayPicker. Multi-month calendars neither sum months individually nor substitute a single month for the whole layout. Vertically stacked months, spacing, horizontal row height, navigation, footer, and root padding all follow actual browser layout.
 
-需要遵守以下布局约束：
+Follow these layout constraints:
 
-- 不要把 ref 挂到正在设置宽高的动画容器上。测量目标在每个被动画控制的轴上都应独立于该容器，例如不要通过 `height: 100%` 或 `width: 100%` 跟随它；否则会形成测量反馈循环。
-- 动画容器本身不放 padding 或 border；装饰放在外层，内容自身的留白放在测量区域内。
-- 需要计入的内容必须参与目标的自然布局。绝对定位内容、阴影和 transform 后的视觉溢出不属于该测量；子元素外边距可由 `flow-root` 包装层收纳。
-- 多个面板在退出和进入时同时存在，应由调用方组织它们的流内布局；Hook 不接管 Presence 或业务选择状态。
+- Do not attach the ref to the animated container whose dimensions are being set. On every animated axis, the measurement target must be independent of that container; for example, it must not follow it through `height: 100%` or `width: 100%`, which would create a measurement feedback loop.
+- Put no padding or border on the animated container itself. Keep decoration outside and content spacing inside the measured region.
+- Content that should be measured must participate in the target's natural layout. Absolutely positioned content, shadows, and visual overflow after transforms are not measured; a `flow-root` wrapper can contain child margins.
+- When multiple panels coexist during exit and enter, callers organize their in-flow layout. The hook does not take over Presence or application selection state.

@@ -1,49 +1,49 @@
 ---
 title: Section
-description: 页面中带标题的内容分区，共享标题、说明、正文和页脚约定，标题自动为分区命名。
+description: A titled page section with shared title, description, body, and footer slots, automatically named by its heading.
 icon: SquareStack
 ---
 
-`Section` 表示页面的一部分：一组围绕同一主题的内容，例如设置页中的一个分组、仪表盘中的一块概览。它默认渲染原生 `<section>`，沿用 momo 的表面、圆角、文字与间距 token。内容 API 与 Drawer、Popover、Sheet、Dialog 一致：`title`、`description`、`children`、`footer` 提供内容，`slots` 配置节点。
+`Section` represents a related group of content, such as settings or a dashboard overview. It renders a native `<section>` by default, using momo surface, radius, typography, and spacing tokens. Its content API matches Drawer, Popover, Sheet, and Dialog: `title`, `description`, `children`, and `footer` supply content; `slots` configure the nodes.
 
 <SectionPlayground />
 
-## 基本用法
+## Basic usage
 
 ```tsx
 import { Button } from '@momots/design/components/button';
 import { Section } from '@momots/design/components/section';
 
 <Section
-  title='通知'
-  description='选择需要提醒的事项。'
-  footer={<Button size='sm'>保存</Button>}
+  title='Notifications'
+  description='Choose what you want to be reminded about.'
+  footer={<Button size='sm'>Save</Button>}
 >
   <NotificationSettings />
 </Section>
 ```
 
-只渲染有内容的区域。省略标题与说明时，不创建 header；省略正文或 footer 时，不创建对应节点，也不保留区域之间的空隙。与其他内容插槽一致，`0` 和空字符串是有效内容，`undefined`、`null`、`false` 表示缺省。
+Only areas with content are rendered. Without a title or description there is no header; omitted body or footer nodes leave no gaps. As with other content slots, `0` and an empty string are valid content; `undefined`, `null`, and `false` mean absent.
 
-## 外观与间距
+## Appearance and spacing
 
-| 属性 | 默认值 | 说明 |
+| Property | Default | Description |
 | --- | --- | --- |
-| `variant` | `muted` | `muted` 为弱化表面、无边框，适合分组；`raised` 为主题表面、边框和轻阴影；`outline` 为透明背景与边框；`ghost` 为透明背景且不显示边框，只保留语义与间距 |
-| `size` | `md` | `sm` / `md` / `lg` 调整分区内边距与各区域间距，对应 `momo-space-sm` / `md` / `lg` |
-| `className` | — | 根节点样式，用于宽度、布局等定制 |
-| `render` | — | 根节点的元素或 `(props, state) => JSX` 回调 |
-| `slots` | — | header、标题、说明、正文和页脚的节点配置 |
+| `variant` | `muted` | `muted`: subdued borderless surface for groups; `raised`: themed surface, border, and light shadow; `outline`: transparent background and border; `ghost`: transparent and borderless, retaining semantics and spacing |
+| `size` | `md` | `sm` / `md` / `lg` control padding and spacing, using `momo-space-sm` / `md` / `lg` |
+| `className` | — | Root styles for width, layout, and other customization |
+| `render` | — | Root element or `(props, state) => JSX` callback |
+| `slots` | — | Node configuration for header, title, description, body, and footer |
 
-`size` 不限制分区宽高。用 `className` 中的布局类控制宽度，正文默认随内容自然增长，页脚中的操作可以换行。
+`size` does not constrain width or height. Set width with layout classes in `className`. The body grows with content and footer actions may wrap.
 
-## 内容插槽
+## Content slots
 
 ```tsx
 <Section
-  title='工作区设置'
-  description='修改对外展示的信息。'
-  footer={<Button>保存</Button>}
+  title='Workspace settings'
+  description='Edit the information shown publicly.'
+  footer={<Button>Save</Button>}
   slots={{
     header: <header />,
     title: { render: <h2 />, id: 'workspace-title' },
@@ -56,46 +56,46 @@ import { Section } from '@momots/design/components/section';
 </Section>
 ```
 
-每个 slot 支持属性对象、元素简写、render 回调或 `false`；元素和回调也可以放在对象的 `render` 字段中。回调应转发 `props`（包含 ref 和 children），保留样式、事件与内容。
+Each slot accepts a props object, element shorthand, render callback, or `false`. Elements and callbacks can also be provided in an object's `render` field. Forward `props`, including ref and children, to preserve styles, events, and content.
 
-| Slot | 默认节点 | 内容来源 |
+| Slot | Default node | Content source |
 | --- | --- | --- |
-| `header` | `div` | 标题与说明的容器 |
+| `header` | `div` | Container for title and description |
 | `title` | `h3` | `title` |
-| `description` | `div` | `description`，支持富文本和块级内容 |
+| `description` | `div` | `description`; supports rich text and block content |
 | `content` | `div` | `children` |
 | `footer` | `div` | `footer` |
 
-`slots.header=false` 同时移除标题与说明。要改变标题层级，用 `slots.title={{ render: <h2 /> }}`，内容仍放在 `title`。不要将 `children` 放进 slot 配置中。完整约定见 [Content Slots](/docs/design/content-slots)。
+`slots.header=false` removes both title and description. Set heading level with `slots.title={{ render: <h2 /> }}`, keeping content in `title`. Do not put `children` in slot configuration. See [Content Slots](/docs/design/content-slots).
 
-## 语义与可访问名称
+## Semantics and accessible names
 
-根节点默认是 `<section>`。渲染了标题时，Section 自动为标题生成 `id`，并在根节点上设置 `aria-labelledby`，使分区成为以标题命名的 `region` 地标。服务端渲染的标记中已经包含这一关联。
+The root defaults to `<section>`. When a title is rendered, Section generates its `id` and sets `aria-labelledby` on the root, creating a named `region` landmark. This association is already present in server-rendered markup.
 
-| 情况 | 结果 |
+| Condition | Result |
 | --- | --- |
-| 渲染了标题 | `aria-labelledby` 指向标题；标题已有 `id` 时沿用该 `id` |
-| 没有标题，或 `slots.header` / `slots.title` 为 `false` | 不设置 `aria-labelledby`；未命名的 `<section>` 不构成地标 |
-| 显式传入 `aria-label` 或 `aria-labelledby` | 使用显式值，不再自动关联 |
+| A title is rendered | `aria-labelledby` references the title, reusing its existing `id` if supplied |
+| No title, or `slots.header` / `slots.title` is `false` | No `aria-labelledby`; an unnamed `<section>` is not a landmark |
+| Explicit `aria-label` or `aria-labelledby` | Uses the explicit value instead of automatic association |
 
 ```tsx
-<Section title='隐私' slots={{ title: { id: 'privacy-title' } }}>
-  照片访问与数据导出。
+<Section title='Privacy' slots={{ title: { id: 'privacy-title' } }}>
+  Photo access and data export.
 </Section>
-// <section aria-labelledby="privacy-title">…<h3 id="privacy-title">隐私</h3>…
+// <section aria-labelledby="privacy-title">…<h3 id="privacy-title">Privacy</h3>…
 
-<Section aria-label='账户' title='登录信息'>
+<Section aria-label='Account' title='Sign-in information'>
   …
 </Section>
 ```
 
-根 render 回调收到 `SectionState`，包含 `slot: 'section'`、`variant` 和 `size`；这些值也以 `data-slot`、`data-variant`、`data-size` 输出。内容节点的 render state 是空对象。
+The root render callback receives `SectionState` with `slot: 'section'`, `variant`, and `size`, also exposed as `data-slot`, `data-variant`, and `data-size`. Content node render state is an empty object.
 
-Section 不添加可点击语义、Tab 停靠点或 live region。它描述的是页面结构，不是可操作的对象：分区内的按钮和链接各自负责交互。列表中可重复的独立条目（一条记录、一件商品）语义上是 `<article>` 或 `<li>`，不应作为页面分区；确需复用 Section 的外观时，用 `render={<article />}` 或 `render={<li />}` 改变根节点。
+Section adds no click semantics, tab stop, or live region. It describes page structure; its buttons and links handle interaction. Independent repeated items, such as records or products, belong in `<article>` or `<li>`. To reuse Section's appearance for them, change the root with `render={<article />}` or `render={<li />}`.
 
-## 自由组合
+## Manual composition
 
-需要自定义 header 或不同的内容顺序时，使用独立节点：
+Use individual nodes for a custom header or different content order:
 
 ```tsx
 import {
@@ -105,18 +105,18 @@ import {
 
 <SectionRoot size='lg'>
   <SectionHeader>
-    <SectionTitle render={<h2 />}>团队工作区</SectionTitle>
-    <SectionDescription>成员与项目一览。</SectionDescription>
+    <SectionTitle render={<h2 />}>Team workspace</SectionTitle>
+    <SectionDescription>Members and projects at a glance.</SectionDescription>
     <Badge>Pro</Badge>
   </SectionHeader>
   <SectionContent><ProjectList /></SectionContent>
   <SectionFooter className='justify-between'>
-    <span>8 位成员</span>
-    <Button>管理成员</Button>
+    <span>8 members</span>
+    <Button>Manage members</Button>
   </SectionFooter>
 </SectionRoot>
 ```
 
-所有独立节点都支持原生属性、ref 和 `render`。`SectionTitle` 会向最近的 `SectionRoot` 登记自己的 `id`，因此手动组合时同样自动命名分区；这一关联在挂载后建立，需要服务端标记中就带有 `aria-labelledby` 时，使用 `Section` 或显式设置 `aria-labelledby`。一个 `SectionRoot` 中只放一个 `SectionTitle`。
+All primitives support native props, ref, and `render`. `SectionTitle` registers its `id` with the nearest `SectionRoot`, automatically naming manually composed sections after mounting. Use `Section` or explicit `aria-labelledby` when this association must exist in server markup. Use only one `SectionTitle` per `SectionRoot`.
 
-`SectionRoot` 只提供表面与区域间距，直接渲染传入的 children；`Section` 则根据内容属性自动生成这套结构。嵌套分区各自使用自己的 `size`，标题也只命名各自所在的分区。
+`SectionRoot` provides surface and area spacing and renders children directly; `Section` generates the structure from content props. Nested sections use their own `size`, and each heading names only its own section.

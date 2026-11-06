@@ -1,14 +1,14 @@
 ---
 title: TweenNumber
-description: 带 tween 过渡的数字展示组件。
+description: A number display with tween transitions.
 icon: Hash
 ---
 
-`TweenNumber` 使用 motion 的 `animate` 与 `useMotionValue` 在数值变化时平滑过渡，并通过 `Intl.NumberFormat` 格式化输出，适合仪表盘、计数器与金额展示。
+`TweenNumber` smoothly interpolates changed values with Motion `animate` and `useMotionValue`, formatting output with `Intl.NumberFormat`. It suits dashboards, counters, and monetary values.
 
 <TweenNumberPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { TweenNumber } from "@momots/design/components/tween-number";
@@ -27,13 +27,13 @@ import { TweenNumber } from "@momots/design/components/tween-number";
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `value` | `number \| string` | 目标数值 |
-| `duration` | `number` | 过渡时长（秒）；默认使用主题动画，`0` 表示立即更新 |
-| `format` | `Intl.NumberFormatOptions` | 数字格式化选项 |
-| `formatter` | `(value: number) => string` | 格式化动画中的数值，优先于 `format` 与 `locales` |
-| `locales` | `Intl.LocalesArgument` | 区域设置，默认 `zh-CN` |
-| `transition` | `Transition` | 覆盖 motion 过渡配置 |
-| `className` | `string` | 容器追加 Tailwind class |
-| `...props` | `ComponentProps<typeof motion.span>` | 其余 `motion.span` 属性 |
+| `value` | `number \| string` | Target numeric value |
+| `duration` | `number` | Transition duration in seconds; theme animation by default; `0` updates immediately |
+| `format` | `Intl.NumberFormatOptions` | Number formatting options |
+| `formatter` | `(value: number) => string` | Formats animated values, taking priority over `format` and `locales` |
+| `locales` | `Intl.LocalesArgument` | Locale configuration; defaults to `zh-CN` |
+| `transition` | `Transition` | Overrides Motion transition configuration |
+| `className` | `string` | Additional Tailwind classes on the container |
+| `...props` | `ComponentProps<typeof motion.span>` | Other `motion.span` props |

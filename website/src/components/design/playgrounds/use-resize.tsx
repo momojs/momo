@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import type { ElementSize } from '../../../../../packages/design/src/hooks/use-resize';
 import { useResize } from '../../../../../packages/design/src/hooks/use-resize';
@@ -13,6 +15,7 @@ import {
 } from './shared';
 
 export function UseResizePlayground() {
+  const t = useSiteTranslations();
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(100);
   const [display, setDisplay] = useState<'block' | 'none' | 'contents'>(
@@ -44,7 +47,7 @@ export function UseResizePlayground() {
       controls={
         <>
           <NumberControl
-            label='容器宽度（%）'
+            label={t('容器宽度（%）')}
             value={width}
             min={20}
             max={100}
@@ -56,18 +59,18 @@ export function UseResizePlayground() {
             value={display}
             options={[
               { value: 'block', label: 'block' },
-              { value: 'none', label: 'none：零尺寸' },
-              { value: 'contents', label: 'contents：无盒子' },
+              { value: 'none', label: t('none：零尺寸') },
+              { value: 'contents', label: t('contents：无盒子') },
             ]}
             onChange={setDisplay}
           />
           <CheckboxControl
-            label='暂停监听'
+            label={t('暂停监听')}
             checked={paused}
             onChange={setPaused}
           />
           <CheckboxControl
-            label='缩放为 75%'
+            label={t('缩放为 75%')}
             checked={scaled}
             onChange={setScaled}
           />
@@ -76,10 +79,10 @@ export function UseResizePlayground() {
             variant='outline'
             onClick={() => setBinding((previous) => previous + 1)}
           >
-            更换逻辑 key
+            {t('更换逻辑 key')}
           </Button>
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
-            暂停时保留上次结果；恢复监听或更换 key 会重新报告尺寸。
+            {t('暂停时保留上次结果；恢复监听或更换 key 会重新报告尺寸。')}
           </p>
         </>
       }
@@ -97,32 +100,37 @@ export function UseResizePlayground() {
               transform: scaled ? 'scale(0.75)' : undefined,
             }}
           >
-            被测元素
+            {t('被测元素')}
           </div>
         </div>
         <div className='grid gap-momo-sm rounded-momo-md border border-momo-border-default p-momo-md'>
           <p className='text-momo-caption text-momo-fg-muted'>
-            {paused ? '已暂停 · 上次测量结果' : '布局边框盒 · CSS px'}
+            {paused ? t('已暂停 · 上次测量结果') : t('布局边框盒 · CSS px')}
           </p>
           <output
-            aria-label='元素测量结果'
+            aria-label={t('元素测量结果')}
             className='font-mono text-momo-title-md'
           >
             {measurement === undefined
-              ? '等待测量'
+              ? t('等待测量')
               : measurement.size === null
-                ? 'null · 布局不受支持'
+                ? t('null · 布局不受支持')
                 : `${measurement.size.width.toFixed(1)} × ${measurement.size.height.toFixed(1)}`}
           </output>
           <p className='text-momo-caption text-momo-fg-muted'>
-            当前 key：{binding}；上次报告 key：{measurement?.binding ?? '—'}；
-            <output aria-label='尺寸通知次数'>
-              通知 {measurement?.count ?? 0} 次
+            {t('当前 key：')}
+            {binding}
+            {t('；上次报告 key：')}
+            {measurement?.binding ?? '—'}；
+            <output aria-label={t('尺寸通知次数')}>
+              {t('通知')}
+              {measurement?.count ?? 0}
+              {t('次')}
             </output>
           </p>
         </div>
         <p className='text-momo-caption text-momo-fg-muted'>
-          尺寸包含内边距和边框。缩放只改变视觉大小，测量值保持不变。
+          {t('尺寸包含内边距和边框。缩放只改变视觉大小，测量值保持不变。')}
         </p>
       </div>
     </PlaygroundFrame>

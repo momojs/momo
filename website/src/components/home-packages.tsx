@@ -8,7 +8,7 @@ import {
   Route,
 } from 'lucide-react';
 
-import { docsLinkParams } from '@/lib/shared';
+import { useSiteLocale, useSiteTranslations } from '@/lib/site-translations';
 import motionTheme from '@/motion.theme';
 
 import { MotionUIThemeProvider } from '../../../packages/design/src/motion';
@@ -162,10 +162,12 @@ function ReminderSettings() {
 ];
 
 export function HomePackages() {
+  const t = useSiteTranslations();
+  const locale = useSiteLocale();
   return (
     <MotionUIThemeProvider theme={motionTheme}>
       <section
-        aria-label='工具包'
+        aria-label={t('工具包')}
         className='mx-auto w-full max-w-6xl px-6 pb-20 sm:px-10 sm:pb-24'
       >
         <div className='border-t border-fd-border pt-14 sm:pt-16'>
@@ -189,31 +191,32 @@ export function HomePackages() {
                     momo/{entry.name}
                   </h2>
                   <span className='ml-auto text-xs text-fd-muted-foreground'>
-                    {entry.category}
+                    {t(entry.category)}
                   </span>
                 </div>
                 <p className='mt-6 text-base font-semibold leading-7'>
-                  {entry.title}
+                  {t(entry.title)}
                 </p>
                 <p className='mt-3 text-sm leading-7 text-fd-muted-foreground'>
-                  {entry.description}
+                  {t(entry.description)}
                 </p>
                 <div className='mt-6 min-w-0'>
-                  <entry.Demo />
+                  <entry.Demo key={locale} />
                 </div>
                 <div className='mt-auto flex items-center justify-between gap-3 pt-4'>
                   <Link
-                    to='/docs/$'
-                    params={docsLinkParams(entry.name)}
+                    to='/$lang/docs/$'
+                    params={{ lang: locale, ['_splat']: entry.name }}
                     className='inline-flex items-center gap-2 rounded-md py-1.5 text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-fd-ring'
                   >
-                    momo/{entry.name} 文档
+                    momo/{entry.name}
+                    {t('文档')}
                     <ArrowUpRight className='size-4' aria-hidden />
                   </Link>
                   <HomePackageSource
                     name={entry.name}
-                    title={entry.title}
-                    code={entry.example}
+                    title={t(entry.title)}
+                    code={t(entry.example)}
                     lang={entry.name === 'design' ? 'tsx' : 'ts'}
                   />
                 </div>

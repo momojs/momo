@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { useStoragefy } from '../../../../../packages/design/src/hooks/use-storagefy';
 import {
@@ -11,6 +13,7 @@ import {
 import { NumberControl, PlaygroundFrame, SelectControl } from './shared';
 
 export function UseStoragefyPlayground() {
+  const t = useSiteTranslations();
   const [memory] = useState(() => new MemoryStorage());
   const [storageKey, setStorageKey] = useState<'counter-a' | 'counter-b'>(
     'counter-a',
@@ -32,7 +35,7 @@ export function UseStoragefyPlayground() {
       controls={
         <>
           <SelectControl
-            label='存储 key'
+            label={t('存储 key')}
             value={storageKey}
             options={[
               { value: 'counter-a', label: 'counter-a' },
@@ -41,13 +44,13 @@ export function UseStoragefyPlayground() {
             onChange={setStorageKey}
           />
           <NumberControl
-            label='展示回退值'
+            label={t('展示回退值')}
             value={fallback}
             step={1}
             onChange={setFallback}
           />
           <NumberControl
-            label='写入后有效秒数'
+            label={t('写入后有效秒数')}
             value={expires}
             min={0}
             max={60}
@@ -59,32 +62,33 @@ export function UseStoragefyPlayground() {
             variant='outline'
             onClick={() => setReadCount((previous) => previous + 1)}
           >
-            重新读取快照
+            {t('重新读取快照')}
           </Button>
           <Button
             size='sm'
             variant='ghost'
             onClick={() => Storagefy.clear(memory)}
           >
-            清空演示存储
+            {t('清空演示存储')}
           </Button>
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
-            0 表示不过期。设为 3 秒后写入，等待 3 秒，再点击“重新读取快照”。
-            修改有效秒数只影响后续写入。
+            {t(
+              '0 表示不过期。设为 3 秒后写入，等待 3 秒，再点击“重新读取快照”。 修改有效秒数只影响后续写入。',
+            )}
           </p>
         </>
       }
     >
       <div className='grid w-full max-w-xl gap-momo-md'>
         <p className='text-momo-body-sm text-momo-fg-muted'>
-          两个独立的 Storagefy 实例共享 key：
+          {t('两个独立的 Storagefy 实例共享 key：')}
           <code>{storageKey}</code>
         </p>
         <div className='grid gap-momo-sm'>
           {cells.map((cell, index) => (
             <StorageCounter
               key={index}
-              label={`订阅者 ${index === 0 ? 'A' : 'B'}`}
+              label={t('订阅者 {0}', index === 0 ? 'A' : 'B')}
               cell={cell}
               fallback={fallback}
               expires={expires}
@@ -92,8 +96,9 @@ export function UseStoragefyPlayground() {
           ))}
         </div>
         <p className='text-momo-caption text-momo-fg-muted'>
-          演示使用独立的 MemoryStorage，刷新页面后清空。展示回退值不会自动写入。
-          到期没有自动通知，下一次读取时才检查是否过期。
+          {t(
+            '演示使用独立的 MemoryStorage，刷新页面后清空。展示回退值不会自动写入。 到期没有自动通知，下一次读取时才检查是否过期。',
+          )}
         </p>
       </div>
     </PlaygroundFrame>
@@ -111,6 +116,7 @@ function StorageCounter({
   fallback: number;
   expires: number;
 }) {
+  const t = useSiteTranslations();
   const [stored, setStored] = useStoragefy(cell, { expires });
   const increment = () => setStored((previous) => (previous ?? fallback) + 1);
 
@@ -119,14 +125,14 @@ function StorageCounter({
       <h3 className='text-momo-body-sm font-medium'>{label}</h3>
       <div className='flex flex-wrap items-baseline gap-momo-md'>
         <output
-          aria-label={`${label} 展示值`}
+          aria-label={t('{0} 展示值', label)}
           className='font-mono text-momo-title-lg'
         >
           {stored ?? fallback}
         </output>
         <p className='text-momo-caption text-momo-fg-muted'>
-          存储值：
-          <output aria-label={`${label} 存储值`} className='font-mono'>
+          {t('存储值：')}
+          <output aria-label={t('{0} 存储值', label)} className='font-mono'>
             {String(stored)}
           </output>
         </p>
@@ -143,10 +149,10 @@ function StorageCounter({
             increment();
           }}
         >
-          连续 +1 两次
+          {t('连续 +1 两次')}
         </Button>
         <Button size='sm' variant='ghost' onClick={() => setStored(null)}>
-          删除记录
+          {t('删除记录')}
         </Button>
       </div>
     </div>

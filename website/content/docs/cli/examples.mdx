@@ -1,10 +1,10 @@
 ---
-title: 示例
-description: "@momots/cli 构建配置与 Bun、Playwright 测试脚本。"
+title: Examples
+description: "@momots/cli build configurations and Bun / Playwright test scripts."
 icon: Code
 ---
 
-## 浏览器包
+## Browser package
 
 ```ts
 import { defineConfig } from '@momots/cli';
@@ -14,7 +14,7 @@ export default defineConfig({
 });
 ```
 
-## Bun CLI 包
+## Bun CLI package
 
 ```ts
 import { defineConfig } from '@momots/cli';
@@ -27,7 +27,7 @@ export default defineConfig({
 });
 ```
 
-## 自定义构建步骤
+## Custom build steps
 
 ```ts
 import { defineConfig } from '@momots/cli';
@@ -40,9 +40,9 @@ export default defineConfig({
 });
 ```
 
-## 内联指定依赖
+## Bundle specific dependencies
 
-其余声明依赖仍保持 external，只把列出的包打进产物：
+Keep other declared dependencies external and bundle only the listed packages:
 
 ```ts
 import { defineConfig } from '@momots/cli';
@@ -54,9 +54,9 @@ export default defineConfig({
 });
 ```
 
-## 测试脚本
+## Test scripts
 
-仓库根目录分别运行非浏览器测试和浏览器测试：
+Run non-browser and browser tests separately from the repository root:
 
 ```json
 {
@@ -67,20 +67,20 @@ export default defineConfig({
 }
 ```
 
-非浏览器测试使用 `bun:test`，命名为 `*.test.ts`；Playwright 收集 `*.spec.ts`。
-两类文件都与源码就近放置。为避免 Bun 收集 Playwright 用例，`bunfig.toml` 配置：
+Non-browser tests use `bun:test` and `*.test.ts`; Playwright collects `*.spec.ts`.
+Both live beside source files. To keep Bun from collecting Playwright tests, configure `bunfig.toml`:
 
 ```toml
 [test]
 pathIgnorePatterns = ["**/*.spec.ts"]
 ```
 
-Playwright 使用根目录 `playwright.config.ts`。安装依赖后，从仓库根目录下载
-配置所需的 Chromium 和 WebKit：
+Playwright uses the root `playwright.config.ts`. After installing dependencies, download
+the configured Chromium and WebKit browsers from the repository root:
 
 ```bash
 bunx playwright install chromium webkit
 ```
 
-页面由 Bun 构建和提供 HTTP 服务；Playwright Test 在 Node.js 中运行。
-完整文件分工与运行方式见 [浏览器测试教程](/docs/cli/tutorial)。
+Bun builds and serves the pages over HTTP; Playwright Test runs in Node.js.
+See the [browser testing tutorial](/docs/cli/tutorial) for file responsibilities and commands.

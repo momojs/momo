@@ -1,0 +1,137 @@
+---
+title: Recipes
+description: "按需接入官方维护的请求策略 recipes。"
+icon: BookOpen
+---
+
+这里收录官方维护、带测试的可选 recipes。根据应用需要从各自的包子路径导入，再通过
+Drive 的扩展接口接入。
+
+## CSRF
+
+这份 recipe 适用于浏览器中使用 cookie 会话、由服务端验证 CSRF token 的 API。
+它在 `prepare` 完成后运行，读取已经编码的请求和最终 method，因此也覆盖自动推断的
+POST。从 `0.1.0-beta.1` 起，可从 `@momots/drive/recipes/csrf` 按需导入。
+
+### 接入
+
+在服务客户端上配置 `stages.send`：
+
+```ts
+import { Drive } from '@momots/drive';
+import { csrf } from '@momots/drive/recipes/csrf';
+
+export const api = new Drive({
+  stages: {
+    send: csrf({
+      origin: () => window.location.origin,
+      header: () => 'X-CSRF-Token',
+      token: () =>
+        document.querySelector<HTMLMetaElement>(
+          'meta[name="csrf-token"]',
+        )?.content,
+    }),
+  },
+});
+
+// json 被 prepare 编码后，自动推断为 POST，也会附加 token。
+await api.request({
+  api: '/api/profile',
+  json: { nickname: 'mango' },
+});
+```
+
+这个例子约定服务端在 HTML 的 `meta[name="csrf-token"]` 中提供 token，并验证请求的
+`X-CSRF-Token`。header 名和 token 来源应与后端已有的 CSRF 实现保持一致。
+
+同一子路径还导出 `CsrfOptions` 类型与 `CsrfTokenMissingError` 错误类：
+
+```ts
+import type { CsrfOptions } from '@momots/drive/recipes/csrf';
+import { CsrfTokenMissingError } from '@momots/drive/recipes/csrf';
+```
+
+### 参数与求值时机
+
+| 参数 | 类型 | 行为 |
+| --- | --- | --- |
+| `origin` | `Realizable<string>` | 必填；字符串或无参同步函数，每次发送前求值一次 |
+| `header` | `Realizable<string>` | 默认 `X-CSRF-Token`；通过来源校验后，每次发送前求值一次 |
+| `token` | `({ signal }) => string \| null \| undefined \| Promise<string \| null \| undefined>` | 每次受保护请求重新调用，等待结果后才发送 |
+
+`Realizable<string>` 来自 `@momots/core`，表示 `string | (() => string)`。创建客户端时
+不会执行 resolver；后续请求可以读取应用更新后的配置。`origin` 与 `header` 的 resolver
+保持同步，异步工作放在 `token` 中。
+
+`origin` 是一个完整 HTTP(S) 来源，例如 `https://api.example.com`，不接受路径、查询、
+fragment 或账号密码。比较按 URL 标准归一化后的协议、主机和端口进行，不匹配子域名。
+它限制首次发送的目标，也不是相对 URL 的 base。
+
+浏览器中的相对 URL 使用 `document.baseURI` 解析，包括页面的 `<base>` 设置，然后检查
+来源并使用解析出的绝对 URL 发送。Bun、Node.js 或没有 document base 的环境应传入
+绝对 URL。来源取应用可信配置，不应从当前请求地址反推。
+
+### 异步 token
+
+`token` 可以是 `async` 函数，也可以直接返回 Promise 对象。下面假设服务端的只读
+`GET /api/csrf` 接口返回 `{ token: string }`：
+
+```ts
+const api = new Drive({
+  stages: {
+    send: csrf({
+      origin: () => window.location.origin,
+      header: 'X-CSRF-Token',
+      token: ({ signal }) =>
+        fetch('/api/csrf', { signal, credentials: 'same-origin' })
+          .then(async (response) => {
+            if (!response.ok) throw new Error('Could not load CSRF token');
+            const data = await response.json() as { token?: string };
+            return data.token;
+          }),
+    }),
+  },
+});
+```
+
+示例使用独立 Fetch 获取 token。应用也可以从自己的会话状态或共享 Promise 中读取，
+缓存、并发合并和刷新时机由应用管理。token 函数不要递归调用这个客户端的受保护接口。
+
+`signal` 是默认 prepare 合并主动取消与 timeout 后的信号。异步获取过程应观察它；若
+Promise 忽略 signal，取消不会强制结束这个 Promise，但它完成后也不会继续发送请求。
+Promise 拒绝时保留原始错误。
+
+### 发送规则
+
+| 情况 | 结果 |
+| --- | --- |
+| 请求目标不属于配置的 origin | 发送前抛出 `TypeError`，不会读取 token；GET 也检查来源 |
+| `GET`、`HEAD`、`OPTIONS` | 不读取或自动附加 token，保留原有请求头 |
+| 其他方法，包括自定义方法和自动 POST | 读取 token，覆盖本次配置的同名 header，再发送 |
+| token 为 `null`、`undefined`、空字符串或纯空白 | 抛出 `CsrfTokenMissingError`，已有同名 header 也不能绕过 |
+| 受保护请求，或安全方法上已显式传入配置的 token header | 强制 `redirect: 'error'`，不会自动跟随重定向 |
+| 需要携带 token 但配置 `mode: 'no-cors'` | 发送前抛出 `TypeError` |
+| 自定义 prepare 没有确定 method | 发送前抛出 `TypeError` |
+| 服务端返回 403 等状态 | 正常进入 Drive 的解析流程，由应用决定如何处理 |
+
+recipe 以发送时的 `context.api` 为准，能检查外层中间件改写后的目标；不使用创建
+Context 时缓存的 `url` 或 `path`。等待 token 前会固定这次请求的 URL、method 和
+headers，异步期间对原 Context 的改写不会改变本次发送目标。
+
+携带 token 的请求禁止重定向，是为了让来源检查覆盖实际发送目标；不会改变其他
+不携带该 header 的安全方法请求的 redirect 设置。Fetch 的重定向规则见
+[Fetch Standard](https://fetch.spec.whatwg.org/#http-redirect-fetch)。
+
+### 与其他配置组合
+
+普通 middleware、parser、receiver、主动取消和默认 timeout 仍按 Drive 的约定工作。
+`credentials` 沿用请求配置；跨来源 cookie 请求所需的 credentials 与服务端 CORS
+配置由应用决定。
+
+`csrf()` 与 `repeat()` 都返回 `DriveStageSend`，当前只能选择一个 `stages.send`。
+单次请求重新指定 `stages.send` 会覆盖实例配置，也会替换掉这份 recipe。此版本不提供
+自动刷新 token 或失败重试。
+
+服务端必须验证受保护请求的 token；客户端附加 header 本身不能代替服务端防护。
+优先接入后端框架已有的 CSRF 机制，参见
+[OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)。

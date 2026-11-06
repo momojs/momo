@@ -1,11 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { source, getLLMText } from '@/lib/source';
+
+import { getLLMText, source } from '@/lib/source';
 
 export const Route = createFileRoute('/llms-full.txt')({
   server: {
     handlers: {
+      // biome-ignore lint/style/useNamingConvention: HTTP method required by TanStack Start.
       GET: async () => {
-        const scan = source.getPages().map(getLLMText);
+        const scan = source.getPages('en').map(getLLMText);
         const scanned = await Promise.all(scan);
         return new Response(scanned.join('\n\n'));
       },

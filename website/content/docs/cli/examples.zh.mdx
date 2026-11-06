@@ -1,0 +1,86 @@
+---
+title: 示例
+description: "@momots/cli 构建配置与 Bun、Playwright 测试脚本。"
+icon: Code
+---
+
+## 浏览器包
+
+```ts
+import { defineConfig } from '@momots/cli';
+
+export default defineConfig({
+  build: { target: 'browser' },
+});
+```
+
+## Bun CLI 包
+
+```ts
+import { defineConfig } from '@momots/cli';
+
+export default defineConfig({
+  build: {
+    target: 'bun',
+    executables: ['bin.js'],
+  },
+});
+```
+
+## 自定义构建步骤
+
+```ts
+import { defineConfig } from '@momots/cli';
+
+export default defineConfig({
+  build: {
+    scripts: ['lint', 'typecheck', 'types'],
+    packages: 'bundle',
+  },
+});
+```
+
+## 内联指定依赖
+
+其余声明依赖仍保持 external，只把列出的包打进产物：
+
+```ts
+import { defineConfig } from '@momots/cli';
+
+export default defineConfig({
+  build: {
+    bundle: ['@momots/host'],
+  },
+});
+```
+
+## 测试脚本
+
+仓库根目录分别运行非浏览器测试和浏览器测试：
+
+```json
+{
+  "scripts": {
+    "test:unit": "bun test --isolate",
+    "test:browser": "playwright test"
+  }
+}
+```
+
+非浏览器测试使用 `bun:test`，命名为 `*.test.ts`；Playwright 收集 `*.spec.ts`。
+两类文件都与源码就近放置。为避免 Bun 收集 Playwright 用例，`bunfig.toml` 配置：
+
+```toml
+[test]
+pathIgnorePatterns = ["**/*.spec.ts"]
+```
+
+Playwright 使用根目录 `playwright.config.ts`。安装依赖后，从仓库根目录下载
+配置所需的 Chromium 和 WebKit：
+
+```bash
+bunx playwright install chromium webkit
+```
+
+页面由 Bun 构建和提供 HTTP 服务；Playwright Test 在 Node.js 中运行。
+完整文件分工与运行方式见 [浏览器测试教程](/docs/cli/tutorial)。

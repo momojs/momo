@@ -1,14 +1,14 @@
 ---
 title: Tabs
-description: 带 motion 指示器的标签页。
+description: Tabs with a Motion indicator.
 icon: AppWindow
 ---
 
-`Tabs` 使用 Base UI Tabs 处理键盘导航和面板关联，组件 API 使用 `options` 描述 tab 与 panel。列表、指示器、面板与文本颜色消费 momo semantic token。
+`Tabs` uses Base UI Tabs for keyboard navigation and panel association, with `options` describing tabs and panels. List, indicator, panel, and text colors use momo semantic tokens.
 
 <TabsPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Tabs } from "@momots/design/components/tabs";
@@ -25,18 +25,18 @@ import { Tabs } from "@momots/design/components/tabs";
 
 ## Props
 
-| Prop           | 类型                         | 说明              |
+| Prop | Type | Description |
 | -------------- | ---------------------------- | ----------------- |
-| `value`        | `T`                          | 当前 tab          |
-| `defaultValue` | `T`                          | 非受控默认 tab    |
-| `options`      | `TabOption<T>[]`             | tab 与 panel 描述 |
-| `orientation`  | `"horizontal" \| "vertical"` | 排列方向          |
-| `onChange`     | `(value: T) => void`         | 切换回调          |
+| `value` | `T` | Current tab |
+| `defaultValue` | `T` | Uncontrolled initial tab |
+| `options` | `TabOption<T>[]` | Tab and panel definitions |
+| `orientation` | `"horizontal" \| "vertical"` | Layout direction |
+| `onChange` | `(value: T) => void` | Tab-change callback |
 
-## 选中状态与高度
+## Selection and height
 
-非受控模式使用 `defaultValue` 初始化；未指定时选择第一个未禁用的选项，也支持初始为空、之后异步提供 `options`。已选项被移除时面板区域收起，同一选中值重新出现时恢复。
+Uncontrolled mode initializes from `defaultValue`, otherwise selecting the first enabled option. It also supports initially empty options loaded asynchronously. Removing the selected option collapses the panel area; restoring that value restores the panel.
 
-受控模式的 `onChange` 表达切换请求；父组件传回新的 `value` 后，面板和高度才跟随切换。当前面板的异步内容变化会持续触发高度测量，外层边框不计入动画高度，减少动态效果偏好下直接更新高度。
+Controlled `onChange` requests a selection; the panel and height change only when the parent supplies the new `value`. Async content changes keep triggering measurement. Outer borders are excluded from animated height, and reduced-motion preferences update height immediately.
 
-高度策略与测量约束见 [useAutoSize](/docs/design/use-auto-size)。
+See [useAutoSize](/docs/design/use-auto-size) for height strategies and measurement constraints.

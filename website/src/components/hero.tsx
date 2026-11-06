@@ -4,7 +4,8 @@ import { Sparkles } from 'lucide-react';
 import type { Variants } from 'motion/react';
 import { motion, useReducedMotion } from 'motion/react';
 
-import { docsLinkParams, gitConfig } from '@/lib/shared';
+import { gitConfig } from '@/lib/shared';
+import { useSiteLocale, useSiteTranslations } from '@/lib/site-translations';
 
 const container: Variants = {
   hidden: {},
@@ -29,6 +30,8 @@ const item: Variants = {
 const GITHUB_URL = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 
 export function Hero() {
+  const t = useSiteTranslations();
+  const locale = useSiteLocale();
   const reduced = useReducedMotion();
 
   return (
@@ -46,27 +49,28 @@ export function Hero() {
           className='inline-flex items-center gap-2 rounded-full border border-fd-border bg-fd-card/60 px-3.5 py-1.5 text-xs font-medium text-fd-muted-foreground backdrop-blur'
         >
           <Sparkles className='size-3.5 text-fd-primary' />
-          momo 读作 mo-mo · 函数式
+          {t('momo 读作 mo-mo · 函数式')}
         </motion.div>
 
         <motion.h1
           variants={item}
           className='mt-6 text-balance text-4xl font-semibold tracking-tight text-fd-foreground sm:text-5xl md:text-6xl'
         >
-          为 React 而生的
+          {t('为 React 而生的')}
           <br />
           <span className='bg-gradient-to-r from-fd-primary via-fuchsia-500 to-amber-500 bg-clip-text text-transparent'>
-            可组合
+            {t('可组合')}
           </span>
-          工具链
+          {t('工具链')}
         </motion.h1>
 
         <motion.p
           variants={item}
           className='mt-6 max-w-xl text-balance text-base leading-relaxed text-fd-muted-foreground sm:text-lg'
         >
-          提供 React 组件与动画、数据处理、宿主环境工具和 HTTP 客户端。 使用
-          TypeScript 编写，支持按需导入。
+          {t(
+            '提供 React 组件与动画、数据处理、宿主环境工具和 HTTP 客户端。 使用 TypeScript 编写，支持按需导入。',
+          )}
         </motion.p>
 
         <motion.div
@@ -74,11 +78,11 @@ export function Hero() {
           className='mt-9 flex flex-col items-center gap-3 sm:flex-row'
         >
           <Link
-            to='/docs/$'
-            params={docsLinkParams()}
+            to='/$lang/docs/$'
+            params={{ lang: locale, ['_splat']: '' }}
             className='group inline-flex h-11 items-center gap-2 rounded-xl bg-fd-primary px-5 text-sm font-semibold text-fd-primary-foreground shadow-lg shadow-fd-primary/20 transition-transform motion-safe:hover:-translate-y-0.5'
           >
-            开始使用
+            {t('开始使用')}
             <svg
               viewBox='0 0 24 24'
               fill='none'
@@ -101,7 +105,8 @@ export function Hero() {
             rel='noreferrer'
             className='inline-flex h-11 items-center gap-2 rounded-xl border border-fd-border bg-fd-card/60 px-5 text-sm font-semibold text-fd-foreground backdrop-blur transition-colors hover:bg-fd-accent'
           >
-            <GithubMark className='size-4' />在 GitHub 上查看
+            <GithubMark className='size-4' />
+            {t('在 GitHub 上查看')}
           </a>
         </motion.div>
       </motion.div>

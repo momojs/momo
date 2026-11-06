@@ -15,11 +15,13 @@ import {
 } from 'fumadocs-ui/components/dialog/search';
 import { useI18n } from 'fumadocs-ui/contexts/i18n';
 
-function initOrama() {
+import { resolveLocale } from '@/lib/i18n';
+import { searchOptions } from '@/lib/search';
+
+function initOrama(locale?: string) {
   return create({
     schema: { ['_']: 'string' },
-    // https://docs.orama.com/docs/orama-js/supported-languages
-    language: 'english',
+    ...searchOptions(locale),
   });
 }
 
@@ -29,7 +31,7 @@ export default function DefaultSearchDialog(props: SharedProps) {
     client: oramaStaticClient({
       from: `${import.meta.env.BASE_URL}api/search${import.meta.env.PROD ? '.json' : ''}`,
       initOrama,
-      locale,
+      locale: resolveLocale(locale),
     }),
   });
 

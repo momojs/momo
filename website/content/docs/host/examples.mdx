@@ -1,12 +1,12 @@
 ---
-title: 示例
-description: 可直接复制的 @momots/host 实战代码。
+title: Examples
+description: Ready-to-use @momots/host examples.
 icon: Code
 ---
 
-下面是一些可以直接复制使用的实战片段。
+The following practical snippets can be copied into your application.
 
-## 渠道自适应跳转
+## Channel-aware navigation
 
 ```ts
 import { isMobile } from '@momots/host/guard/is-mobile';
@@ -21,7 +21,7 @@ function openPayment(orderId: string) {
 }
 ```
 
-## 带过期时间的接口缓存
+## API caching with expiration
 
 ```ts
 import { Storagefy } from '@momots/host/storage';
@@ -38,19 +38,19 @@ async function getRates(): Promise<Rates> {
   if (cached) return cached;
 
   const data: Rates = await fetch('/api/fx').then((r) => r.json());
-  ratesCache.set(data, 60 * 60); // 缓存 1 小时
+  ratesCache.set(data, 60 * 60); // Cache for one hour
   return data;
 }
 ```
 
-## 跨标签页同步主题
+## Synchronize themes across tabs
 
 ```ts
 import { Storagefy } from '@momots/host/storage';
 
 const theme = new Storagefy<'light' | 'dark'>('theme');
 
-theme.set('dark'); // 会派发 StorageEvent
+theme.set('dark'); // Dispatches a StorageEvent
 
 window.addEventListener('storage', (e) => {
   if (e.key === 'Storagefy:theme') {
@@ -59,7 +59,7 @@ window.addEventListener('storage', (e) => {
 });
 ```
 
-## 上报埋点的离线缓冲
+## Offline buffering for analytics
 
 ```ts
 import { PersistentBuffer } from '@momots/host/persistent';
@@ -76,14 +76,14 @@ async function flush() {
   if (events.length === 0) return;
   try {
     await fetch('/api/track', { method: 'POST', body: JSON.stringify(events) });
-    queue.drain(events.length); // 上报成功才清除
+    queue.drain(events.length); // Remove only after successful reporting
   } catch {
-    /* 失败保留，下次再试；刷新页面也不丢 */
+    /* Keep on failure and retry later; data also survives page reloads */
   }
 }
 ```
 
-## 主题色 → rgba 半透明遮罩
+## Theme color to a translucent rgba overlay
 
 ```ts
 import { toCSSRGBVariable } from '@momots/host/css/to-css-rgb-variable';
@@ -94,7 +94,7 @@ const overlay = primary
   : 'rgba(0, 0, 0, 0.16)';
 ```
 
-## 一键复制为 cURL（调试面板）
+## Copy as cURL in a debug panel
 
 ```ts
 import { toCurl } from '@momots/host/fetch';
@@ -105,7 +105,7 @@ async function copyAsCurl(input: RequestInfo, init?: RequestInit) {
 }
 ```
 
-## 滚动到最近的可滚动容器顶部
+## Scroll the nearest scrollable container to the top
 
 ```ts
 import { nearestScrollable } from '@momots/host/nearest';

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Select } from '../../../../../packages/design/src/components/select';
 import { useControllableValue } from '../../../../../packages/design/src/hooks/use-controllable-value';
@@ -66,6 +68,7 @@ function ScenarioPlayground({
   onScenarioChange: (scenario: Scenario) => void;
   onReset: () => void;
 }) {
+  const t = useSiteTranslations();
   const [source, setSource] = useState<number | undefined>(
     scenario === 'undefined' ? undefined : 1,
   );
@@ -91,12 +94,15 @@ function ScenarioPlayground({
       controls={
         <>
           <div className='grid gap-2 text-xs font-medium text-momo-fg-muted'>
-            <span>场景</span>
+            <span>{t('场景')}</span>
             <Select<Scenario>
               size='sm'
               value={scenario}
-              options={scenarios.map(({ value, label }) => ({ value, label }))}
-              trigger={{ className: 'w-full text-xs', 'aria-label': '场景' }}
+              options={scenarios.map(({ value, label }) => ({
+                value,
+                label: t(label),
+              }))}
+              trigger={{ className: 'w-full text-xs', 'aria-label': t('场景') }}
               popup={{ className: 'text-xs' }}
               item={{ className: 'text-xs' }}
               onChange={onScenarioChange}
@@ -113,7 +119,7 @@ function ScenarioPlayground({
                 setPending(undefined);
               }}
             >
-              确认最新请求
+              {t('确认最新请求')}
             </Button>
           )}
           {isControlled && scenario !== 'undefined' && (
@@ -125,31 +131,33 @@ function ScenarioPlayground({
                 setPending(undefined);
               }}
             >
-              父组件重置为 1
+              {t('父组件重置为 1')}
             </Button>
           )}
           <Button size='sm' variant='ghost' onClick={onReset}>
-            重新开始
+            {t('重新开始')}
           </Button>
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
-            切换场景会重新挂载。父组件重置或确认只改变 value，不会增加请求记录。
+            {t(
+              '切换场景会重新挂载。父组件重置或确认只改变 value，不会增加请求记录。',
+            )}
           </p>
         </>
       }
     >
       <div className='grid w-full max-w-xl gap-momo-md'>
         <div className='grid gap-momo-xxs'>
-          <h3 className='font-medium'>{activeScenario?.label}</h3>
+          <h3 className='font-medium'>{t(activeScenario?.label ?? '')}</h3>
           <p className='text-momo-body-sm text-momo-fg-muted'>
-            {activeScenario?.description}
+            {t(activeScenario?.description ?? '')}
           </p>
         </div>
         <div className='grid gap-momo-xs rounded-momo-md border border-momo-border-default bg-momo-bg-surface p-momo-md'>
           <span className='text-momo-caption text-momo-fg-muted'>
-            界面当前值
+            {t('界面当前值')}
           </span>
           <output
-            aria-label='界面当前值'
+            aria-label={t('界面当前值')}
             className='font-mono text-momo-title-lg'
           >
             {String(current)}
@@ -171,10 +179,10 @@ function ScenarioPlayground({
               setCurrent((previous) => (previous ?? 0) + 1);
             }}
           >
-            连续 +1 两次
+            {t('连续 +1 两次')}
           </Button>
           <Button size='sm' variant='outline' onClick={() => setCurrent(20)}>
-            请求 20
+            {t('请求 20')}
           </Button>
           <Button
             size='sm'
@@ -184,7 +192,7 @@ function ScenarioPlayground({
               setCurrent(2);
             }}
           >
-            重复请求 2
+            {t('重复请求 2')}
           </Button>
           <Button
             size='sm'
@@ -196,23 +204,24 @@ function ScenarioPlayground({
               setCurrent(current);
             }}
           >
-            +1 后撤回
+            {t('+1 后撤回')}
           </Button>
         </div>
         <div className='grid gap-momo-xs rounded-momo-md bg-momo-bg-surface-muted p-momo-md'>
           <span className='text-momo-caption text-momo-fg-muted'>
-            onChange 请求记录（最近 8 次）
+            {t('onChange 请求记录（最近 8 次）')}
           </span>
           <output
-            aria-label='onChange 请求记录'
+            aria-label={t('onChange 请求记录')}
             className='break-words font-mono text-momo-body-sm'
           >
-            {requests.length > 0 ? requests.join(' → ') : '暂无请求'}
+            {requests.length > 0 ? requests.join(' → ') : t('暂无请求')}
           </output>
         </div>
         <p className='text-momo-caption text-momo-fg-muted'>
-          每个“连续”或“重复”按钮都在同一个事件中调用两次 setter；空值的 +1 使用
-          (previous ?? 0) + 1。
+          {t(
+            '每个“连续”或“重复”按钮都在同一个事件中调用两次 setter；空值的 +1 使用 (previous ?? 0) + 1。',
+          )}
         </p>
       </div>
     </PlaygroundFrame>

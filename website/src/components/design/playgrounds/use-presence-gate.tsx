@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Select } from '../../../../../packages/design/src/components/select';
 import { usePresenceGate } from '../../../../../packages/design/src/hooks/use-presence-gate';
@@ -58,6 +60,7 @@ function PresenceScenario({
   onScenarioChange: (scenario: Scenario) => void;
   onReset: () => void;
 }) {
+  const t = useSiteTranslations();
   const [open, setOpen] = useState(true);
   const [showExtra, setShowExtra] = useState(true);
   const [slow, setSlow] = useState(false);
@@ -75,24 +78,24 @@ function PresenceScenario({
   }, []);
 
   useEffect(() => {
-    if (!open && !visible) record('visible → false，父级开始退出');
-  }, [open, visible, record]);
+    if (!open && !visible) record(t('visible → false，父级开始退出'));
+  }, [open, visible, record, t]);
 
   // Register during render; the event callback only reports completion.
   function trackGate(key: string, label: string) {
     const complete = createGate(key);
     return () => {
-      record(`${label}退出完成`);
+      record(t('{0}退出完成', label));
       complete();
     };
   }
 
   function toggleOpen() {
     if (open) {
-      record('open → false，请求关闭');
+      record(t('open → false，请求关闭'));
       setOpen(false);
     } else {
-      record(visible ? '退出途中重新打开' : '重新打开');
+      record(visible ? t('退出途中重新打开') : t('重新打开'));
       setShowExtra(true);
       setOpen(true);
     }
@@ -103,48 +106,53 @@ function PresenceScenario({
       controls={
         <>
           <div className='grid gap-2 text-xs font-medium text-momo-fg-muted'>
-            <span>场景</span>
+            <span>{t('场景')}</span>
             <Select<Scenario>
               size='sm'
               value={scenario}
-              options={scenarios.map(({ value, label }) => ({ value, label }))}
-              trigger={{ className: 'w-full text-xs', 'aria-label': '场景' }}
+              options={scenarios.map(({ value, label }) => ({
+                value,
+                label: t(label),
+              }))}
+              trigger={{ className: 'w-full text-xs', 'aria-label': t('场景') }}
               popup={{ className: 'text-xs' }}
               item={{ className: 'text-xs' }}
               onChange={onScenarioChange}
             />
           </div>
           <CheckboxControl
-            label='慢速观察（3 倍时长）'
+            label={t('慢速观察（3 倍时长）')}
             checked={slow}
             onChange={setSlow}
           />
           <CheckboxControl
-            label='立即完成动画'
+            label={t('立即完成动画')}
             checked={instant}
             onChange={setInstant}
           />
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
             {reduced
-              ? '系统已开启减少动态效果，动画立即完成。'
-              : '内容退出 0.6 秒，说明退出 1.2 秒，父级退出 0.3 秒。慢速模式便于观察和中途重新打开。'}
+              ? t('系统已开启减少动态效果，动画立即完成。')
+              : t(
+                  '内容退出 0.6 秒，说明退出 1.2 秒，父级退出 0.3 秒。慢速模式便于观察和中途重新打开。',
+                )}
           </p>
           <Button size='sm' variant='ghost' onClick={onReset}>
-            重新开始
+            {t('重新开始')}
           </Button>
         </>
       }
     >
       <div className='grid w-full max-w-xl gap-momo-md'>
         <div className='grid gap-momo-xs'>
-          <h3 className='font-medium'>{activeScenario?.label}</h3>
+          <h3 className='font-medium'>{t(activeScenario?.label ?? '')}</h3>
           <p className='text-momo-body-sm text-momo-fg-muted'>
-            {activeScenario?.description}
+            {t(activeScenario?.description ?? '')}
           </p>
         </div>
         <div className='flex flex-wrap gap-momo-xs'>
           <Button size='sm' variant='outline' onClick={toggleOpen}>
-            {open ? '关闭' : '重新打开'}
+            {open ? t('关闭') : t('重新打开')}
           </Button>
           {scenario === 'dynamic' && (
             <Button
@@ -152,11 +160,11 @@ function PresenceScenario({
               variant='outline'
               disabled={open || !visible || !showExtra}
               onClick={() => {
-                record('移除说明子树，取消该 gate 的等待');
+                record(t('移除说明子树，取消该 gate 的等待'));
                 setShowExtra(false);
               }}
             >
-              移除说明子树
+              {t('移除说明子树')}
             </Button>
           )}
         </div>
@@ -164,29 +172,29 @@ function PresenceScenario({
           <AnimatePresence
             initial={false}
             onExitComplete={() => {
-              record('父级退出完成，已卸载');
+              record(t('父级退出完成，已卸载'));
             }}
           >
             {visible && (
               <motion.section
                 key='root'
-                aria-label='父级动画容器'
+                aria-label={t('父级动画容器')}
                 className='grid gap-momo-sm rounded-momo-md border border-momo-border-default bg-momo-bg-surface p-momo-md shadow-momo-sm'
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: duration(0.3) }}
               >
-                <p className='text-momo-body-sm font-medium'>父级容器</p>
+                <p className='text-momo-body-sm font-medium'>{t('父级容器')}</p>
                 {scenario !== 'empty' && (
                   <AnimatePresence
                     initial={false}
-                    onExitComplete={trackGate('content', '内容')}
+                    onExitComplete={trackGate('content', t('内容'))}
                   >
                     {open && (
                       <motion.div
                         key='content'
-                        aria-label='内容子级'
+                        aria-label={t('内容子级')}
                         className='rounded-momo-md bg-momo-bg-surface-muted p-momo-md text-momo-body-sm'
                         initial={{ opacity: 0, y: reduced ? 0 : 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -196,7 +204,7 @@ function PresenceScenario({
                           ease: 'easeOut',
                         }}
                       >
-                        内容 · 先完成自己的退出，再通知父级。
+                        {t('内容 · 先完成自己的退出，再通知父级。')}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -204,12 +212,12 @@ function PresenceScenario({
                 {hasExtra && (
                   <AnimatePresence
                     initial={false}
-                    onExitComplete={trackGate('extra', '说明')}
+                    onExitComplete={trackGate('extra', t('说明'))}
                   >
                     {open && (
                       <motion.div
                         key='extra'
-                        aria-label='说明子级'
+                        aria-label={t('说明子级')}
                         className='rounded-momo-md border border-momo-border-default p-momo-md text-momo-body-sm text-momo-fg-muted'
                         initial={{ opacity: 0, y: reduced ? 0 : 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -219,14 +227,14 @@ function PresenceScenario({
                           ease: 'easeOut',
                         }}
                       >
-                        说明 · 退出更慢，父级会等到我完成。
+                        {t('说明 · 退出更慢，父级会等到我完成。')}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 )}
                 {scenario === 'empty' && (
                   <p className='text-momo-body-sm text-momo-fg-muted'>
-                    普通内容随父级一起退出，无需登记 gate。
+                    {t('普通内容随父级一起退出，无需登记 gate。')}
                   </p>
                 )}
               </motion.section>
@@ -235,14 +243,14 @@ function PresenceScenario({
         </div>
         <div className='grid gap-momo-xs rounded-momo-md bg-momo-bg-surface-muted p-momo-md'>
           <p className='text-momo-caption text-momo-fg-muted'>
-            事件顺序（最近 8 条）
+            {t('事件顺序（最近 8 条）')}
           </p>
           <ol
-            aria-label='退出事件记录'
+            aria-label={t('退出事件记录')}
             className='grid gap-1 text-momo-caption'
           >
             {events.length === 0 ? (
-              <li>暂无退出事件，点击“关闭”开始。</li>
+              <li>{t('暂无退出事件，点击“关闭”开始。')}</li>
             ) : (
               events.map((event, index) => <li key={index}>{event}</li>)
             )}

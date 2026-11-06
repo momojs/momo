@@ -1,52 +1,52 @@
 ---
 title: usePresenceGate
-description: 用嵌套退出、多个子级等待和中途重新打开等场景，理解关闭意图如何与实际卸载分开。
+description: Separate closing intent from unmounting with nested exits, multiple waiting children, and reopening during exit.
 icon: Layers
 ---
 
-`usePresenceGate` 让父级在收到关闭请求后继续挂载，直到登记的子级 `AnimatePresence` 完成退出，再允许父级退出。它适合弹层、菜单和折叠区域等需要“里面先退出，外面再收走”的结构。
+`usePresenceGate` keeps a parent mounted after closing is requested until registered child `AnimatePresence` boundaries finish exiting, then allows the parent to exit. It suits overlays, menus, and collapsible regions that must exit inside-out.
 
-## 为什么需要它
+## Why use it
 
-假设一个弹层包含遮罩和内容。关闭时，遮罩需要淡出，内容需要完成自己的退出，最后才能移除承载它们的 Portal。如果直接用 `open && <Portal />` 控制整个结构，`open` 变为 `false` 时，子级的动画宿主也会一起消失。
+Consider an overlay containing a backdrop and content. Both must finish exiting before their Portal disappears. Using `open && <Portal />` for the whole structure removes the child animation hosts as soon as `open` becomes `false`.
 
-用一个固定的 `setTimeout` 延迟卸载也难以维护：某个子级修改动画时长，或者用户中途重新打开，延迟时间就不再代表真实完成状态。
+A fixed `setTimeout` delay is difficult to maintain: changes to child durations or reopening mid-exit mean elapsed time no longer represents actual completion.
 
-这个 Hook 将两件事分开：`open` 表达“业务上是否打开”，`visible` 表达“父级现在是否还需要保留”。子级通过 gate 报告退出完成，父级等待所有参与者。
+The hook separates `open`, the application's desired state, from `visible`, whether the parent must remain mounted. Children report exit completion through gates, and the parent waits for all participants.
 
-| 遇到的问题 | Hook 提供的行为 |
+| Problem | Hook behavior |
 | --- | --- |
-| 父级直接卸载，子级退出被截断 | 关闭后暂时保留父级，让子级有机会完成退出 |
-| 遮罩与内容退出时长不同 | 分别登记 gate，等全部完成后释放父级 |
-| 子级已退出，其他状态更新导致再次渲染 | 同一轮关闭中，已完成的 gate 不会重新加入等待 |
-| 用户在退出途中重新打开 | `visible` 保持为 `true`，清空本轮等待，内容重新进入 |
-| 关闭过程中某个可选子树被移除 | 移除对应等待，不让父级永久停留 |
-| 根本没有子级需要等待 | 关闭后的 effect 直接释放父级 |
+| Immediate parent unmount truncates child exits | Temporarily retains the parent until children can finish |
+| Backdrop and content have different durations | Registers separate gates and releases after all complete |
+| A completed child rerenders due to other state | Completed gates do not rejoin waiting during the same close cycle |
+| User reopens during exit | Keeps `visible` true, clears current waits, and reenters content |
+| An optional subtree disappears while closing | Removes its wait so the parent cannot remain stuck |
+| No children need waiting | Releases the parent directly in the closing effect |
 
-如果只有一层元素需要退出，直接使用 `AnimatePresence` 即可。需要协调独立的嵌套退出边界，或者必须先完成内层、再处理外层时，再使用 `usePresenceGate`。它不负责定义动画、管理焦点或改变业务开关。
+Use `AnimatePresence` directly for a single exit layer. Use `usePresenceGate` to coordinate independent nested exit boundaries or enforce inner-before-outer completion. It does not define animations, manage focus, or change application open state.
 
-## 先观察：已关闭，不等于已卸载
+## Observe: Closed does not mean unmounted
 
-选择场景并点击“关闭”，观察父子级的退出顺序和事件记录。开启慢速模式后，可以在退出完成前点击“重新打开”，或在动态场景中移除说明子树。
+Choose a scenario and click Close to observe exit order and event history. Slow mode allows reopening before completion or removing the help subtree in the dynamic scenario.
 
 <UsePresenceGatePlayground />
 
-每行从对应场景的初始状态开始；切换场景或点击“重新开始”会重建演示：
+Each row starts from the corresponding initial state; changing scenarios or clicking Restart rebuilds the demo:
 
-| 场景与操作 | 状态如何变化 | 预期退出顺序 |
+| Scenario and action | State changes | Expected order |
 | --- | --- | --- |
-| 内容先退出 → 关闭 | 先 `open = false, visible = true`，子级完成后 `visible = false` | 内容 → 父级 |
-| 等待多个子级 → 关闭 | 内容先完成时，`visible` 仍为 `true` | 内容与说明同时退出 → 等说明完成 → 父级 |
-| 任一有子级的场景 → 慢速观察 → 关闭 → 立即重新打开 | `open` 恢复为 `true`，父级继续保留 | 中断关闭，内容重新进入 |
-| 动态场景 → 慢速观察 → 关闭 → 移除说明子树 | 不再等待已经移除的说明，只等待剩余内容 | 剩余 gate 完成 → 父级 |
-| 没有子级需要等待 → 关闭 | effect 中直接将 `visible` 设为 `false` | 只有父级退出 |
-| 等待多个子级 → 立即完成动画 → 关闭 | 仍通过完成回调释放父级 | 顺序不变，不增加人为延迟 |
+| Content exits first → close | Initially `open = false, visible = true`; after child completion, `visible = false` | Content → parent |
+| Wait for multiple children → close | `visible` remains true when content finishes first | Content and help exit together → wait for help → parent |
+| Any child scenario → slow mode → close → immediately reopen | `open` returns to true and the parent remains | Closing interrupted; content reenters |
+| Dynamic scenario → slow mode → close → remove help subtree | Stops waiting for removed help, waits only for remaining content | Remaining gates complete → parent |
+| No children to wait for → close | Effect directly sets `visible = false` | Parent only |
+| Multiple children → instant animation → close | Completion callbacks still release the parent | Same sequence, without artificial delay |
 
-`visible = false` 表示不再由 Hook 保留父级。如果外层还包着 `AnimatePresence`，它会继续保留正在退出的父级 DOM，直到父级自己的动画完成。因此演示把“父级退出中”和“父级已卸载”分开显示。
+`visible = false` means the hook no longer retains the parent. An outer `AnimatePresence` can still retain its exiting DOM until its own animation completes. The demo therefore distinguishes “parent exiting” from “parent unmounted.”
 
-## 场景一：内部内容先退出，外层容器再退出
+## Scenario 1: Inner content exits before its container
 
-内层以 `open` 决定是否退出，外层以 `visible` 决定是否释放。两个条件分开，才能形成由内向外的顺序：
+The inner layer uses `open` to decide when to exit; the outer layer uses `visible` to decide when to release. Separating these conditions establishes inside-out order:
 
 ```tsx
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -79,7 +79,7 @@ function NestedPanel({ open }: { open: boolean }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.4 }}
               >
-                面板内容
+                Panel content
               </motion.div>
             )}
           </AnimatePresence>
@@ -90,36 +90,36 @@ function NestedPanel({ open }: { open: boolean }) {
 }
 ```
 
-子级内容由原始的 `open` 控制，父级容器则由 `visible` 控制。关闭时会按以下顺序运行：
+The original `open` controls children while `visible` controls the parent container. Closing follows this order:
 
-1. `open` 变为 `false`，`visible` 暂时保持 `true`。
-2. 关闭帧调用 `createGate("content")`，登记该子级退出任务。
-3. 子级 `AnimatePresence` 完成退出并调用返回的 handler。
-4. 所有 gate 都完成后，`visible` 变为 `false`，父级开始自己的退出动画。
+1. `open` becomes `false`; `visible` temporarily stays `true`.
+2. The closing render calls `createGate("content")` to register the child's exit task.
+3. Child `AnimatePresence` finishes exiting and calls the returned handler.
+4. Once all gates complete, `visible` becomes `false` and the parent begins its own exit.
 
-上述例子中，内容用约 `0.4` 秒退出，之后父级再用约 `0.2` 秒淡出。Hook 根据完成回调判断何时释放，不依赖这两个时长，也没有额外的倒计时。
+Here content exits over roughly `0.4` seconds, then the parent fades out over roughly `0.2` seconds. Release depends on completion callbacks, not these durations, with no extra countdown.
 
-### 让负责等待的组件持续挂载
+### Keep the waiting component mounted
 
-调用方应该持续渲染这个组件，只改变 `open`：
+The caller should continuously render this component and change only `open`:
 
 ```tsx
-// 正确：组件有机会观察从 true 到 false 的变化。
+// Correct: the component can observe the true-to-false transition.
 <NestedPanel open={open} />
 ```
 
-如果写成下面这样，包含 Hook 的组件会被调用方直接移除，内部就无法等待：
+The following removes the hook's component immediately, leaving no opportunity to wait:
 
 ```tsx
-// 不适用于这套等待逻辑：关闭时整个组件立刻卸载。
+// Incompatible with this waiting logic: closing immediately unmounts the entire component.
 {open && <NestedPanel open={open} />}
 ```
 
-子级 `AnimatePresence` 本身也需要留在树上，只把它管理的动画内容切换出去。不要用 `open` 把整个 `AnimatePresence` 包起来。
+Child `AnimatePresence` itself must also remain in the tree; toggle only its managed animated content. Do not wrap the entire `AnimatePresence` in `open`.
 
-## 场景二：遮罩与内容同时退出，等待较慢的一方
+## Scenario 2: Parallel backdrop and content exits
 
-一个父级可以登记多个 gate。下面遮罩退出较快，内容退出较慢；它们同时开始，父级等到两者都完成才释放：
+One parent can register multiple gates. Here the backdrop exits faster than content; both start together and the parent releases only after both finish:
 
 ```tsx
 function OverlayLayers({ open }: { open: boolean }) {
@@ -142,7 +142,7 @@ function OverlayLayers({ open }: { open: boolean }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.2 }}
               >
-                遮罩层示意
+                Backdrop illustration
               </motion.div>
             )}
           </AnimatePresence>
@@ -153,7 +153,7 @@ function OverlayLayers({ open }: { open: boolean }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.5 }}
               >
-                内容层示意
+                Content illustration
               </motion.div>
             )}
           </AnimatePresence>
@@ -164,15 +164,15 @@ function OverlayLayers({ open }: { open: boolean }) {
 }
 ```
 
-这里等待的是同级任务全部完成，**不会把两个子级串成先后队列**。正常播放时，子级等待约 `max(0.2, 0.5)` 秒，而不是两者之和；之后再播放父级退出。
+This waits for all sibling tasks; **it does not sequence the two children**. Normal child waiting takes roughly `max(0.2, 0.5)` seconds rather than their sum, followed by the parent exit.
 
-每个 gate 对应一个 `AnimatePresence` 的完成信号。如果一个 `AnimatePresence` 内有多个正在退出的直接子元素，它自己的 `onExitComplete` 已经表示这些退出全部完成，不必为每个 DOM 节点单独登记。
+Each gate represents one `AnimatePresence` completion signal. If that boundary contains multiple directly exiting children, its `onExitComplete` already means all have completed; no gate per DOM node is needed.
 
-这个例子只展示退出协调。真实弹窗可以使用已经接入该 Hook 的 [Dialog](/docs/design/dialog)；[Accordion](/docs/design/accordion) 也使用 `visible` 保留退出中的面板。
+This example demonstrates only exit coordination. Use [Dialog](/docs/design/dialog), already integrated with the hook, for actual dialogs. [Accordion](/docs/design/accordion) also uses `visible` to retain exiting panels.
 
-## 场景三：关闭途中重新打开
+## Scenario 3: Reopening during closing
 
-用户不需要等动画结束才能撤回关闭：
+Users need not wait for animation completion to reverse closing:
 
 ```tsx
 import { useState } from "react";
@@ -183,7 +183,7 @@ function PanelExample() {
   return (
     <>
       <button onClick={() => setOpen((previous) => !previous)}>
-        {open ? "关闭" : "重新打开"}
+        {open ? "Close" : "Reopen"}
       </button>
       <NestedPanel open={open} />
     </>
@@ -191,51 +191,51 @@ function PanelExample() {
 }
 ```
 
-| 时刻 | `open` | `visible` | 行为 |
+| Moment | `open` | `visible` | Behavior |
 | --- | --- | --- | --- |
-| 已打开 | `true` | `true` | 内容正常显示 |
-| 请求关闭，子级仍在退出 | `false` | `true` | 父级保留，等待子级 |
-| 此时重新打开 | `true` | `true` | 清空本轮等待，内容重新进入 |
-| 之后再关闭 | `false` | `true` | 重新登记本轮等待，直到子级全部完成 |
+| Open | `true` | `true` | Content displays normally |
+| Closing requested, children still exiting | `false` | `true` | Parent retained while waiting |
+| Reopened now | `true` | `true` | Current waiting clears and content reenters |
+| Closed again later | `false` | `true` | Registers a new close cycle until all children finish |
 
-保持根节点和各个逻辑子级的 key 稳定，让 Motion 处理同一元素的重新进入。不要为了“重启动画”在每次切换时给整个组件换一个 key，否则会丢失正在保留的状态。
+Keep root and logical child keys stable so Motion handles reentry of the same elements. Changing the entire component's key on every toggle to “restart animation” loses retained state.
 
-已经打开时，退出完成通知不会把父级关掉。Hook 负责开关和等待关系，具体动画如何反向、是否有位移或缩放，仍由 Motion 的配置决定。
+Completion notifications cannot close an already reopened parent. The hook manages opening and waiting relationships; Motion configuration determines reversal, translation, and scaling behavior.
 
-## 场景四：可选子树在关闭过程中消失
+## Scenario 4: Optional subtrees disappear during closing
 
-弹层可能有可选帮助区，菜单也可能动态移除某个区域。动态目标使用稳定且唯一的业务 key，并让 `createGate` 的调用与对应的 `AnimatePresence` 一起出现：
+Overlays may have optional help, and menus may dynamically remove areas. Give dynamic targets stable unique application keys, and call `createGate` alongside its corresponding `AnimatePresence`:
 
 ```tsx
-// 放在由 visible 保留的父级内部。
+// Place inside the parent retained by visible.
 {showHelp && (
   <AnimatePresence onExitComplete={createGate("help")}>
     {open && (
       <motion.aside key="help" exit={{ opacity: 0 }}>
-        帮助说明
+        Help content
       </motion.aside>
     )}
   </AnimatePresence>
 )}
 ```
 
-关闭时，如果帮助区存在，就等待它的退出。关闭途中 `showHelp` 变为 `false`，整个帮助区及其 gate 都从当前渲染中消失，Hook 会移除这项等待；剩余 gate 完成后即可释放父级。普通重新渲染也不会让已经完成的 gate 再次进入等待。
+If help exists when closing starts, its exit is awaited. If `showHelp` becomes false mid-close, its entire subtree and gate disappear from the current render; the hook removes that wait and releases once remaining gates complete. Ordinary rerenders do not re-enlist completed gates.
 
-直接移除整棵子树，意味着放弃该子树剩余的退出过程。如果需要完整播放帮助区的退出，就保留它的 `AnimatePresence`，只让内部的 `motion.aside` 根据 `open` 退出。
+Removing the entire subtree abandons its remaining exit animation. To play the complete help exit, retain its `AnimatePresence` and let only the inner `motion.aside` exit based on `open`.
 
-不要在关闭过程中新增一个从未显示过内容的空 gate：没有元素退出，就不一定会产生完成回调。参与等待的应该是本轮确实需要退出、能够报告完成的区域。
+Do not add a new empty gate during closing for content that was never shown: without an exiting element, a completion callback may never arrive. Wait only for regions actually exiting this cycle and able to report completion.
 
-### key 标识等待的区域
+### Keys identify waiting regions
 
-`createGate("help")` 的 key 用于 Hook 识别等待项，`<motion.aside key="help">` 的 key 用于 React 和 Motion 识别元素；两者职责不同，可以同名以便阅读，但都要保持稳定。
+The key in `createGate("help")` identifies the wait to the hook; `<motion.aside key="help">` identifies the element to React and Motion. These are distinct roles and may share a name for readability, but both must remain stable.
 
-不同并存区域不要共用同一个 gate key，否则任意一个完成都可能被当作同一项等待完成。动态列表使用记录 ID，不使用数组下标或每次渲染新建的 `Symbol()`。
+Concurrent regions must not share gate keys, or either completion could count as the same wait. Use record IDs for dynamic lists, not array indices or newly created `Symbol()` values on every render.
 
-`createGate()` 也支持不传 key，这时按本次渲染的调用顺序识别 gate。只在数量与顺序固定的结构中使用；条件分支和动态列表应始终显式传 key。
+Without a key, `createGate()` identifies gates by call order in the current render. Use this only for fixed counts and order; always provide explicit keys for branches and dynamic lists.
 
-## 场景五：没有子级需要等待
+## Scenario 5: No children need waiting
 
-如果当前没有调用 `createGate`，`open` 从 `true` 变为 `false` 后，Hook 会在 effect 中释放保留状态，不会凭空等待一个完成事件。
+If no `createGate` is called, changing `open` from true to false releases retained state in an effect instead of waiting for a nonexistent completion event.
 
 ```tsx
 function SimpleShell({ open }: { open: boolean }) {
@@ -245,7 +245,7 @@ function SimpleShell({ open }: { open: boolean }) {
     <AnimatePresence>
       {visible && (
         <motion.div key="shell" exit={{ opacity: 0 }}>
-          普通内容随父级一起退出
+          Ordinary content exits with its parent
         </motion.div>
       )}
     </AnimatePresence>
@@ -253,11 +253,11 @@ function SimpleShell({ open }: { open: boolean }) {
 }
 ```
 
-单独的这一层通常直接使用 `open` 即可。这个场景主要用于理解可选子级全部不存在时的行为：Hook 不再等待，但外层 Motion 仍会完成父级自己的退出动画。
+For this single layer, using `open` directly is usually sufficient. This scenario illustrates when all optional children are absent: the hook stops waiting, while outer Motion still completes the parent's exit.
 
-## 场景六：减少动态效果，仍使用完成信号
+## Scenario 6: Reduced motion still uses completion signals
 
-系统偏好减少动态效果时，可以缩短或取消位移动画，而不改变 gate 的连接方式：
+With reduced-motion preferences, shorten or remove spatial animation without changing gate connections:
 
 ```tsx
 const reduced = useReducedMotion();
@@ -269,48 +269,48 @@ const reduced = useReducedMotion();
       exit={{ opacity: 0 }}
       transition={{ duration: reduced ? 0 : 0.3 }}
     >
-      面板内容
+      Panel content
     </motion.div>
   )}
 </AnimatePresence>
 ```
 
-时长为 `0` 时，仍由 `AnimatePresence` 报告完成，父级随之释放。不要因为动画更快就改用定时器，也不要跳过完成回调。演示中的“立即完成动画”用于观察这条路径。
+At duration `0`, `AnimatePresence` still reports completion and releases the parent. Do not replace callbacks with timers or skip them because animation is faster. “Complete animation immediately” in the demo exercises this path.
 
-## 场景七：记录退出事件，同时完成 gate
+## Scenario 7: Logging exits while completing gates
 
-如果需要在 `onExitComplete` 中增加业务逻辑，先在渲染时取得 gate handler，再在完成回调里调用它：
+To add application logic in `onExitComplete`, obtain the gate handler during render and invoke it in the completion callback:
 
 ```tsx
-// 在对应 AnimatePresence 的渲染路径中执行。
+// Run in the corresponding AnimatePresence render path.
 const finishContent = createGate("content");
 
 <AnimatePresence
   onExitComplete={() => {
     finishContent();
-    console.log("内容退出完成");
+    console.log("Content exit complete");
   }}
 >
   {open && <motion.div key="content" exit={{ opacity: 0 }} />}
 </AnimatePresence>
 ```
 
-不要写成 `onExitComplete={() => createGate("content")}`：它直到退出完成才登记，而且没有调用返回的 handler。也不要只记日志而忘记调用 `finishContent()`，否则父级仍然在等待。
+Do not write `onExitComplete={() => createGate("content")}`: it registers only after exiting and never invokes the returned handler. Logging without calling `finishContent()` also leaves the parent waiting.
 
-子级的回调只代表这个子级完成。需要知道父级也已经退出，应监听包住父级的**最外层** `AnimatePresence.onExitComplete`，而不是把 `visible = false` 当成所有 DOM 都已移除。
+A child callback means only that child has completed. To know the parent has also exited, observe the **outermost** `AnimatePresence.onExitComplete` wrapping it; `visible = false` does not mean every DOM node has been removed.
 
-## 常见问题
+## Troubleshooting
 
-| 现象 | 原因与处理 |
+| Symptom | Cause and solution |
 | --- | --- |
-| 点击关闭后，子级立即消失 | 检查调用方是否直接卸载了含 Hook 的组件，或者用 `open` 移除了整个子级 `AnimatePresence` |
-| 一直停在 `open = false, visible = true` | 子级应由 `open` 控制；如果也使用 `visible`，就会相互等待：父级等子级完成，子级等父级释放才开始退出 |
-| 只退出一个区域，父级就消失 | 检查是否漏登记 gate，或多个区域共用了一个 key |
-| 已关闭但还看得到父级 | 区分子级等待阶段和父级自身的退出阶段；`visible` 不表示 DOM 已卸载 |
-| 日志正常但父级一直不释放 | 确认完成回调真正调用了渲染阶段创建的 gate handler，没有只登记或只记日志 |
-| 使用 `hidden` / `display: none` 后看不到退出 | CSS 隐藏可能先于 Motion 退出生效；让动画宿主保留到合适阶段，再执行隐藏或卸载 |
+| Children disappear immediately on close | Check whether the caller unmounts the hook's component or removes the entire child `AnimatePresence` using `open` |
+| Stuck at `open = false, visible = true` | Children must use `open`. Using `visible` creates circular waiting: the parent waits for child completion while the child waits for parent release before exiting |
+| Parent disappears after only one region exits | Check missing gates or shared keys between regions |
+| Parent remains visible after closing | Distinguish waiting for children from the parent's own exit phase; `visible` does not indicate DOM removal |
+| Logging works but parent never releases | Ensure the completion callback invokes the handler created during render, rather than merely registering or logging |
+| No visible exit after `hidden` / `display: none` | CSS hiding may take effect before Motion exit; retain the animation host until the appropriate phase before hiding or unmounting |
 
-`createGate` 应在拥有这个 Hook 的组件本次渲染中调用，不要把登记动作推迟到事件、effect 或退出完成回调里。它也不负责等待网络请求、路由切换或保存数据；这些业务任务应在自己的流程中处理。
+Call `createGate` during the current render of the component owning the hook, not later in an event, effect, or exit callback. It does not wait for network requests, route changes, or data saves; handle those within their application workflows.
 
 ## API
 
@@ -321,11 +321,11 @@ function usePresenceGate(open: boolean): {
 };
 ```
 
-| 返回值 | 说明 |
+| Return value | Description |
 | --- | --- |
-| `visible` | `open` 时立即为 `true`；关闭后保留到本轮 gate 全部完成或被移除。初次 `open = false` 时为 `false` |
-| `createGate(key?)` | 渲染时登记子级并返回它的 `onExitComplete` handler；显式 key 可为 `string`、`number` 或 `symbol` |
+| `visible` | Immediately true when open; after closing, retained until every current gate completes or is removed. Initially false when `open = false` |
+| `createGate(key?)` | Registers a child during render and returns its `onExitComplete` handler; explicit keys may be `string`, `number`, or `symbol` |
 
-参数 `open: boolean` 应来自当前生效的业务状态。受控父组件拒绝关闭时，继续传入 `true`，Hook 就不会开始释放。返回的 gate handler 不需要参数，也不返回 Promise。
+`open: boolean` should reflect current effective application state. If a controlled parent rejects closing, continue passing true and the hook will not release. Gate handlers take no arguments and return no Promise.
 
-相关导出类型包括 `PresenceGateKey`、`PresenceGateExitHandler` 与 `UsePresenceGateResult`。
+Related exported types include `PresenceGateKey`, `PresenceGateExitHandler`, and `UsePresenceGateResult`.

@@ -1,21 +1,21 @@
 ---
 title: Recipes
-description: "按需接入官方维护的请求策略 recipes。"
+description: "Add officially maintained request-policy recipes as needed."
 icon: BookOpen
 ---
 
-这里收录官方维护、带测试的可选 recipes。根据应用需要从各自的包子路径导入，再通过
-Drive 的扩展接口接入。
+These optional recipes are officially maintained and tested. Import each from its dedicated package subpath as needed, then connect it through
+Drive's extension points.
 
 ## CSRF
 
-这份 recipe 适用于浏览器中使用 cookie 会话、由服务端验证 CSRF token 的 API。
-它在 `prepare` 完成后运行，读取已经编码的请求和最终 method，因此也覆盖自动推断的
-POST。从 `0.1.0-beta.1` 起，可从 `@momots/drive/recipes/csrf` 按需导入。
+This recipe targets browser APIs using cookie sessions with server-side CSRF token verification.
+It runs after `prepare`, reading the encoded request and final method, so it also covers automatically inferred
+POST. Since `0.1.0-beta.1`, it is available from `@momots/drive/recipes/csrf`.
 
-### 接入
+### Setup
 
-在服务客户端上配置 `stages.send`：
+Configure `stages.send` on your service client:
 
 ```ts
 import { Drive } from '@momots/drive';
@@ -34,47 +34,47 @@ export const api = new Drive({
   },
 });
 
-// json 被 prepare 编码后，自动推断为 POST，也会附加 token。
+// prepare encodes json and infers POST, so the token is added too.
 await api.request({
   api: '/api/profile',
   json: { nickname: 'mango' },
 });
 ```
 
-这个例子约定服务端在 HTML 的 `meta[name="csrf-token"]` 中提供 token，并验证请求的
-`X-CSRF-Token`。header 名和 token 来源应与后端已有的 CSRF 实现保持一致。
+This example assumes the server supplies a token in HTML `meta[name="csrf-token"]` and validates the request's
+`X-CSRF-Token`. Match the header name and token source to the backend's existing CSRF implementation.
 
-同一子路径还导出 `CsrfOptions` 类型与 `CsrfTokenMissingError` 错误类：
+The same subpath exports the `CsrfOptions` type and `CsrfTokenMissingError` class:
 
 ```ts
 import type { CsrfOptions } from '@momots/drive/recipes/csrf';
 import { CsrfTokenMissingError } from '@momots/drive/recipes/csrf';
 ```
 
-### 参数与求值时机
+### Options and evaluation timing
 
-| 参数 | 类型 | 行为 |
+| Option | Type | Behavior |
 | --- | --- | --- |
-| `origin` | `Realizable<string>` | 必填；字符串或无参同步函数，每次发送前求值一次 |
-| `header` | `Realizable<string>` | 默认 `X-CSRF-Token`；通过来源校验后，每次发送前求值一次 |
-| `token` | `({ signal }) => string \| null \| undefined \| Promise<string \| null \| undefined>` | 每次受保护请求重新调用，等待结果后才发送 |
+| `origin` | `Realizable<string>` | Required string or synchronous no-argument function, evaluated once before each send |
+| `header` | `Realizable<string>` | Defaults to `X-CSRF-Token`; evaluated once per send after origin validation |
+| `token` | `({ signal }) => string \| null \| undefined \| Promise<string \| null \| undefined>` | Called again for every protected request; sending waits for its result |
 
-`Realizable<string>` 来自 `@momots/core`，表示 `string | (() => string)`。创建客户端时
-不会执行 resolver；后续请求可以读取应用更新后的配置。`origin` 与 `header` 的 resolver
-保持同步，异步工作放在 `token` 中。
+`Realizable<string>` comes from `@momots/core` and means `string | (() => string)`. Resolvers are not run when creating
+the client, so later requests can read updated application configuration. Keep `origin` and `header` resolvers
+synchronous and put asynchronous work in `token`.
 
-`origin` 是一个完整 HTTP(S) 来源，例如 `https://api.example.com`，不接受路径、查询、
-fragment 或账号密码。比较按 URL 标准归一化后的协议、主机和端口进行，不匹配子域名。
-它限制首次发送的目标，也不是相对 URL 的 base。
+`origin` is a complete HTTP(S) origin such as `https://api.example.com`; paths, queries,
+fragments, and credentials are rejected. Comparison uses URL-normalized protocol, host, and port, without matching subdomains.
+It restricts the initial destination and is not a base for relative URLs.
 
-浏览器中的相对 URL 使用 `document.baseURI` 解析，包括页面的 `<base>` 设置，然后检查
-来源并使用解析出的绝对 URL 发送。Bun、Node.js 或没有 document base 的环境应传入
-绝对 URL。来源取应用可信配置，不应从当前请求地址反推。
+In browsers, relative URLs resolve against `document.baseURI`, including a page's `<base>` setting; the resolved origin is checked
+and the absolute URL is sent. Bun, Node.js, and environments without a document base should supply
+absolute URLs. Use trusted application configuration for the origin, not a value inferred from the current request URL.
 
-### 异步 token
+### Asynchronous tokens
 
-`token` 可以是 `async` 函数，也可以直接返回 Promise 对象。下面假设服务端的只读
-`GET /api/csrf` 接口返回 `{ token: string }`：
+`token` may be an `async` function or return a Promise directly. This example assumes a read-only server
+`GET /api/csrf` endpoint returning `{ token: string }`:
 
 ```ts
 const api = new Drive({
@@ -94,44 +94,44 @@ const api = new Drive({
 });
 ```
 
-示例使用独立 Fetch 获取 token。应用也可以从自己的会话状态或共享 Promise 中读取，
-缓存、并发合并和刷新时机由应用管理。token 函数不要递归调用这个客户端的受保护接口。
+The example uses a separate Fetch call to obtain the token. Applications may read their own session state or shared Promise instead;
+caching, deduplication, and refresh timing belong to the application. Do not recursively call this client's protected endpoints from the token function.
 
-`signal` 是默认 prepare 合并主动取消与 timeout 后的信号。异步获取过程应观察它；若
-Promise 忽略 signal，取消不会强制结束这个 Promise，但它完成后也不会继续发送请求。
-Promise 拒绝时保留原始错误。
+`signal` is the signal formed by default prepare from manual cancellation and timeout. Observe it during asynchronous acquisition; if a
+Promise ignores the signal, cancellation cannot force it to settle, but sending will still stop after it finishes.
+Promise rejection preserves the original error.
 
-### 发送规则
+### Sending rules
 
-| 情况 | 结果 |
+| Condition | Result |
 | --- | --- |
-| 请求目标不属于配置的 origin | 发送前抛出 `TypeError`，不会读取 token；GET 也检查来源 |
-| `GET`、`HEAD`、`OPTIONS` | 不读取或自动附加 token，保留原有请求头 |
-| 其他方法，包括自定义方法和自动 POST | 读取 token，覆盖本次配置的同名 header，再发送 |
-| token 为 `null`、`undefined`、空字符串或纯空白 | 抛出 `CsrfTokenMissingError`，已有同名 header 也不能绕过 |
-| 受保护请求，或安全方法上已显式传入配置的 token header | 强制 `redirect: 'error'`，不会自动跟随重定向 |
-| 需要携带 token 但配置 `mode: 'no-cors'` | 发送前抛出 `TypeError` |
-| 自定义 prepare 没有确定 method | 发送前抛出 `TypeError` |
-| 服务端返回 403 等状态 | 正常进入 Drive 的解析流程，由应用决定如何处理 |
+| Destination does not match configured origin | Throw `TypeError` before sending, without reading the token; GET also checks origin |
+| `GET`, `HEAD`, `OPTIONS` | Do not read or automatically add a token; preserve existing headers |
+| Other methods, including custom methods and automatic POST | Read token, replace the configured header, then send |
+| Token is `null`, `undefined`, empty, or whitespace-only | Throw `CsrfTokenMissingError`; an existing matching header cannot bypass this |
+| Protected request, or safe method with the configured token header already set | Force `redirect: 'error'`; do not follow redirects automatically |
+| Token required with `mode: 'no-cors'` | Throw `TypeError` before sending |
+| Custom prepare did not determine the method | Throw `TypeError` before sending |
+| Server returns a status such as 403 | Continue normal Drive parsing; application decides how to handle it |
 
-recipe 以发送时的 `context.api` 为准，能检查外层中间件改写后的目标；不使用创建
-Context 时缓存的 `url` 或 `path`。等待 token 前会固定这次请求的 URL、method 和
-headers，异步期间对原 Context 的改写不会改变本次发送目标。
+The recipe uses `context.api` at send time, so it checks destinations rewritten by outer middleware rather than the
+`url` or `path` cached when Context was created. The URL, method, and
+headers are fixed before awaiting the token; changes to the original Context during that wait do not alter this send's destination.
 
-携带 token 的请求禁止重定向，是为了让来源检查覆盖实际发送目标；不会改变其他
-不携带该 header 的安全方法请求的 redirect 设置。Fetch 的重定向规则见
-[Fetch Standard](https://fetch.spec.whatwg.org/#http-redirect-fetch)。
+Requests carrying tokens prohibit redirects so origin checks cover the actual destination. Safe requests without
+that header retain their redirect setting. See Fetch redirect rules in
+[Fetch Standard](https://fetch.spec.whatwg.org/#http-redirect-fetch).
 
-### 与其他配置组合
+### Combining with other configuration
 
-普通 middleware、parser、receiver、主动取消和默认 timeout 仍按 Drive 的约定工作。
-`credentials` 沿用请求配置；跨来源 cookie 请求所需的 credentials 与服务端 CORS
-配置由应用决定。
+Ordinary middleware, parsers, receivers, manual cancellation, and default timeouts still follow Drive's contracts.
+`credentials` follows request configuration; applications choose credentials and server CORS
+configuration for cross-origin cookie requests.
 
-`csrf()` 与 `repeat()` 都返回 `DriveStageSend`，当前只能选择一个 `stages.send`。
-单次请求重新指定 `stages.send` 会覆盖实例配置，也会替换掉这份 recipe。此版本不提供
-自动刷新 token 或失败重试。
+`csrf()` and `repeat()` both return `DriveStageSend`; only one `stages.send` can currently be selected.
+Specifying `stages.send` on an individual request overrides the instance configuration and replaces this recipe. This version does not provide
+automatic token refresh or retries.
 
-服务端必须验证受保护请求的 token；客户端附加 header 本身不能代替服务端防护。
-优先接入后端框架已有的 CSRF 机制，参见
-[OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)。
+Servers must validate tokens on protected requests; adding a client header does not replace server-side protection.
+Prefer the backend framework's existing CSRF mechanism; see
+[OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).

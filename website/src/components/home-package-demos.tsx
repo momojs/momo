@@ -4,6 +4,9 @@ import { useState, useSyncExternalStore } from 'react';
 
 import { ArrowRight, File, Folder } from 'lucide-react';
 
+import type { SiteTranslator } from '@/lib/site-translations';
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { prune } from '../../../packages/core/src/tree/prune';
 import type { TreeNode } from '../../../packages/core/src/tree/types';
 import { Alert } from '../../../packages/design/src/components/alert';
@@ -114,6 +117,7 @@ function FileTree({
 }
 
 export function HomeCoreDemo() {
+  const t = useSiteTranslations();
   const [query, setQuery] = useState('select');
   const keyword = query.trim().toLowerCase();
   const matches = prune(
@@ -125,7 +129,7 @@ export function HomeCoreDemo() {
     <div className={frameClass}>
       <div className='flex items-center gap-2'>
         <label htmlFor='home-core-search' className='sr-only'>
-          搜索文件名
+          {t('搜索文件名')}
         </label>
         <Input
           id='home-core-search'
@@ -133,7 +137,7 @@ export function HomeCoreDemo() {
           size='sm'
           className='text-xs'
           value={query}
-          placeholder='试试 select 或 theme'
+          placeholder={t('试试 select 或 theme')}
           autoComplete='off'
           spellCheck={false}
           aria-controls='home-core-search-results'
@@ -146,25 +150,29 @@ export function HomeCoreDemo() {
           className='text-xs'
           onClick={() => setQuery('')}
         >
-          清空
+          {t('清空')}
         </Button>
       </div>
       <div className='grid grid-cols-2 gap-3'>
-        <section aria-label='原始目录' className='min-w-0'>
-          <p className='mb-2 text-xs text-fd-muted-foreground'>原始目录</p>
+        <section aria-label={t('原始目录')} className='min-w-0'>
+          <p className='mb-2 text-xs text-fd-muted-foreground'>
+            {t('原始目录')}
+          </p>
           <FileTree nodes={projectFiles} />
         </section>
         <section
           id='home-core-search-results'
-          aria-label='筛选结果'
+          aria-label={t('筛选结果')}
           className='min-w-0'
         >
-          <p className='mb-2 text-xs text-fd-muted-foreground'>筛选结果</p>
+          <p className='mb-2 text-xs text-fd-muted-foreground'>
+            {t('筛选结果')}
+          </p>
           {matches.length > 0 ? (
             <FileTree nodes={matches} highlight={Boolean(keyword)} />
           ) : (
             <p className='text-xs leading-6 text-fd-muted-foreground'>
-              没有匹配的文件
+              {t('没有匹配的文件')}
             </p>
           )}
         </section>
@@ -174,11 +182,11 @@ export function HomeCoreDemo() {
         className='mt-auto border-t border-fd-border pt-3 text-xs leading-6 text-fd-muted-foreground'
       >
         {!keyword
-          ? '显示全部文件。'
+          ? t('显示全部文件。')
           : matches.length > 0
-            ? '保留匹配文件及其父级目录。'
-            : '没有匹配的文件。'}
-        原始数据不变。
+            ? t('保留匹配文件及其父级目录。')
+            : t('没有匹配的文件。')}
+        {t('原始数据不变。')}
       </p>
     </div>
   );
@@ -233,6 +241,7 @@ function StoredListPreview({
   title: string;
   items: string[];
 }) {
+  const t = useSiteTranslations();
   const [preference] = useDisplayPreference();
   const compact =
     preference !== 'unavailable' && preference?.density === 'compact';
@@ -245,7 +254,7 @@ function StoredListPreview({
       <div className='mb-2 flex flex-wrap items-center justify-between gap-1 text-xs'>
         <p>{title}</p>
         <Badge size='sm' variant='outline'>
-          {compact ? '紧凑' : '宽松'}
+          {compact ? t('紧凑') : t('宽松')}
         </Badge>
       </div>
       <ul className='divide-y divide-fd-border text-xs text-fd-muted-foreground'>
@@ -262,6 +271,7 @@ function StoredListPreview({
 }
 
 export function HomeHostDemo() {
+  const t = useSiteTranslations();
   const [preference, storage] = useDisplayPreference();
   const [error, setError] = useState<string>();
   const unavailable = preference === 'unavailable';
@@ -275,7 +285,7 @@ export function HomeHostDemo() {
       else storage.set({ density: next });
       setError(undefined);
     } catch {
-      setError('未能保存设置，请检查浏览器的存储权限或可用空间。');
+      setError(t('未能保存设置，请检查浏览器的存储权限或可用空间。'));
     }
   }
 
@@ -283,11 +293,11 @@ export function HomeHostDemo() {
     <div className={frameClass}>
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <DemoSelect
-          label='显示密度'
+          label={t('显示密度')}
           value={density}
           options={[
-            { value: 'comfortable', label: '宽松' },
-            { value: 'compact', label: '紧凑' },
+            { value: 'comfortable', label: t('宽松') },
+            { value: 'compact', label: t('紧凑') },
           ]}
           disabled={unavailable}
           onChange={save}
@@ -300,17 +310,17 @@ export function HomeHostDemo() {
           disabled={unavailable}
           onClick={() => save(null)}
         >
-          重置设置
+          {t('重置设置')}
         </Button>
       </div>
       <div className='grid grid-cols-2 gap-3'>
         <StoredListPreview
-          title='文件列表'
-          items={['设计说明.md', '组件清单.ts', '更新记录.md']}
+          title={t('文件列表')}
+          items={[t('设计说明.md'), t('组件清单.ts'), t('更新记录.md')]}
         />
         <StoredListPreview
-          title='待办列表'
-          items={['检查键盘操作', '补充使用示例', '更新发布说明']}
+          title={t('待办列表')}
+          items={[t('检查键盘操作'), t('补充使用示例'), t('更新发布说明')]}
         />
       </div>
       {error || unavailable ? (
@@ -318,7 +328,7 @@ export function HomeHostDemo() {
           variant='warning'
           role='status'
           className='mt-auto'
-          description={error ?? '浏览器存储不可用，无法保存设置。'}
+          description={error ?? t('浏览器存储不可用，无法保存设置。')}
         />
       ) : (
         <p
@@ -326,8 +336,8 @@ export function HomeHostDemo() {
           className='mt-auto border-t border-fd-border pt-3 text-xs leading-6 text-fd-muted-foreground'
         >
           {preference
-            ? '已保存到此浏览器，刷新页面后仍会恢复。'
-            : '修改后自动保存；刷新页面可验证恢复。'}
+            ? t('已保存到此浏览器，刷新页面后仍会恢复。')
+            : t('修改后自动保存；刷新页面可验证恢复。')}
         </p>
       )}
     </div>
@@ -349,7 +359,10 @@ const endpoints = [
   { name: '商品目录', path: '/catalog/products', private: false },
 ];
 
-async function runRequests(session: Session): Promise<RequestPreview[]> {
+async function runRequests(
+  session: Session,
+  t: SiteTranslator,
+): Promise<RequestPreview[]> {
   const token = session === 'signed-in' ? 'demo-token' : null;
   const authOutcomes = new Map<string, AuthOutcome>();
   const responseLog = new Map<string, ResponseLog>();
@@ -363,7 +376,7 @@ async function runRequests(session: Session): Promise<RequestPreview[]> {
           ctx.req.headers.get('Authorization') === 'Bearer demo-token';
         const status = endpoint?.private && !authenticated ? 401 : 200;
         ctx.res.raw = Response.json(
-          { message: status === 200 ? 'OK' : '需要登录' },
+          { message: status === 200 ? 'OK' : t('需要登录') },
           { status },
         );
         ctx.decode(ctx.res.raw);
@@ -406,22 +419,23 @@ async function runRequests(session: Session): Promise<RequestPreview[]> {
 }
 
 export function HomeDriveDemo() {
+  const t = useSiteTranslations();
   const [session, setSession] = useState<Session>('signed-in');
   const [selectedPath, setSelectedPath] = useState('/account/profile');
   const [results, setResults] = useState<RequestPreview[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const [message, setMessage] = useState(
-    '请求全部接口后，可切换查看各条规则的结果。',
+    t('请求全部接口后，可切换查看各条规则的结果。'),
   );
   const result = results.find((entry) => entry.path === selectedPath);
   const authLabel = !result
-    ? '等待请求'
+    ? t('等待请求')
     : !result.auth
-      ? '未命中'
+      ? t('未命中')
       : result.auth.after
-        ? '已添加凭证'
-        : '命中，无凭证';
+        ? t('已添加凭证')
+        : t('命中，无凭证');
   const authVariant =
     !result || !result.auth
       ? 'outline'
@@ -433,12 +447,12 @@ export function HomeDriveDemo() {
     setPending(true);
     setError(undefined);
     try {
-      const next = await runRequests(session);
+      const next = await runRequests(session, t);
       setResults(next);
-      setMessage(`${next.length} 个接口已完成，可切换接口比较处理结果。`);
+      setMessage(t('{0} 个接口已完成，可切换接口比较处理结果。', next.length));
     } catch {
       setResults([]);
-      setError('示例执行失败，请重新运行。');
+      setError(t('示例执行失败，请重新运行。'));
     } finally {
       setPending(false);
     }
@@ -448,18 +462,18 @@ export function HomeDriveDemo() {
     <div className={frameClass}>
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <DemoSelect
-          label='登录状态'
+          label={t('登录状态')}
           value={session}
           options={[
-            { value: 'signed-in', label: '已登录' },
-            { value: 'signed-out', label: '未登录' },
+            { value: 'signed-in', label: t('已登录') },
+            { value: 'signed-out', label: t('未登录') },
           ]}
           disabled={pending}
           onChange={(value) => {
             setSession(value);
             setResults([]);
             setError(undefined);
-            setMessage('登录状态已修改，重新请求查看结果。');
+            setMessage(t('登录状态已修改，重新请求查看结果。'));
           }}
         />
         <Button
@@ -472,16 +486,16 @@ export function HomeDriveDemo() {
           onClick={run}
         >
           {pending && <Spinner className='size-3' aria-hidden />}
-          {pending ? '请求中…' : '请求全部'}
+          {pending ? t('请求中…') : t('请求全部')}
         </Button>
       </div>
       <div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-fd-border pt-2'>
         <DemoSelect
-          label='查看接口'
+          label={t('查看接口')}
           value={selectedPath}
           options={endpoints.map(({ name, path }) => ({
             value: path,
-            label: name,
+            label: t(name),
           }))}
           disabled={pending}
           onChange={setSelectedPath}
@@ -503,10 +517,13 @@ export function HomeDriveDemo() {
         </div>
       </div>
       <div className='divide-y divide-fd-border rounded-lg border border-fd-border'>
-        <section aria-label='鉴权规则处理结果' className='min-w-0 px-3 py-2'>
+        <section
+          aria-label={t('鉴权规则处理结果')}
+          className='min-w-0 px-3 py-2'
+        >
           <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5'>
-            <span className='text-fd-muted-foreground'>请求前</span>
-            <h3 className='font-medium'>鉴权规则</h3>
+            <span className='text-fd-muted-foreground'>{t('请求前')}</span>
+            <h3 className='font-medium'>{t('鉴权规则')}</h3>
             <code className='text-fd-muted-foreground'>/account/**</code>
             <Badge size='sm' variant={authVariant} className='ml-auto'>
               {authLabel}
@@ -517,42 +534,49 @@ export function HomeDriveDemo() {
             {result?.auth ? (
               <div className='flex flex-wrap items-center gap-x-2'>
                 <span className='text-fd-muted-foreground'>
-                  <span className='sr-only'>处理前：</span>
-                  {result.auth.before ?? '未设置'}
+                  <span className='sr-only'>{t('处理前：')}</span>
+                  {result.auth.before ?? t('未设置')}
                 </span>
                 <ArrowRight
                   className='size-3 shrink-0 text-fd-muted-foreground'
                   aria-hidden
                 />
                 <code className='wrap-anywhere'>
-                  <span className='sr-only'>处理后：</span>
-                  {result.auth.after ?? '未设置'}
+                  <span className='sr-only'>{t('处理后：')}</span>
+                  {result.auth.after ?? t('未设置')}
                 </code>
               </div>
             ) : (
               <p className='text-fd-muted-foreground'>
                 {result
-                  ? `${result.authorization ?? '未设置'}，保持原样`
-                  : '等待请求后查看变化'}
+                  ? t('{0}，保持原样', result.authorization ?? t('未设置'))
+                  : t('等待请求后查看变化')}
               </p>
             )}
           </div>
         </section>
-        <section aria-label='响应记录处理结果' className='min-w-0 px-3 py-2'>
+        <section
+          aria-label={t('响应记录处理结果')}
+          className='min-w-0 px-3 py-2'
+        >
           <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5'>
-            <span className='text-fd-muted-foreground'>响应后</span>
-            <h3 className='font-medium'>记录规则</h3>
+            <span className='text-fd-muted-foreground'>{t('响应后')}</span>
+            <h3 className='font-medium'>{t('记录规则')}</h3>
             <code className='text-fd-muted-foreground'>*</code>
             <Badge
               size='sm'
               variant={result?.log ? 'success' : 'outline'}
               className='ml-auto'
             >
-              {!result ? '等待请求' : result.log ? '已写入日志' : '未写入日志'}
+              {!result
+                ? t('等待请求')
+                : result.log
+                  ? t('已写入日志')
+                  : t('未写入日志')}
             </Badge>
           </div>
           <div className='mt-1 text-[11px] leading-5'>
-            <p className='text-fd-muted-foreground'>响应日志</p>
+            <p className='text-fd-muted-foreground'>{t('响应日志')}</p>
             {result?.log ? (
               <p className='flex flex-wrap items-center gap-x-2 font-mono'>
                 <span>
@@ -568,7 +592,7 @@ export function HomeDriveDemo() {
                 </span>
               </p>
             ) : (
-              <p className='text-fd-muted-foreground'>暂无记录</p>
+              <p className='text-fd-muted-foreground'>{t('暂无记录')}</p>
             )}
           </div>
         </section>
@@ -581,7 +605,7 @@ export function HomeDriveDemo() {
         </p>
       )}
       <p className='mt-auto text-xs leading-5 text-fd-muted-foreground'>
-        凭证与响应为本地演示值，不发送网络请求。
+        {t('凭证与响应为本地演示值，不发送网络请求。')}
       </p>
     </div>
   );

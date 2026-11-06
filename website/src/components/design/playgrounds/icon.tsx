@@ -12,6 +12,8 @@ import {
   Sun03Icon,
 } from '@hugeicons/core-free-icons';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Spinner } from '../../../../../packages/design/src/components/spinner';
 import {
@@ -22,6 +24,7 @@ import {
 } from './shared';
 
 export function IconPlayground() {
+  const t = useSiteTranslations();
   const [size, setSize] = useState(24);
   const [strokeWidth, setStrokeWidth] = useState(1.8);
   const [morph, setMorph] = useState(true);
@@ -68,15 +71,15 @@ export function IconPlayground() {
               {...iconProps}
               icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
             />
-            复制状态
+            {t('复制状态')}
           </Button>
           <Button variant='outline' onClick={() => setOpen(!open)}>
             <Icon {...iconProps} icon={open ? Cancel01Icon : Menu01Icon} />
-            菜单状态
+            {t('菜单状态')}
           </Button>
           <Button variant='outline' onClick={() => setNight(!night)}>
             <Icon {...iconProps} icon={night ? Moon02Icon : Sun03Icon} />
-            日夜图标
+            {t('日夜图标')}
           </Button>
         </div>
         <div className='flex flex-wrap items-center justify-center gap-momo-sm'>
@@ -97,18 +100,19 @@ export function IconPlayground() {
             aria-hidden
           />
           <Button variant='outline' onClick={() => setResult(undefined)}>
-            重新加载
+            {t('重新加载')}
           </Button>
           <Button variant='outline' onClick={() => setResult('success')}>
-            加载成功
+            {t('加载成功')}
           </Button>
           <Button variant='outline' onClick={() => setResult('error')}>
-            加载失败
+            {t('加载失败')}
           </Button>
         </div>
         <p className='max-w-xs text-center text-momo-caption text-momo-fg-muted'>
-          点击切换图标，连续点击可在过渡途中改变目标。加载完成时从当前圆弧变形；关闭
-          Morph 后立即切换。
+          {t(
+            '点击切换图标，连续点击可在过渡途中改变目标。加载完成时从当前圆弧变形；关闭 Morph 后立即切换。',
+          )}
         </p>
       </div>
     </PlaygroundFrame>

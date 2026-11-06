@@ -1,19 +1,33 @@
 import { readdirSync } from 'node:fs';
 
-import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
-import { defineConfig } from 'vite';
+
 import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
 import mdx from 'fumadocs-mdx/vite';
+import { defineConfig } from 'vite';
+
+import { i18n } from './src/lib/i18n';
 
 const base = process.env.GITHUB_PAGES_BASE_PATH || '/';
-const docsPages = readdirSync(new URL('./content/docs/', import.meta.url), {
-  recursive: true,
-  encoding: 'utf8',
-})
-  .filter((file) => file.endsWith('.mdx'))
-  .map((file) => file.replace(/\.mdx$/, '').replace(/(^|\/)index$/, ''))
-  .map((slug) => `/docs${slug ? `/${slug.replace(/\/$/, '')}` : ''}`);
+const slugs = [
+  ...new Set(
+    readdirSync(new URL('./content/docs/', import.meta.url), {
+      recursive: true,
+      encoding: 'utf8',
+    })
+      .filter((file) => file.endsWith('.mdx'))
+      .map((file) =>
+        file
+          .replace(/(?:\.(?:en|zh))?\.mdx$/, '')
+          .replace(/(^|\/)index$/, '')
+          .replace(/\/$/, ''),
+      ),
+  ),
+];
+const docsPages = ['', ...i18n.languages.map((lang) => `/${lang}`)].flatMap(
+  (prefix) => slugs.map((slug) => `${prefix}/docs${slug ? `/${slug}` : ''}`),
+);
 
 export default defineConfig({
   base,
@@ -32,6 +46,13 @@ export default defineConfig({
     mdx(),
     tailwindcss(),
     tanstackStart({
+      // GitHub Pages serves this shell for unknown locale URLs. The router then
+      // normalizes unsupported languages to English while retaining the page.
+      spa: {
+        enabled: true,
+        maskPath: '/__fallback',
+        prerender: { outputPath: '/404' },
+      },
       prerender: {
         enabled: true,
         autoStaticPathsDiscovery: false,
@@ -40,9 +61,10 @@ export default defineConfig({
       },
       pages: [
         { path: '/' },
+        ...i18n.languages.map((lang) => ({ path: `/${lang}` })),
         ...docsPages.map((path) => ({ path })),
         ...docsPages.map((path) => ({
-          path: path === '/docs' ? '/docs/index.md' : `${path}.md`,
+          path: path.endsWith('/docs') ? `${path}/index.md` : `${path}.md`,
         })),
         {
           path: '/api/search',
@@ -54,6 +76,10 @@ export default defineConfig({
         {
           path: '/llms.txt',
         },
+        ...i18n.languages.flatMap((lang) => [
+          { path: `/${lang}/llms.txt` },
+          { path: `/${lang}/llms-full.txt` },
+        ]),
       ],
     }),
     react(),

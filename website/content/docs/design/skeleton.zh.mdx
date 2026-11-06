@@ -1,0 +1,224 @@
+---
+title: Skeleton
+description: 在内容到达前按最终形状占位的骨架屏，支持扫光、呼吸和静态三种动画。
+icon: SquareStack
+---
+
+`Skeleton` 和 `SkeletonText` 在异步内容到达前占住它最终要占的位置，只负责形状和动画；`SkeletonReveal` 在数据到达时把占位擦除，露出下面的真实内容。三者都不判断加载状态，也不持有数据：加载状态由持有数据的组件决定，骨架屏只响应。
+
+<SkeletonPlayground />
+
+## 基本用法
+
+```tsx
+import { Skeleton, SkeletonText } from '@momots/design/components/skeleton';
+
+function ProfileCard({ profile }: { profile?: Profile }) {
+  if (!profile) {
+    return (
+      <div aria-busy='true' className='grid gap-momo-sm'>
+        <Skeleton shape='circle' className='size-14' />
+        <SkeletonText lines={2} lastLineRatio={0.5} className='text-momo-body-sm' />
+        <Skeleton className='h-40 w-full' shape='lg' />
+      </div>
+    );
+  }
+
+  return <ProfileContent profile={profile} />;
+}
+```
+
+尺寸、圆角和间距都通过 `className` 指定，沿用 momo 的 Tailwind token。骨架屏不预设任何宽高，因为它不知道该块内容有多高；这一点必须由调用方按最终布局给出。
+
+## 动画
+
+| `variant` | 效果 |
+| --- | --- |
+| `shimmer` | 默认。一条高光带从左向右扫过，适合卡片、列表这类面积较大的占位 |
+| `pulse` | 底色与高光之间柔和往返，接近文字块的自然呼吸 |
+| `solid` | 静态底色，不播放任何循环动画 |
+
+`duration` 控制单次循环的秒数，默认 `2`。非有限数或非正数会回退到默认值，而不是让动画停住。扫光只改变内部高光层的 `transform`，由合成层完成，不会触发布局和重绘，在移动端长列表里也能保持稳定。
+
+系统启用 `prefers-reduced-motion: reduce` 时，三种动画统一退化为静态底色，占位尺寸保持不变。这个判断复用 `MotionUIThemeProvider` 解析出的动效姿态，不需要额外配置。
+
+## 形状
+
+| `shape` | 圆角 |
+| --- | --- |
+| `sm` | `momo-radius-xs` |
+| `md` | 默认。`momo-radius-sm` |
+| `lg` | `momo-radius-lg` |
+| `pill` | `momo-radius-pill` |
+| `circle` | `momo-radius-full`，配合正方形尺寸使用 |
+| `none` | 无圆角 |
+
+`shape` 只是常用圆角的快捷方式。需要别的值时直接写 `className='rounded-momo-xl'`，它排在 `shape` 之后，会覆盖默认值。
+
+## 文本占位
+
+```tsx
+<SkeletonText lines={3} lastLineRatio={0.6} className='text-momo-body-sm' />
+```
+
+`SkeletonText` 按行生成占位，每行高度继承宿主的行高（`1lh`），所以字号和行高和真实文本保持一致：把真实文本用的字号类写在 `className` 上即可。`lines` 低于 1 时按 1 行渲染，小数向下取整；`lastLineRatio` 只作用于最后一行，取值限制在 0 到 1 之间，用来避免整段文字看起来像一块实心矩形。
+
+每一行占满一个行盒（`1lh`），灰条本身高 `0.7lh` 并在行内垂直居中，行与行之间的空隙由行高自然形成。因此 `n` 行占位和 `n` 行真实文本一样高，交接时不会让段落伸缩。
+
+## 与真实内容的交接
+
+数据到达时直接把骨架换成内容，会有一瞬间的跳变。`SkeletonReveal` 把真实内容始终保持挂载，只在上面盖一层占位；数据就绪后按从左到右的顺序把占位擦除。
+
+```tsx
+<SkeletonReveal pending={!data} fallback={<Skeleton className='h-40 w-full' />}>
+  <CardContent data={data} />
+</SkeletonReveal>
+```
+
+| 属性 | 说明 | 默认 |
+| --- | --- | --- |
+| `pending` | 内容是否仍在加载 | — |
+| `fallback` | 占位内容，省略时填满宿主的 `Skeleton` | `<Skeleton className='size-full' />` |
+| `reveal` | `wipe` 从左向右擦除；`fade` 交叉淡出 | `wipe` |
+| `duration` | 交接秒数，`0` 表示立即完成 | wipe 为 `0.6`，fade 为 `0.3` |
+| `delay` | 揭示前的等待秒数 | `0` |
+
+交接用互补的遮罩完成：占位本身带一层软边渐变遮罩，动画从右侧挪到左侧，占住的区域就一点点让出来。它不依赖 View Transitions，因此在 Safari 和 React 的并发渲染下表现一致。`wipe` 的遮罩边缘是渐变的，不是一条硬线。
+
+真实内容在加载期间保持 `inert` 和 `aria-hidden`，既不能用键盘聚焦，也不会被读屏器先读一遍再读占位；交接完成后这两个属性同时移除，交互恢复。内容层自身也带一层和占位互补的遮罩：加载期间完全隐藏，擦除时两层的软边严格互补，所以即使占位只是几根稀疏的灰条，下面的内容也不会从空隙里透出来；揭示完成后这层遮罩随即移除，不会裁掉内容的阴影或溢出部分。因为内容始终挂载，宿主的高度取内容和占位两者中较大的一个，列表不会因为换成占位而塌陷。为了交接后不再伸缩，占位不要比真实内容更高：默认占位会自动填满内容的盒子，自定义占位则按真实内容的尺寸来画。再次加载时占位会重新盖上，重复这个过程即可。
+
+系统启用减少动态效果时，`SkeletonReveal` 跳过遮罩动画，占位直接移除。
+
+## 场景示例
+
+下面的示例都用一个定时器模拟请求，点击右侧的“重新加载”可以重放加载和交接过程。
+
+### 个人资料卡
+
+把卡片拆成封面、头像、名称、简介和统计几块，每块各包一层 `SkeletonReveal`，并用递增的 `delay` 错开揭示顺序。省略 `fallback` 时，默认占位会填满内容自己的盒子，所以骨架的尺寸天然贴合真实内容；只有头像和简介这类需要特殊形状的地方才传入自定义占位。
+
+<SkeletonProfileDemo />
+
+```tsx
+<article aria-busy={pending || undefined}>
+  <SkeletonReveal pending={pending}>
+    <Cover />
+  </SkeletonReveal>
+  <SkeletonReveal
+    pending={pending}
+    delay={0.08}
+    fallback={<Skeleton shape='circle' className='size-full' />}
+  >
+    <Avatar />
+  </SkeletonReveal>
+  <SkeletonReveal
+    pending={pending}
+    delay={0.24}
+    fallback={<SkeletonText lines={2} lastLineRatio={0.6} className='text-momo-body-sm' />}
+  >
+    <p className='text-momo-body-sm'>{profile.bio}</p>
+  </SkeletonReveal>
+</article>
+```
+
+内容在加载期间保持挂载，因此需要先有可以撑开布局的值。数据还没到时，用同结构的占位数据渲染（例如 `profile ?? placeholderProfile`）；它们处于 `inert` 和 `aria-hidden` 之下，用户看不到也读不到。
+
+### 消息列表
+
+同一次请求返回的多行数据，可以按行号错峰揭示，让列表像被逐行“写”出来。每一行的占位是自定义的头像加两行文字，和真实行的高度一致。
+
+<SkeletonListDemo />
+
+```tsx
+{messages.map((message, index) => (
+  <li key={message.id}>
+    <SkeletonReveal pending={pending} delay={index * 0.08} fallback={<MessageRowSkeleton />}>
+      <MessageRow message={message} />
+    </SkeletonReveal>
+  </li>
+))}
+```
+
+错峰延迟建议控制在每项 50–100 毫秒，整列总时长不超过半秒；行数较多时只给可视区域内的前几行加延迟。
+
+### 文章正文
+
+长文本适合用 `reveal='fade'`：擦除的方向感会和阅读方向叠加，在大段文字上显得过于用力。标题和正文的 `SkeletonText` 分别使用和真实文本相同的字号类，行高因此一致。
+
+<SkeletonArticleDemo />
+
+```tsx
+<SkeletonReveal
+  pending={pending}
+  reveal='fade'
+  fallback={<SkeletonText lines={4} lastLineRatio={0.45} className='text-momo-body-md' />}
+>
+  <p className='text-momo-body-md'>{article.body}</p>
+</SkeletonReveal>
+```
+
+### 图片网格
+
+图片的尺寸在加载前就要确定下来，用 `aspect-*` 或固定宽高预留空间，占位才不会在图片到达时塌陷。延迟按行列计算，揭示会从左上角向右下角推进。
+
+<SkeletonGalleryDemo />
+
+```tsx
+<SkeletonReveal
+  pending={!loaded}
+  delay={(index % 3) * 0.06 + Math.floor(index / 3) * 0.12}
+  fallback={<Skeleton shape='lg' className='size-full' />}
+>
+  <img src={src} alt={alt} className='aspect-square rounded-momo-lg object-cover' onLoad={onLoad} />
+</SkeletonReveal>
+```
+
+### 分区内的数值
+
+页面结构本身是已知的：标题、说明和指标名称不需要等待，只有数值来自接口。把 `SkeletonReveal` 收窄到真正等待数据的那一小块，加载期间用户依然能读到“本月概览”和各项指标的含义。
+
+<SkeletonSectionDemo />
+
+```tsx
+<Section title='本月概览' aria-busy={pending || undefined}>
+  <dl className='grid grid-cols-3'>
+    {metrics.map((metric, index) => (
+      <div key={metric.label}>
+        <dt>{metric.label}</dt>
+        <SkeletonReveal pending={pending} delay={index * 0.08} className='w-fit'>
+          <dd>{metric.value}</dd>
+        </SkeletonReveal>
+      </div>
+    ))}
+  </dl>
+</Section>
+```
+
+占位的范围越小，加载时页面传达的信息越多。只在确实不知道内容形状时，才用一整块骨架盖住整个区域。
+
+## 语义与可访问性
+
+骨架屏的根节点、每一行和动画层都带 `aria-hidden`。占位不承载信息，读屏器不应该读到"一段空白"。加载状态由外层表达：
+
+```tsx
+<section aria-busy='true' aria-label='个人资料'>
+  <Skeleton className='h-40 w-full' />
+</section>
+```
+
+`aria-busy` 放在哪个元素上，取决于哪一部分正在加载，组件不做这个猜测。整页加载用一个 `role='status'` 的容器播报"正在加载"也可以，但要在加载完成后移除，避免焦点或播报重复。
+
+## 非组件属性
+
+`Skeleton` 和 `SkeletonText` 都接受原生 `div` 属性、`ref` 和 `render`。`render` 收到 `SkeletonState`，包含 `slot: 'skeleton'`、`variant` 和 `shape`：
+
+```tsx
+<Skeleton
+  render={(props, state) => (
+    <span {...props} data-shape={state.shape} />
+  )}
+  shape='circle'
+/>
+```
+
+这些值同时以 `data-slot`、`data-variant`、`data-shape` 输出，`SkeletonText` 另外输出 `data-lines`。需要按行渲染成别的标签时，把 `SkeletonText` 放进宿主里，而不是替换它的根节点：每一行由组件自己生成。

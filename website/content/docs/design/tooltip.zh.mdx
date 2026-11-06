@@ -1,0 +1,118 @@
+---
+title: Tooltip
+description: "基于 Base UI Tooltip 与 Motion，提供悬停和键盘焦点触发的简短提示。"
+icon: MessageSquareText
+---
+
+`Tooltip` 用于在控件旁补充简短的视觉提示。它沿用 `Popover` 的主题表面、定位参数、箭头与 Motion 动画；内容通过 `children` 提供，触发器通过 `trigger` 提供。
+
+## Playground
+
+<TooltipPlayground />
+
+悬停或用 Tab 聚焦按钮可打开提示，Escape 可关闭提示。两个按钮共享一个 `TooltipProvider`，从已打开的提示移到相邻按钮时不必重复等待完整延迟。
+
+## 基本用法
+
+```tsx
+import { Button } from '@momots/design/components/button';
+import { Tooltip } from '@momots/design/components/tooltip';
+
+<Tooltip trigger={<Button variant='outline'>保存</Button>} showArrow>
+  保存当前工作区的更改
+</Tooltip>
+```
+
+`trigger` 保留原元素的事件、样式和 ref。自定义组件需要把收到的 props 和 ref 转发到真实 DOM 节点。也可以直接传 `(props, state) => JSX`：
+
+```tsx
+<Tooltip
+  trigger={(props, state) => (
+    <button {...props} type='button' data-hint-open={state.open}>
+      查看历史
+    </button>
+  )}
+>
+  查看最近的修改记录
+</Tooltip>
+```
+
+## 延迟与分组
+
+```tsx
+import { Tooltip, TooltipProvider } from '@momots/design/components/tooltip';
+
+<TooltipProvider delay={500} closeDelay={100} timeout={400}>
+  <Tooltip trigger={<button type='button'>复制</button>}>复制内容</Tooltip>
+  <Tooltip trigger={<button type='button'>粘贴</button>}>粘贴内容</Tooltip>
+</TooltipProvider>
+```
+
+不提供 Provider 也可使用 Tooltip。悬停默认等待 `600ms`，移出默认延迟为 `0ms`；键盘聚焦不等待悬停延迟。Provider 的 `timeout` 默认是 `400ms`，控制离开一个提示后，多久内打开相邻提示仍可跳过延迟。
+
+单个 Tooltip 的 `delay`、`closeDelay` 可覆盖 Provider 设置。`closeOnClick` 默认开启；设为 `false` 可保留点击后的提示。默认允许指针移到提示本身而不关闭，`disableHoverablePopup` 可关闭这项行为。
+
+## 状态与事件
+
+```tsx
+const [open, setOpen] = useState(false);
+
+<Tooltip
+  open={open}
+  onChange={setOpen}
+  onOpenChange={(next, details) => {
+    if (!next && details.reason === 'trigger-press') details.cancel();
+  }}
+  trigger={<button type='button'>保存</button>}
+>
+  保存更改
+</Tooltip>
+```
+
+`open` 控制状态，`defaultOpen` 提供非受控初始值。`onOpenChange` 先收到 Base UI 完整事件详情；调用 `details.cancel()` 后，不更新内部状态，也不调用简化的 `onChange`。
+
+`disabled` 只禁用提示，不禁用触发器本身。需要禁用按钮时，应在按钮上另外设置 `disabled`。
+
+## 定位与样式
+
+| 属性 | 默认值 | 说明 |
+| --- | --- | --- |
+| `side` | `top` | 首选方向，靠近边界时由 Base UI 调整 |
+| `align` | `center` | 沿触发器的对齐方式 |
+| `sideOffset` | `8` | 提示与触发器的距离 |
+| `alignOffset` | `0` | 沿对齐方向的偏移 |
+| `showArrow` | `false` | 是否显示箭头 |
+| `className` | — | 提示表面的样式 |
+| `triggerClassName` / `positionerClassName` / `arrowClassName` | — | 对应节点的样式 |
+
+`triggerProps`、`portalProps`、`positionerProps`、`popupProps`、`arrowProps` 透传各层原生属性。例如，`positionerProps={{ collisionPadding: 12 }}` 调整避让边界的留白，`portalProps={{ container }}` 指定挂载容器。底层 props 中的定位和延迟配置优先于同名顶层参数。
+
+默认 Portal 挂载到 `body`。主题 class 应放在能覆盖 Portal 的祖先节点上，或通过 `portalProps.container` 挂入对应主题容器。
+
+## 自定义内容节点
+
+与 Popover 的 [内容插槽](/docs/design/content-slots) 保持一致，`slots.content` 支持属性对象、元素、render 回调和 `false`。内容仍由 `children` 提供：
+
+```tsx
+<Tooltip
+  trigger={<button type='button'>格式说明</button>}
+  slots={{ content: { render: <span />, className: 'block' } }}
+>
+  支持 Markdown 格式
+</Tooltip>
+
+<Tooltip
+  trigger={<button type='button'>快捷键</button>}
+  slots={{ content: (props, _state) => <span {...props} /> }}
+>
+  ⌘ K
+</Tooltip>
+```
+
+元素简写为 `slots={{ content: <span /> }}`。通用容器的 `state` 是空对象；触发器的 `state` 则包含 `open`。`slots={{ content: false }}` 移除内容节点。Tooltip 保持简短，不提供 `title`、`header`、`footer`；需要表单、链接、操作按钮或较长内容时使用 [Popover](/docs/design/popover)。
+
+## 动画与可访问性
+
+动画复用 `useFeel('ui')`，围绕定位计算得到的原点缩放和淡入淡出，退出完成后再卸载。系统请求减少动效时遵循共享主题的 `calm` / `off` 策略，停止空间缩放。
+
+遵循 [Base UI Tooltip 的语义](https://base-ui.com/react/components/tooltip)：提示是补充性的视觉信息，不会自动成为触发器的可访问名称或说明。触发器应有可见文本；图标按钮应自行提供 `aria-label`。必要的说明应直接展示在页面上，避免只放在 Tooltip 中。提示不接管键盘焦点，触摸操作不应依赖悬停提示。

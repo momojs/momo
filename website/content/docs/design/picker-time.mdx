@@ -1,14 +1,14 @@
 ---
 title: PickerTime
-description: 小时、分钟与上下午选择器。
+description: An hour, minute, and AM/PM picker.
 icon: Clock
 ---
 
-`PickerTime` 基于 `PickerCore` 生成 hour/minute/meridiem 三列，面板、选中行、文本与 focus ring 使用 momo semantic token。
+`PickerTime` uses `PickerCore` to generate hour/minute/meridiem columns. Its panel, selected row, text, and focus ring use momo semantic tokens.
 
 <PickerTimePlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { PickerTime } from "@momots/design/components/picker-time";
@@ -18,9 +18,9 @@ import { PickerTime } from "@momots/design/components/picker-time";
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `value` | `Date` | 受控时间 |
-| `defaultValue` | `Date` | 非受控默认时间，默认使用模块初始化时的当前时间 |
-| `disabled` | `boolean` | 是否禁用 |
-| `onChange` | `(value: Date) => void` | 时间变化回调，保留当前年月日，并把秒与毫秒归零 |
+| `value` | `Date` | Controlled time |
+| `defaultValue` | `Date` | Uncontrolled initial time; defaults to the current time when the module initializes |
+| `disabled` | `boolean` | Whether interaction is disabled |
+| `onChange` | `(value: Date) => void` | Time change callback; preserves the current date and resets seconds and milliseconds to zero |

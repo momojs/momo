@@ -1,19 +1,19 @@
 ---
-title: 教程
-description: "沿一条完整路径建立服务客户端，并把请求细节收进领域 API。"
+title: Tutorial
+description: "Build a service client end to end and encapsulate request details in domain APIs."
 icon: GraduationCap
 ---
 
-本教程只完成一件事：为用户服务建立一个清晰的请求边界。完成后，页面只调用领域函数，
-公共传输规则集中在客户端，需要 HTTP 元数据时再显式使用 `request()`。
+This tutorial establishes a clear request boundary for a user service. When finished, pages call only domain functions,
+shared transport rules live in the client, and `request()` is used explicitly when HTTP metadata is needed.
 
-示例中的 `/api/...` 假设浏览器同源环境。Drive 不提供 `baseURL`；Bun 与 Node.js 通常应
-传入绝对 URL。`getToken()` 等未定义标识符代表应用侧依赖。
+The `/api/...` examples assume a same-origin browser environment. Drive has no `baseURL`; Bun and Node.js generally require
+absolute URLs. Undefined identifiers such as `getToken()` represent application dependencies.
 
-## 第一步：建立服务客户端
+## Step 1: Create a service client
 
-在独立模块中创建 Drive 实例。一个实例通常对应一个服务边界，例如同一域名、后端服务
-或认证规则下的请求。
+Create a Drive instance in a separate module. An instance usually represents one service boundary, such as requests sharing a domain name, backend service,
+or authentication policy.
 
 ```ts
 // api/client.ts
@@ -22,11 +22,11 @@ import { Drive } from "@momots/drive";
 export const drive = new Drive();
 ```
 
-先保持客户端简单。只有一项规则被多个接口共同需要时，才把它提升到这里。
+Keep the client simple initially. Promote a rule here only when multiple endpoints need it.
 
-## 第二步：用领域函数命名请求
+## Step 2: Name requests with domain functions
 
-页面不应反复拼接 URL 和请求选项。把这些细节收进按业务命名的 API：
+Pages should not repeatedly assemble URLs and options. Encapsulate those details in APIs named after business actions:
 
 ```ts
 // api/users.ts
@@ -50,21 +50,21 @@ export const UserApi = {
 };
 ```
 
-这里的函数名表达业务动作，`query` 与 `json` 表达数据去向，泛型表达调用方相信的后端
-契约。Drive 不会在运行时验证 `User`；需要验证时，应在领域边界接入 schema 或自定义
-parser。
+Function names express domain actions; `query` and `json` express data destinations; generics express the backend contract the caller
+expects. Drive does not validate `User` at runtime; add a schema or custom
+parser.
 
-## 第三步：选择最清楚的数据写法
+## Step 3: Choose the clearest data form
 
-对象式 API 使用三个显式通道：
+Object-style APIs expose three explicit channels:
 
-| 字段 | 表达的意图 |
+| Field | Intent |
 | --- | --- |
-| `query` | 把 `URLSearchParams` 合并到 URL |
-| `json` | 把结构化值作为 JSON 请求体发送 |
-| `body` | 把 Fetch 原生 `BodyInit` 原样发送 |
+| `query` | Merge `URLSearchParams` into the URL |
+| `json` | Send a structured value as a JSON body |
+| `body` | Pass a native Fetch `BodyInit` through unchanged |
 
-简单调用也可以使用位置式写法：
+Simple calls can also use positional arguments:
 
 ```ts
 const created = await drive.post<User>(
@@ -74,22 +74,22 @@ const created = await drive.post<User>(
 );
 ```
 
-它与对象式 `{ api, data, ...init }` 能力相同：第二参只是 `data` 自动通道。普通对象和数组
-按 JSON 发送，`URLSearchParams` 进入 URL，受支持的原生 body 对象直接交给 Fetch。
+This has the same capabilities as `{ api, data, ...init }`: the second argument is simply the automatic `data` channel. Plain objects and arrays
+become JSON, `URLSearchParams` goes into the URL, and supported native body objects pass through to Fetch.
 
-公共接口或复杂请求通常优先使用 `query`、`json`、`body`，因为读者不必根据值类型推断
-去向。字符串、`Date`、`Map` 或自定义 class 不应直接作为 `data`。同一请求也不要通过
-自动与显式字段重复声明一个通道；精确组合见 [API 参考 · 通道冲突](/docs/drive/guide#通道冲突)。
+For public APIs or complex requests, prefer `query`, `json`, and `body` so readers need not infer destinations from value
+types. Strings, `Date`, `Map`, and custom classes should not be passed directly as `data`. Do not declare the same channel through both automatic and explicit
+fields; see [API reference · Channel conflicts](/docs/drive/guide#channel-conflicts) for exact combinations.
 
-## 第四步：按需要选择返回入口
+## Step 4: Choose the return entry point
 
-| 需要 | 入口 | 返回 |
+| Need | Entry point | Return |
 | --- | --- | --- |
-| 常规 HTTP 方法，只关心解析结果 | `get()`、`post()` 等快捷方法 | `T` |
-| 自定义方法，只关心解析结果 | `exec()` | `T` |
-| 状态码、响应头、原始 Response 或流 | `request()` | 完整 Context |
+| Standard HTTP method, parsed result only | Shortcuts such as `get()` and `post()` | `T` |
+| Custom method, parsed result only | `exec()` | `T` |
+| Status, headers, raw Response, or streams | `request()` | Full Context |
 
-例如，查询详情只需要 `User`，可以继续使用 `get()`；把 `404` 转成“未找到”则需要状态码：
+For example, use `get()` when a detail query only needs `User`; interpreting `404` as “not found” requires the status:
 
 ```ts
 export async function findUser(id: string): Promise<User | undefined> {
@@ -106,16 +106,16 @@ export async function findUser(id: string): Promise<User | undefined> {
 }
 ```
 
-`request()` 成功返回时，`raw`、`status` 和 `headers` 一定存在，`body` 是否存在取决于
-响应与 parser。Drive 不因 `4xx` / `5xx` 自动使 Promise 拒绝。
+When `request()` succeeds, `raw`, `status`, and `headers` always exist; whether `body` exists depends on the
+response and parser. Drive does not reject automatically for `4xx` / `5xx`.
 
-快捷方法和 `exec()` 的 `T` 只是调用方断言，不参与 parser 的运行时选择。已知没有响应
-体时使用 `void`，响应体可能缺失时使用 `T | undefined`。
+The `T` on shortcuts and `exec()` is only a caller assertion and does not select the parser at runtime. Use `void` for a known empty
+body and `T | undefined` when the body may be absent.
 
-## 第五步：只提升真正共享的规则
+## Step 5: Promote only shared rules
 
-假设用户接口都需要令牌，并且所有服务请求都需要审计。现在这两项规则已经跨越多个领域
-函数，适合放回客户端：
+Suppose all user endpoints need a token and every service request needs auditing. These rules now cross several domain
+functions and belong in the client:
 
 ```ts
 // api/client.ts
@@ -135,24 +135,24 @@ export const drive = new Drive()
   });
 ```
 
-`await next()` 之前处理请求，之后处理响应。路径只用于决定规则适用范围；页面仍只依赖
-`UserApi`，不会看到令牌和审计细节。
+Handle requests before `await next()` and responses afterward. Paths only determine where rules apply; pages still depend solely on
+`UserApi` and never see token or audit details.
 
-至此，基础客户端已经完成：领域函数说明业务动作，显式通道说明数据意图，服务客户端
-集中公共策略，`request()` 只在确实需要 HTTP 信息时出现。
+The basic client is now complete: domain functions describe business actions, explicit channels describe data intent, service clients
+centralize shared policies, and `request()` appears only when HTTP information is needed.
 
-## 按需添加能力
+## Add capabilities as needed
 
-下面这些能力不是搭建基础客户端的必经步骤。遇到相应需求时再添加，并先确认它属于哪一
-层：
+The following features are optional additions, not prerequisites for a basic client. Add them when required and first identify the appropriate
+layer:
 
-| 需求 | 达成方式 | 继续阅读 |
+| Need | Approach | Read more |
 | --- | --- | --- |
-| 为默认 Fetch 增加超时取消，或允许用户主动取消 | `timeout` 配合调用方 `AbortSignal` | [超时与取消](/docs/drive/examples#为单次请求设置超时和主动取消) |
-| 下载大文件并观察进度 | `request()`、`receiver` 与返回的 stream | [流式下载](/docs/drive/examples#下载大文件并显示进度) |
-| 统一解释 HTTP 状态 | 在明确的服务边界添加中间件 | [状态错误](/docs/drive/examples#统一-http-状态错误) |
-| 解析服务特有的响应 envelope | 为该边界提供 parser | [自定义 parser](/docs/drive/examples#自定义-rpc-响应解析) |
-| 根据已取得的响应再次发送 | 使用带停止条件和幂等保障的 repeat 策略 | [响应条件重复发送](/docs/drive/examples#对幂等请求按响应状态重复发送) |
+| Timeout cancellation for default Fetch, or user cancellation | `timeout` with a caller `AbortSignal` | [Timeouts and cancellation](/docs/drive/examples#timeout-and-manual-cancellation) |
+| Download large files with progress | `request()`, `receiver`, and the returned stream | [Streaming downloads](/docs/drive/examples#download-large-files-with-progress) |
+| Interpret HTTP statuses consistently | Middleware at an explicit service boundary | [Status errors](/docs/drive/examples#consistent-http-status-errors) |
+| Parse a service-specific response envelope | A parser for that boundary | [Custom parser](/docs/drive/examples#custom-rpc-response-parsing) |
+| Send again based on an obtained response | A repeat policy with stop conditions and idempotency guarantees | [Response-based repeat](/docs/drive/examples#repeat-idempotent-requests-based-on-response-status) |
 
-完整示例见 [示例](/docs/drive/examples)；字段、重载、匹配顺序和生命周期的唯一精确定义见
-[API 参考](/docs/drive/guide)。
+See [examples](/docs/drive/examples) for complete scenarios; the authoritative definitions of fields, overloads, matching order, and lifecycle are in the
+[API reference](/docs/drive/guide).

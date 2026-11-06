@@ -1,16 +1,16 @@
 ---
 title: Highlight
-description: 用 Motion 在多个目标之间移动、切换和退出高亮层。
+description: Move, switch, and animate highlight layers between targets with Motion.
 icon: Sparkles
 ---
 
-Highlight 将 DOM 测量、目标注册、交互事件和 Motion 渲染拆成四个可组合 API。它适合 tabs、segmented control、菜单 hover 与可移动选中背景。
+Highlight separates DOM measurement, target registration, interaction events, and Motion rendering into four composable APIs. It suits tabs, segmented controls, menu hover, and moving selection backgrounds.
 
 <HighlightPlayground />
 
-## 导入
+## Imports
 
-`Highlight` 组件从组件子路径导入，测量、注册和交互 Hook 从 `hooks` 导入：
+Import `Highlight` from its component subpath, and measurement, registration, and interaction hooks from `hooks`:
 
 ```tsx
 import { Highlight } from "@momots/design/components/highlight";
@@ -21,18 +21,18 @@ import {
 } from "@momots/design/hooks";
 ```
 
-## 工作方式
+## How it works
 
-1. `useHighlightLayer` 相对容器测量目标元素，并产生 Motion style；目标或容器尺寸变化时会自动重新测量。
-2. `useHighlightTrigger` 把 hover、click 或 focus 事件连接到 layer。
-3. `useHighlightRegistrar` 用稳定 value 注册元素，适合受控的选中态。
-4. `Highlight` 根据 layer style 渲染并动画化绝对定位的高亮层。
+1. `useHighlightLayer` measures targets relative to their container and produces Motion styles, automatically remeasuring when target or container dimensions change.
+2. `useHighlightTrigger` connects hover, click, or focus events to a layer.
+3. `useHighlightRegistrar` registers elements by stable values for controlled selection.
+4. `Highlight` renders and animates the absolutely positioned layer using its styles.
 
-容器必须建立定位上下文，通常使用 `position: relative`。交互内容还需要位于高亮之上；`Highlight` 自带 `pointer-events: none`，不会拦截点击。
+The container must establish a positioning context, usually `position: relative`. Interactive content must sit above the highlight. `Highlight` uses `pointer-events: none` and does not intercept clicks.
 
-## 移动高亮
+## Moving highlights
 
-下面同时使用一个 hover layer 和一个 selected layer：
+This example uses both a hover layer and a selected layer:
 
 ```tsx
 function Navigation() {
@@ -84,7 +84,7 @@ function Navigation() {
 }
 ```
 
-把多个 layer 放在同一容器时，可以在 `highlightStyle` 中覆盖 `zIndex`，明确 hover 与 selected 背景的层级。
+When sharing a container between layers, override `zIndex` in `highlightStyle` to define hover and selection stacking.
 
 ## useHighlightLayer
 
@@ -92,22 +92,22 @@ function Navigation() {
 const layer = useHighlightLayer(targetContainerRef, { enabled: true });
 ```
 
-返回值：
+Return value:
 
-| 字段 | 说明 |
+| Field | Description |
 | --- | --- |
-| `style` | 目标相对容器的 `x`、`y`、`width`、`height` 与 `zIndex`；没有目标时为 `null` |
-| `setTarget(element)` | 测量并激活目标；`enabled` 为真时开始监听目标与容器的 resize |
-| `clear(target?)` | 清空 layer 并停止监听；传入非当前目标时不会误清理新目标 |
-| `flush()` | 对当前目标重新测量；容器仅发生滚动等 resize 无法覆盖的变化时可手动调用 |
+| `style` | Target `x`, `y`, `width`, `height`, and `zIndex` relative to the container; `null` without a target |
+| `setTarget(element)` | Measures and activates a target; observes target/container resize while `enabled` |
+| `clear(target?)` | Clears the layer and stops observation; a non-current target cannot accidentally clear a new target |
+| `flush()` | Remeasures the current target; call manually for changes resize cannot detect, such as container scrolling |
 
-测量会考虑容器边框与滚动偏移。激活目标后，layer 会通过 Motion `resize` 监听目标与容器的尺寸变化并自动 `flush()`。容器内部滚动目前不会自动触发重测；若高亮需要跟随滚动，请在滚动时调用 `flush()`。
+Measurement accounts for container borders and scroll offsets. Active layers observe target and container dimensions through Motion `resize` and automatically `flush()`. Internal scrolling does not currently trigger remeasurement; call `flush()` on scroll when the highlight must follow it.
 
-将 `enabled` 设为 `false` 会清除 style 并停止监听，但保留当前目标；重新启用时会再次测量并恢复监听。卸载 layer 时会完整清理目标与订阅。
+Setting `enabled` to `false` clears styles and stops observation but retains the target. Re-enabling remeasures and resumes observation. Unmounting completely cleans up the target and subscriptions.
 
 ## useHighlightRegistrar
 
-Registrar 用 `ControlValue` 把稳定的业务值映射到 DOM 元素：
+The registrar maps stable application values to DOM elements through `ControlValue`:
 
 ```tsx
 const registrar = useHighlightRegistrar(layer);
@@ -117,13 +117,13 @@ registrar.activate("account");
 registrar.clear();
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 | --- | --- |
-| `register(value)` | 返回缓存过的 callback ref，负责挂载、卸载与目标清理 |
-| `activate(value)` | 激活已注册的元素；元素稍后挂载时也会继续匹配该 value |
-| `clear()` | 清除当前 value 与 layer |
+| `register(value)` | Returns a cached callback ref handling mount, unmount, and target cleanup |
+| `activate(value)` | Activates a registered element, continuing to match that value if it mounts later |
+| `clear()` | Clears the current value and layer |
 
-value 必须在同一 registrar 内唯一，否则后注册的元素会覆盖同一个映射。
+Values must be unique within a registrar; later registration otherwise replaces the same mapping.
 
 ## useHighlightTrigger
 
@@ -134,25 +134,25 @@ const trigger = useHighlightTrigger(layer, {
 });
 ```
 
-`getReferenceProps(existingProps?)` 返回应展开到目标元素上的事件 props，并会先调用传入的原事件处理器：
+`getReferenceProps(existingProps?)` returns event props to spread on the target, calling supplied handlers first:
 
-| 模式 | 行为 |
+| Mode | Behavior |
 | --- | --- |
-| `hover` | pointer enter 激活，pointer leave 清除；移动端会自动停用 |
-| `click` | 点击时激活，不会自动清除 |
-| `focus` | focus 激活，blur 清除 |
+| `hover` | Activates on pointer enter, clears on pointer leave; automatically disabled on mobile |
+| `click` | Activates on click without automatically clearing |
+| `focus` | Activates on focus, clears on blur |
 
-禁用 trigger 时，`getReferenceProps` 会原样返回已有 props。切换模式并不会替调用方清理旧模式留下的目标；动态切换时可以同步调用 `layer.clear()`。
+When the trigger is disabled, `getReferenceProps` returns existing props unchanged. Changing mode does not clear the previous mode's target; call `layer.clear()` alongside dynamic mode changes if needed.
 
 ## Highlight
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `highlightStyle` | `StyleKeyframesDefinition \| null` | 通常传入 `layer.style`，控制位置与尺寸 |
-| `active` | `boolean` | 即使没有 measured style 也保持可见，适合铺满容器的高亮 |
-| `exitDelay` | `number` | 退出延迟，单位为毫秒 |
-| `transition` | Motion `Transition` | 当前实现只把它合并到退出状态的 transition |
-| `className` | `string` | 高亮颜色、圆角、阴影等视觉样式 |
-| `...props` | `ComponentProps<typeof motion.div>` | 其余 Motion div 属性 |
+| `highlightStyle` | `StyleKeyframesDefinition \| null` | Usually `layer.style`, controlling position and dimensions |
+| `active` | `boolean` | Keeps the layer visible without measured styles, useful for container-filling highlights |
+| `exitDelay` | `number` | Exit delay in milliseconds |
+| `transition` | Motion `Transition` | Currently merged only into the exit transition |
+| `className` | `string` | Highlight color, radius, shadow, and other visual styles |
+| `...props` | `ComponentProps<typeof motion.div>` | Other Motion div props |
 
-当 `active` 为假且 `highlightStyle` 为 `null` 时，组件通过 `AnimatePresence` 执行退出。组件使用 scale 与 opacity 表达出现和消失，位置和尺寸由 Motion 在目标之间插值。`exitDelay` 与 `transition.delay` 只影响退出；当前组件不会把 `transition` prop 传给进入或移动状态。
+When `active` is false and `highlightStyle` is `null`, `AnimatePresence` runs the exit. Scale and opacity animate appearance/disappearance while Motion interpolates position and dimensions between targets. `exitDelay` and `transition.delay` affect only exit; the `transition` prop is not currently passed to entry or movement states.

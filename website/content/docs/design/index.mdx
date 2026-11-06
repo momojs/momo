@@ -1,15 +1,15 @@
 ---
-title: 开始
-description: "@momots/design —— 面向 React 19.2+，基于 motion、Base UI 与 Tailwind CSS 的组件库。"
+title: Getting started
+description: "@momots/design — a React 19.2+ component library built with Motion, Base UI, and Tailwind CSS."
 icon: Rocket
 ---
 
-`@momots/design` 是 momo 面向 **React 19.2+** 的组件层。它把 **Base UI** 的无样式交互能力、**motion** 的过渡动画、以及 **Tailwind CSS** 的样式表达组合起来，用来沉淀项目中可复用、可调试、可 tree-shaking 的组件。
+`@momots/design` is momo's component layer for **React 19.2+**. It combines **Base UI** headless interactions, **Motion** transitions, and **Tailwind CSS** styling to create reusable, debuggable, tree-shakeable components.
 
-## 安装
+## Installation
 
-React API 兼容基线为 **19.2+**，Hooks 直接使用原生 `useEffectEvent`。当前发布的
-`react` 与 `react-dom` peer 范围均为 `^19.2.7`（`>=19.2.7 <20.0.0`），请安装版本一致的 React 与 React DOM。
+The React API compatibility baseline is **19.2+**; hooks directly use native `useEffectEvent`. Published
+`react` and `react-dom` peer ranges are both `^19.2.7` (`>=19.2.7 <20.0.0`). Install matching React and React DOM versions.
 
 ```bash
 bun add @momots/design@alpha @momots/core@beta @momots/host@beta
@@ -18,101 +18,101 @@ bun add react@^19.2.7 react-dom@^19.2.7
 bun add cn cva date-fns motion remeda tailwindcss type-fest
 ```
 
-`@momots/core`、`@momots/host`、`@base-ui/react`、`motion`、`react`、`react-dom`、`remeda`、`type-fest`、`cn`、`cva`、`date-fns` 与 Hugeicons 应作为 peer dependencies 由应用侧提供，避免组件库把 React、基础工具、图标或动画运行时重复打进产物。
+Applications provide `@momots/core`, `@momots/host`, `@base-ui/react`, `motion`, `react`, `react-dom`, `remeda`, `type-fest`, `cn`, `cva`, `date-fns`, and Hugeicons as peer dependencies, avoiding duplicate React, utilities, icons, or animation runtimes in the library bundle.
 
-`@ncdai/react-wheel-picker`、`morphicons` 与 `motion-plus` 会作为普通 dependencies 随
-`@momots/design` 安装；其余运行时依赖保持为 peer dependencies，由应用统一版本。
+`@ncdai/react-wheel-picker`, `morphicons`, and `motion-plus` install as ordinary dependencies alongside
+`@momots/design`. Other runtime dependencies remain peers so applications can coordinate versions.
 
-## 调试优先
+## Debugging first
 
-当前网站的 design 文档会直接加载 `packages/design/src` 中的源码组件。这样在开发组件时，改动源码即可通过 Vite 热更新反映到文档页面。
+This site's design docs load components directly from `packages/design/src`. While developing, source edits appear in the documentation through Vite hot updates.
 
-## 组件
+## Components
 
 <Cards>
   <Card title="Alert" href="/docs/design/alert">
-    用于传达重要状态、反馈与下一步操作的内联提示。
+    Inline feedback for important status, results, and next actions.
   </Card>
   <Card title="Toast" href="/docs/design/toast">
-    支持队列、动作、优先级与滑动关闭的短暂通知。
+    Temporary notifications with queues, actions, priorities, and swipe dismissal.
   </Card>
   <Card title="Accordion" href="/docs/design/accordion">
-    带 motion 展开动画的折叠面板。
+    Collapsible panels with Motion expansion animation.
   </Card>
   <Card title="Badge" href="/docs/design/badge">
-    用于状态、分类与元数据的轻量标签。
+    Lightweight labels for status, categories, and metadata.
   </Card>
   <Card title="Button" href="/docs/design/button">
-    带 motion 点击反馈的基础按钮，支持多种 variant 与 size。
+    A basic button with Motion tap feedback and multiple variants and sizes.
   </Card>
   <Card title="Section" href="/docs/design/section">
-    以标题命名区域的页面分区，共享内容插槽约定并支持语义节点定制。
+    Page sections named by their headings, with shared content slots and customizable semantic nodes.
   </Card>
   <Card title="Checkbox" href="/docs/design/checkbox">
-    表单友好的复选框，支持 indeterminate 状态。
+    A form-friendly checkbox with indeterminate state support.
   </Card>
   <Card title="Dialog" href="/docs/design/dialog">
-    带焦点管理、退出动画与模态语义的居中弹层。
+    A centered overlay with focus management, exit animation, and modal semantics.
   </Card>
   <Card title="Drawer" href="/docs/design/drawer">
-    支持拖拽、方向与吸附点的手势抽屉。
+    A gesture drawer with dragging, directions, and snap points.
   </Card>
   <Card title="Tooltip" href="/docs/design/tooltip">
-    支持悬停延迟、键盘焦点与共享分组的简短提示。
+    Short hints with hover delay, keyboard focus, and shared grouping.
   </Card>
   <Card title="Menu" href="/docs/design/menu">
-    支持分组、链接、单选、复选和嵌套子菜单的操作菜单。
+    Action menus with groups, links, radio/checkbox items, and nested submenus.
   </Card>
   <Card title="Field" href="/docs/design/field">
-    统一标签、控件、说明与校验错误的字段容器。
+    A field container combining labels, controls, descriptions, and validation errors.
   </Card>
   <Card title="Highlight" href="/docs/design/highlight">
-    可复用的 Motion 移动高亮层与触发器 Hooks。
+    Reusable Motion highlight layers and interaction hooks.
   </Card>
   <Card title="Icon" href="/docs/design/icon">
-    改变图标数据即可平滑变形，统一尺寸、描边与动效主题。
+    Smooth icon morphing when data changes, with shared dimensions, strokes, and motion themes.
   </Card>
   <Card title="Input" href="/docs/design/input">
-    支持 Base UI 表单状态与三档尺寸的原子输入框。
+    An atomic input with Base UI form states and three sizes.
   </Card>
   <Card title="Numeric" href="/docs/design/numeric">
-    支持输入、步进按钮与拖拽调值的数字字段。
+    A numeric field with typing, stepper buttons, and drag adjustment.
   </Card>
   <Card title="Rating" href="/docs/design/rating">
-    支持精度、键盘操作与表单提交的评分控件。
+    A rating control with precision, keyboard operation, and form submission.
   </Card>
   <Card title="TweenNumber" href="/docs/design/tween-number">
-    数值变化时带 tween 过渡的数字展示，支持 Intl 格式化。
+    Animated number displays with tween transitions and Intl formatting.
   </Card>
   <Card title="ToggleGroup" href="/docs/design/toggle-group">
-    图标工具组，适合单选的编辑器按钮或视图切换。
+    Icon tool groups for single-select editor buttons or view switching.
   </Card>
   <Card title="Switch" href="/docs/design/switch">
-    表单友好的开关控件。
+    A form-friendly switch control.
   </Card>
   <Card title="Select" href="/docs/design/select">
-    带 motion 动画的下拉选择器。
+    A dropdown selector with Motion animation.
   </Card>
   <Card title="Combobox" href="/docs/design/combobox">
-    支持搜索过滤、多选标签和键盘导航的选择控件。
+    A selection control with search, multiple-selection chips, and keyboard navigation.
   </Card>
   <Card title="Skeleton" href="/docs/design/skeleton">
-    在内容到达前按最终形状占位的骨架屏，支持扫光、呼吸与静态动画。
+    Skeleton placeholders matching final content shape, with shimmer, pulse, and static modes.
   </Card>
   <Card title="Slider" href="/docs/design/slider">
-    带 motion 动画与键盘交互的滑块控件。
+    A slider with Motion animation and keyboard interaction.
   </Card>
   <Card title="Tabs" href="/docs/design/tabs">
-    带动效指示器的标签页。
+    Tabs with an animated indicator.
   </Card>
   <Card title="PickerCore" href="/docs/design/picker-core">
-    用于构建自定义多列滚轮选择器的底层组件。
+    The foundation for custom multi-column wheel pickers.
   </Card>
   <Card title="PickerDate" href="/docs/design/picker-date">
-    年、月、日三列选择器。
+    A three-column year, month, and day picker.
   </Card>
   <Card title="PickerTime" href="/docs/design/picker-time">
-    小时、分钟与上下午选择器。
+    An hour, minute, and AM/PM picker.
   </Card>
 </Cards>
 
@@ -120,59 +120,59 @@ bun add cn cva date-fns motion remeda tailwindcss type-fest
 
 <Cards>
   <Card title="useAutoSize" href="/docs/design/use-auto-size">
-    测量当前内容，为容器提供稳定的宽高动画目标。
+    Measure current content for stable container width and height animation targets.
   </Card>
   <Card title="useControllableValue" href="/docs/design/use-controllable-value">
-    为组件统一受控、非受控状态与函数式更新语义。
+    Shared controlled/uncontrolled state and functional update semantics.
   </Card>
   <Card title="useIsBreakpoint" href="/docs/design/use-is-breakpoint">
-    订阅视口宽度断点，并保持 SSR 与 hydration 的初始值一致。
+    Subscribe to viewport breakpoints with consistent SSR and hydration initial values.
   </Card>
   <Card title="useMergedRefs" href="/docs/design/use-merged-refs">
-    合并内部与外部 refs，保留回调 ref 的清理行为。
+    Merge internal and external refs while preserving callback-ref cleanup.
   </Card>
   <Card title="usePresenceGate" href="/docs/design/use-presence-gate">
-    协调多层 AnimatePresence 的退出完成时机。
+    Coordinate exit completion across nested AnimatePresence boundaries.
   </Card>
   <Card title="usePrevious" href="/docs/design/use-previous">
-    读取最近一次 Effect 记录的值，比较相邻提交。
+    Read the value recorded by the latest Effect to compare adjacent commits.
   </Card>
   <Card title="useResize" href="/docs/design/use-resize">
-    监听元素布局边框盒尺寸，支持目标替换与逻辑绑定重置。
+    Observe layout border-box dimensions with target replacement and logical-binding resets.
   </Card>
   <Card title="useStoragefy" href="/docs/design/use-storagefy">
-    订阅存储项的真实值，统一更新、空值、同步与 SSR 行为。
+    Subscribe to actual stored values with consistent updates, empty values, synchronization, and SSR.
   </Card>
 </Cards>
 
-## 通用约定
+## Shared conventions
 
 <Cards>
   <Card title="Content Slots" href="/docs/design/content-slots">
-    通过内容属性与 slots 配置组件的内容节点。
+    Configure component content nodes through content props and slots.
   </Card>
 </Cards>
 
 ## Utils
 
 <Cards>
-  <Card title="类名与样式变体" href="/docs/design/class-utilities">
-    用 cx、cva 与 asClass 组合条件类名、组件变体和状态样式。
+  <Card title="Classes and style variants" href="/docs/design/class-utilities">
+    Combine conditional classes, component variants, and state styles with cx, cva, and asClass.
   </Card>
   <Card title="Control types" href="/docs/design/control-types">
-    组件间共享的值、尺寸、方向与选项类型。
+    Shared value, size, direction, and option types for controls.
   </Card>
   <Card title="Substitute" href="/docs/design/substitute">
-    将文本占位符替换为字符串或 React 节点，支持默认文本。
+    Replace placeholders with strings or React nodes, with default text support.
   </Card>
   <Card title="toPixel" href="/docs/design/to-pixel">
-    将根节点上的 rem 间距变量换算为 JavaScript 使用的像素值。
+    Convert root-level rem spacing variables to JavaScript pixel values.
   </Card>
 </Cards>
 
-## 打包约定
+## Packaging conventions
 
-组件库应以 ESM 多入口发布，并把 React、Base UI、motion 和 momo 的基础包保持 external：
+Publish the library with multiple ESM entries, keeping React, Base UI, Motion, and momo foundation packages external:
 
 ```ts
 await Bun.build({
@@ -183,7 +183,7 @@ await Bun.build({
 });
 ```
 
-同时保留 `sideEffects` 标记与子路径 `exports`，让消费端 bundler 可以安全地移除未使用组件：
+Preserve `sideEffects` and subpath `exports` so consuming bundlers can safely remove unused components:
 
 ```json
 {
@@ -203,15 +203,15 @@ await Bun.build({
 }
 ```
 
-组件 JS 入口不 import 主题文件；主题只通过 `./themes/*` 暴露给应用侧手动引入。
+Component JS entries do not import theme files; themes are exposed only through `./themes/*` for manual application imports.
 
 ## Tailwind CSS
 
-本网站已经在 `app.css` 中把 Tailwind 扫描范围扩展到 design 源码目录，因此调试 `packages/design/src` 里的 className 时会即时生成样式。外部应用应导入 `@momots/design/tailwind.css`；该入口通过 `@source` 注册包内 `dist`，让 Tailwind v4 生成组件使用的 utility。
+This site's `app.css` extends Tailwind scanning to design sources, generating styles immediately while debugging `className` in `packages/design/src`. External applications should import `@momots/design/tailwind.css`, which registers package `dist` through `@source` so Tailwind v4 generates component utilities.
 
-## 主题
+## Themes
 
-主题文件不会被组件入口自动引入，应用侧需要在自己的 CSS 中手动 import：
+Component entries do not import themes automatically. Import them explicitly in application CSS:
 
 ```css
 @import "tailwindcss";
@@ -220,13 +220,13 @@ await Bun.build({
 @import "@momots/design/themes/anthropic.css";
 ```
 
-使用 `PickerCore`、`PickerDate` 或 `PickerTime` 时，再显式导入滚轮组件样式：
+When using `PickerCore`, `PickerDate`, or `PickerTime`, explicitly import wheel picker styles:
 
 ```css
 @import "@momots/design/picker.css";
 ```
 
-然后在根元素或局部容器上切换主题类：
+Then switch theme classes on the root or a local container:
 
 ```tsx
 <div className="theme-anthropic">
@@ -238,4 +238,4 @@ await Bun.build({
 </div>
 ```
 
-组件只消费带 `momo` 前缀的 semantic token，例如 `bg-momo-bg-canvas`、`text-momo-fg-default`、`border-momo-border-default` 与 `ring-momo-ring-focus`。新增主题只需复用同一套命名即可通过替换根元素 class 完成切换。token 的分层结构与每个 token 的具体语义见 [主题与 Token](/docs/design/theme)。
+Components consume only `momo`-prefixed semantic tokens, such as `bg-momo-bg-canvas`, `text-momo-fg-default`, `border-momo-border-default`, and `ring-momo-ring-focus`. New themes reuse these names and switch by replacing the root class. See [Themes and tokens](/docs/design/theme) for token layers and meanings.

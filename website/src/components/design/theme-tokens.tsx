@@ -3,6 +3,8 @@
 import type { CSSProperties } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Select } from '../../../../packages/design/src/components/select';
 import { ToggleGroup } from '../../../../packages/design/src/components/toggle-group';
 import type { PlaygroundThemeName } from './playgrounds/theme';
@@ -454,6 +456,7 @@ function TokenCard({
   source: string;
   scopeKey: string;
 }) {
+  const t = useSiteTranslations();
   return (
     <article className='grid gap-2 rounded-md border border-momo-border-default bg-momo-bg-surface-raised p-3'>
       <ColorSwatch
@@ -464,7 +467,7 @@ function TokenCard({
       />
       <div className='grid gap-1'>
         <code className='text-[11px] text-momo-fg-brand'>{token.utility}</code>
-        <p className='text-xs text-momo-fg-muted'>{token.description}</p>
+        <p className='text-xs text-momo-fg-muted'>{t(token.description)}</p>
       </div>
     </article>
   );

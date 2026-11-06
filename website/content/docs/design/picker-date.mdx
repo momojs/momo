@@ -1,14 +1,14 @@
 ---
 title: PickerDate
-description: 支持年、月、日精度的日期选择器。
+description: A date picker with year, month, and day precision.
 icon: CalendarDays
 ---
 
-`PickerDate` 基于 `PickerCore` 生成日期滚轮，面板、选中行、文本与 focus ring 使用 momo semantic token。通过 `precision` 可显示年、年月或完整日期。
+`PickerDate` builds date wheels with `PickerCore`. Its panel, selected row, text, and focus ring use momo semantic tokens. `precision` selects year, year/month, or full-date display.
 
 <PickerDatePlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { PickerDate } from "@momots/design/components/picker-date";
@@ -16,17 +16,17 @@ import { PickerDate } from "@momots/design/components/picker-date";
 <PickerDate value={date} onChange={setDate} />
 ```
 
-`precision="year"` 会输出所选年份的 1 月 1 日，`precision="month"` 会输出所选月份的 1 日，默认的 `precision="date"` 输出完整日期。`min` 与 `max` 会按相同精度比较。
+`precision="year"` returns January 1 of the selected year; `precision="month"` returns the first day of the selected month; the default `precision="date"` returns the full date. `min` and `max` are compared at the same precision.
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `value` | `Date` | 受控日期 |
-| `defaultDate` | `Date` | 非受控默认日期 |
-| `precision` | `"year" \| "month" \| "date"` | 日期精度，默认为 `"date"` |
-| `min` | `Date` | 可选最小日期 |
-| `max` | `Date` | 可选最大日期 |
-| `disabled` | `boolean` | 是否禁用 |
-| `className` | `string` | 根节点追加 Tailwind class |
-| `onChange` | `(value: Date) => void` | 日期变化回调 |
+| `value` | `Date` | Controlled date |
+| `defaultDate` | `Date` | Uncontrolled initial date |
+| `precision` | `"year" \| "month" \| "date"` | Date precision; defaults to `"date"` |
+| `min` | `Date` | Optional minimum date |
+| `max` | `Date` | Optional maximum date |
+| `disabled` | `boolean` | Whether interaction is disabled |
+| `className` | `string` | Additional Tailwind classes on the root |
+| `onChange` | `(value: Date) => void` | Date change callback |

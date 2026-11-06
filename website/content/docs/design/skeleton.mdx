@@ -1,14 +1,14 @@
 ---
 title: Skeleton
-description: 在内容到达前按最终形状占位的骨架屏，支持扫光、呼吸和静态三种动画。
+description: Skeleton placeholders matching the final content shape, with shimmer, pulse, and static animation modes.
 icon: SquareStack
 ---
 
-`Skeleton` 和 `SkeletonText` 在异步内容到达前占住它最终要占的位置，只负责形状和动画；`SkeletonReveal` 在数据到达时把占位擦除，露出下面的真实内容。三者都不判断加载状态，也不持有数据：加载状态由持有数据的组件决定，骨架屏只响应。
+`Skeleton` and `SkeletonText` reserve the space that asynchronous content will occupy, handling only shape and animation. `SkeletonReveal` wipes away the placeholder when data arrives to expose the real content underneath. None of them determine loading state or own data: the component that owns the data decides whether it is loading, and the skeleton responds.
 
 <SkeletonPlayground />
 
-## 基本用法
+## Basic usage
 
 ```tsx
 import { Skeleton, SkeletonText } from '@momots/design/components/skeleton';
@@ -28,46 +28,46 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 }
 ```
 
-尺寸、圆角和间距都通过 `className` 指定，沿用 momo 的 Tailwind token。骨架屏不预设任何宽高，因为它不知道该块内容有多高；这一点必须由调用方按最终布局给出。
+Specify dimensions, radius, and spacing through `className`, using momo's Tailwind tokens. Skeletons have no preset width or height because they do not know the content's dimensions; callers must supply these according to the final layout.
 
-## 动画
+## Animation
 
-| `variant` | 效果 |
+| `variant` | Effect |
 | --- | --- |
-| `shimmer` | 默认。一条高光带从左向右扫过，适合卡片、列表这类面积较大的占位 |
-| `pulse` | 底色与高光之间柔和往返，接近文字块的自然呼吸 |
-| `solid` | 静态底色，不播放任何循环动画 |
+| `shimmer` | Default. A highlight sweeps left to right, suitable for larger placeholders such as cards and lists |
+| `pulse` | A gentle transition between the base and highlight colors, resembling the natural rhythm of text blocks |
+| `solid` | Static background with no looping animation |
 
-`duration` 控制单次循环的秒数，默认 `2`。非有限数或非正数会回退到默认值，而不是让动画停住。扫光只改变内部高光层的 `transform`，由合成层完成，不会触发布局和重绘，在移动端长列表里也能保持稳定。
+`duration` sets the length of one loop in seconds and defaults to `2`. Non-finite or non-positive values fall back to the default instead of stopping the animation. The shimmer changes only the inner highlight layer's `transform`, running on the compositor without layout or repaint, so it remains stable even in long mobile lists.
 
-系统启用 `prefers-reduced-motion: reduce` 时，三种动画统一退化为静态底色，占位尺寸保持不变。这个判断复用 `MotionUIThemeProvider` 解析出的动效姿态，不需要额外配置。
+When the system enables `prefers-reduced-motion: reduce`, all three animation modes become static backgrounds while preserving their dimensions. This uses the motion posture resolved by `MotionUIThemeProvider` and requires no additional configuration.
 
-## 形状
+## Shape
 
-| `shape` | 圆角 |
+| `shape` | Radius |
 | --- | --- |
 | `sm` | `momo-radius-xs` |
-| `md` | 默认。`momo-radius-sm` |
+| `md` | Default. `momo-radius-sm` |
 | `lg` | `momo-radius-lg` |
 | `pill` | `momo-radius-pill` |
-| `circle` | `momo-radius-full`，配合正方形尺寸使用 |
-| `none` | 无圆角 |
+| `circle` | `momo-radius-full`; use with equal width and height |
+| `none` | No rounded corners |
 
-`shape` 只是常用圆角的快捷方式。需要别的值时直接写 `className='rounded-momo-xl'`，它排在 `shape` 之后，会覆盖默认值。
+`shape` is a shortcut for common radii. For other values, use a class such as `className='rounded-momo-xl'`; it comes after `shape` and overrides the default.
 
-## 文本占位
+## Text placeholders
 
 ```tsx
 <SkeletonText lines={3} lastLineRatio={0.6} className='text-momo-body-sm' />
 ```
 
-`SkeletonText` 按行生成占位，每行高度继承宿主的行高（`1lh`），所以字号和行高和真实文本保持一致：把真实文本用的字号类写在 `className` 上即可。`lines` 低于 1 时按 1 行渲染，小数向下取整；`lastLineRatio` 只作用于最后一行，取值限制在 0 到 1 之间，用来避免整段文字看起来像一块实心矩形。
+`SkeletonText` generates placeholders by line. Each line inherits the host's line height (`1lh`), matching the real text's font size and line height when you apply the same font-size class through `className`. `lines` below 1 renders one line, and fractional values are rounded down. `lastLineRatio` affects only the final line and is clamped between 0 and 1, preventing the paragraph from looking like a solid rectangle.
 
-每一行占满一个行盒（`1lh`），灰条本身高 `0.7lh` 并在行内垂直居中，行与行之间的空隙由行高自然形成。因此 `n` 行占位和 `n` 行真实文本一样高，交接时不会让段落伸缩。
+Each row occupies one line box (`1lh`). The gray bar itself is `0.7lh` tall and vertically centered, so line spacing follows naturally from the line height. As a result, `n` placeholder lines are as tall as `n` real text lines, avoiding paragraph resizing during the transition.
 
-## 与真实内容的交接
+## Transitioning to real content
 
-数据到达时直接把骨架换成内容，会有一瞬间的跳变。`SkeletonReveal` 把真实内容始终保持挂载，只在上面盖一层占位；数据就绪后按从左到右的顺序把占位擦除。
+Replacing a skeleton directly with content when data arrives can cause an abrupt visual jump. `SkeletonReveal` keeps the real content mounted beneath a placeholder layer, then wipes that layer away from left to right when the data is ready.
 
 ```tsx
 <SkeletonReveal pending={!data} fallback={<Skeleton className='h-40 w-full' />}>
@@ -75,27 +75,27 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 </SkeletonReveal>
 ```
 
-| 属性 | 说明 | 默认 |
+| Prop | Description | Default |
 | --- | --- | --- |
-| `pending` | 内容是否仍在加载 | — |
-| `fallback` | 占位内容，省略时填满宿主的 `Skeleton` | `<Skeleton className='size-full' />` |
-| `reveal` | `wipe` 从左向右擦除；`fade` 交叉淡出 | `wipe` |
-| `duration` | 交接秒数，`0` 表示立即完成 | wipe 为 `0.6`，fade 为 `0.3` |
-| `delay` | 揭示前的等待秒数 | `0` |
+| `pending` | Whether content is still loading | — |
+| `fallback` | Placeholder content; when omitted, a `Skeleton` fills the host | `<Skeleton className='size-full' />` |
+| `reveal` | `wipe` removes the placeholder left to right; `fade` crossfades it | `wipe` |
+| `duration` | Transition duration in seconds; `0` completes immediately | `0.6` for wipe; `0.3` for fade |
+| `delay` | Delay before revealing, in seconds | `0` |
 
-交接用互补的遮罩完成：占位本身带一层软边渐变遮罩，动画从右侧挪到左侧，占住的区域就一点点让出来。它不依赖 View Transitions，因此在 Safari 和 React 的并发渲染下表现一致。`wipe` 的遮罩边缘是渐变的，不是一条硬线。
+The transition uses complementary masks. A soft-edged gradient mask on the placeholder moves from right to left, gradually revealing the occupied area. It does not depend on View Transitions, so behavior is consistent in Safari and with React concurrent rendering. The `wipe` mask has a gradient edge rather than a hard line.
 
-真实内容在加载期间保持 `inert` 和 `aria-hidden`，既不能用键盘聚焦，也不会被读屏器先读一遍再读占位；交接完成后这两个属性同时移除，交互恢复。内容层自身也带一层和占位互补的遮罩：加载期间完全隐藏，擦除时两层的软边严格互补，所以即使占位只是几根稀疏的灰条，下面的内容也不会从空隙里透出来；揭示完成后这层遮罩随即移除，不会裁掉内容的阴影或溢出部分。因为内容始终挂载，宿主的高度取内容和占位两者中较大的一个，列表不会因为换成占位而塌陷。为了交接后不再伸缩，占位不要比真实内容更高：默认占位会自动填满内容的盒子，自定义占位则按真实内容的尺寸来画。再次加载时占位会重新盖上，重复这个过程即可。
+While loading, the real content remains `inert` and `aria-hidden`: it cannot receive keyboard focus, and screen readers do not read it before the placeholder. Both attributes are removed when the transition completes, restoring interaction. The content layer has a mask complementary to the placeholder's: it is fully hidden during loading, and the soft edges of the two masks remain exactly complementary during the wipe. Even sparse gray placeholder bars therefore do not expose the content between them. Once revealed, the content mask is removed so it does not clip shadows or overflow. Because content stays mounted, the host takes the greater height of the content and placeholder, preventing the list from collapsing when placeholders appear. To avoid resizing afterward, do not make the placeholder taller than the real content. The default placeholder automatically fills the content box; custom placeholders should match the real content's dimensions. Loading again restores the placeholder and repeats the process.
 
-系统启用减少动态效果时，`SkeletonReveal` 跳过遮罩动画，占位直接移除。
+When reduced motion is enabled, `SkeletonReveal` skips the mask animation and removes the placeholder immediately.
 
-## 场景示例
+## Examples
 
-下面的示例都用一个定时器模拟请求，点击右侧的“重新加载”可以重放加载和交接过程。
+The following examples simulate requests with a timer. Click “Reload” on the right to replay loading and the transition.
 
-### 个人资料卡
+### Profile card
 
-把卡片拆成封面、头像、名称、简介和统计几块，每块各包一层 `SkeletonReveal`，并用递增的 `delay` 错开揭示顺序。省略 `fallback` 时，默认占位会填满内容自己的盒子，所以骨架的尺寸天然贴合真实内容；只有头像和简介这类需要特殊形状的地方才传入自定义占位。
+Split the card into its cover, avatar, name, bio, and statistics. Wrap each part in `SkeletonReveal` and use increasing `delay` values to stagger reveals. When `fallback` is omitted, the default placeholder fills the content's own box, naturally matching its dimensions. Supply custom placeholders only where special shapes are needed, such as the avatar and bio.
 
 <SkeletonProfileDemo />
 
@@ -121,11 +121,11 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 </article>
 ```
 
-内容在加载期间保持挂载，因此需要先有可以撑开布局的值。数据还没到时，用同结构的占位数据渲染（例如 `profile ?? placeholderProfile`）；它们处于 `inert` 和 `aria-hidden` 之下，用户看不到也读不到。
+Since content stays mounted during loading, it needs values that can establish the layout. Before data arrives, render placeholder data with the same structure, such as `profile ?? placeholderProfile`. It remains under `inert` and `aria-hidden`, invisible and inaccessible to the user.
 
-### 消息列表
+### Message list
 
-同一次请求返回的多行数据，可以按行号错峰揭示，让列表像被逐行“写”出来。每一行的占位是自定义的头像加两行文字，和真实行的高度一致。
+Stagger rows from the same request by their index to make the list appear to be written line by line. Each row uses a custom avatar and two-line text placeholder with the same height as the real row.
 
 <SkeletonListDemo />
 
@@ -139,11 +139,11 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 ))}
 ```
 
-错峰延迟建议控制在每项 50–100 毫秒，整列总时长不超过半秒；行数较多时只给可视区域内的前几行加延迟。
+Keep staggered delays around 50–100 milliseconds per item and the whole list's delay within half a second. For longer lists, delay only the first few visible rows.
 
-### 文章正文
+### Article body
 
-长文本适合用 `reveal='fade'`：擦除的方向感会和阅读方向叠加，在大段文字上显得过于用力。标题和正文的 `SkeletonText` 分别使用和真实文本相同的字号类，行高因此一致。
+Long text works well with `reveal='fade'`. A directional wipe reinforces the reading direction and can feel excessive across a large passage. Apply the same font-size classes to the heading and body `SkeletonText` as to the real text so their line heights match.
 
 <SkeletonArticleDemo />
 
@@ -157,9 +157,9 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 </SkeletonReveal>
 ```
 
-### 图片网格
+### Image grid
 
-图片的尺寸在加载前就要确定下来，用 `aspect-*` 或固定宽高预留空间，占位才不会在图片到达时塌陷。延迟按行列计算，揭示会从左上角向右下角推进。
+Determine image dimensions before loading. Reserve space with `aspect-*` or fixed width and height so placeholders do not collapse when images arrive. Calculate delays by row and column to reveal the grid from the upper left to the lower right.
 
 <SkeletonGalleryDemo />
 
@@ -173,14 +173,14 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 </SkeletonReveal>
 ```
 
-### 分区内的数值
+### Values within a section
 
-页面结构本身是已知的：标题、说明和指标名称不需要等待，只有数值来自接口。把 `SkeletonReveal` 收窄到真正等待数据的那一小块，加载期间用户依然能读到“本月概览”和各项指标的含义。
+The page structure is already known: the heading, description, and metric labels do not need to wait; only the values come from the API. Limit `SkeletonReveal` to the small region actually waiting for data so users can still read “This month” and understand each metric while loading.
 
 <SkeletonSectionDemo />
 
 ```tsx
-<Section title='本月概览' aria-busy={pending || undefined}>
+<Section title='This month' aria-busy={pending || undefined}>
   <dl className='grid grid-cols-3'>
     {metrics.map((metric, index) => (
       <div key={metric.label}>
@@ -194,23 +194,23 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 </Section>
 ```
 
-占位的范围越小，加载时页面传达的信息越多。只在确实不知道内容形状时，才用一整块骨架盖住整个区域。
+Smaller placeholder regions let the page communicate more information during loading. Cover an entire region with one skeleton only when its content shape is genuinely unknown.
 
-## 语义与可访问性
+## Semantics and accessibility
 
-骨架屏的根节点、每一行和动画层都带 `aria-hidden`。占位不承载信息，读屏器不应该读到"一段空白"。加载状态由外层表达：
+The skeleton root, each line, and animation layers all have `aria-hidden`. Placeholders carry no information, so screen readers should not announce an empty block. Express loading state on the outer element:
 
 ```tsx
-<section aria-busy='true' aria-label='个人资料'>
+<section aria-busy='true' aria-label='Profile'>
   <Skeleton className='h-40 w-full' />
 </section>
 ```
 
-`aria-busy` 放在哪个元素上，取决于哪一部分正在加载，组件不做这个猜测。整页加载用一个 `role='status'` 的容器播报"正在加载"也可以，但要在加载完成后移除，避免焦点或播报重复。
+The appropriate location for `aria-busy` depends on which part is loading; the component does not guess. A `role='status'` container can announce “Loading” for a whole page, but remove it after loading to avoid duplicate focus or announcements.
 
-## 非组件属性
+## Native props
 
-`Skeleton` 和 `SkeletonText` 都接受原生 `div` 属性、`ref` 和 `render`。`render` 收到 `SkeletonState`，包含 `slot: 'skeleton'`、`variant` 和 `shape`：
+`Skeleton` and `SkeletonText` accept native `div` attributes, `ref`, and `render`. `render` receives `SkeletonState`, containing `slot: 'skeleton'`, `variant`, and `shape`:
 
 ```tsx
 <Skeleton
@@ -221,4 +221,4 @@ function ProfileCard({ profile }: { profile?: Profile }) {
 />
 ```
 
-这些值同时以 `data-slot`、`data-variant`、`data-shape` 输出，`SkeletonText` 另外输出 `data-lines`。需要按行渲染成别的标签时，把 `SkeletonText` 放进宿主里，而不是替换它的根节点：每一行由组件自己生成。
+These values are also exposed through `data-slot`, `data-variant`, and `data-shape`; `SkeletonText` additionally exposes `data-lines`. To use a different surrounding tag, place `SkeletonText` inside the host rather than replacing its root: the component generates each line itself.

@@ -1,24 +1,24 @@
 ---
 title: usePrevious
-description: 读取最近一次已执行 Effect 记录的值，理解首次渲染和重复渲染的区别。
+description: Read the value recorded by the most recently executed effect, distinguishing the first render from subsequent renders.
 icon: History
 ---
 
-`usePrevious` 在 Effect 中记录当前值，并在后续渲染时返回这份记录。它适合比较相邻提交前后的页码、日期或选中项。
+`usePrevious` records the current value in an effect and returns that record on subsequent renders. It suits comparing page numbers, dates, or selected items across adjacent commits.
 
 ## Playground
 
-先点击“下一页”，再点击“仅重渲染，不改页码”，观察 `previous` 的变化。“重新开始”会重新挂载示例，恢复首次渲染的 `null`。
+Click “Next page”, then “Rerender without changing page” and watch `previous`. “Restart” remounts the example and restores the first-render `null`.
 
 <UsePreviousPlayground />
 
-| 操作 | 当前页码 | `previous` |
+| Action | Current page | `previous` |
 | --- | --- | --- |
-| 重新开始 | `1` | `null` |
-| 下一页 | `2` | `1` |
-| 仅重渲染，不改页码 | `2` | `2` |
+| Restart | `1` | `null` |
+| Next page | `2` | `1` |
+| Rerender without changing page | `2` | `2` |
 
-## 比较当前页与之前的页
+## Comparing the current and previous pages
 
 ```tsx
 import { usePrevious } from "@momots/design/hooks";
@@ -29,29 +29,29 @@ function PageDirection({ page }: { page: number }) {
 
   return (
     <p>
-      当前第 {page} 页；
-      {direction > 0 ? "向后翻页" : direction < 0 ? "向前翻页" : "页码未变化"}
+      Current page: {page};
+      {direction > 0 ? "Moving forward" : direction < 0 ? "Moving backward" : "Page unchanged"}
     </p>
   );
 }
 ```
 
-## 返回值的时间含义
+## What the returned value represents over time
 
-首次渲染返回 `null`。提交后 Effect 才会保存本次值；保存记录本身不会引发重渲染。
+The first render returns `null`. The effect saves the current value only after commit; saving the record does not itself trigger a render.
 
-假设每次提交后 Effect 都已执行，行为如下：
+Assuming the effect has run after each commit, behavior is as follows:
 
-| 渲染原因 | 当前 `page` | 返回值 |
+| Render reason | Current `page` | Return value |
 | --- | --- | --- |
-| 首次挂载 | `1` | `null` |
-| 页码改为 2 | `2` | `1` |
-| 父组件因其他状态再次渲染 | `2` | `2` |
-| 页码改为 3 | `3` | `2` |
+| Initial mount | `1` | `null` |
+| Page changes to 2 | `2` | `1` |
+| Parent renders again due to other state | `2` | `2` |
+| Page changes to 3 | `3` | `2` |
 
-它不会持续保存“上一个不同的值”，也不会保存整段历史。如果切换方向需要在整个过渡期间保持不变，应在页码变更时把方向作为独立状态记录，不能依赖这个 Hook 在所有后续渲染中持续返回旧页码。
+It does not retain the last distinct value or a complete history. If transition direction must remain fixed throughout an animation, record direction as separate state when the page changes rather than relying on this hook to keep returning the old page across every later render.
 
-对象和数组按引用保存，不会创建快照或深拷贝。原地修改对象也会影响已经记录的引用，因此应使用不可变更新。
+Objects and arrays are stored by reference, without snapshots or deep copies. In-place mutations also affect the recorded reference, so use immutable updates.
 
 ## API
 
@@ -59,4 +59,4 @@ function PageDirection({ page }: { page: number }) {
 function usePrevious<T>(value: T): T | null;
 ```
 
-服务端渲染不执行 Effect，所以返回 `null`。真实输入值也可能是 `null`，此时无法仅凭返回值区分“尚无记录”和“上次值就是 null”；需要区分时，应由调用方显式建模。
+Server rendering does not run effects, so the return value is `null`. Since an actual input may also be `null`, the returned value alone cannot distinguish no record from a previously recorded null value. Model that distinction explicitly if needed.

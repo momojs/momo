@@ -1,14 +1,14 @@
 ---
 title: Button
-description: 带 motion 点击反馈的基础按钮。
+description: A basic button with Motion tap feedback.
 icon: MousePointer2
 ---
 
-`Button` 基于 `motion.button` 构建，提供 variant 与 size 变体，点击时有轻微缩放反馈，样式使用 momo semantic token。
+`Button` builds on `motion.button`, with variants and sizes, subtle press scaling, and momo semantic styles.
 
 <ButtonPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Button } from "@momots/design/components/button";
@@ -18,18 +18,18 @@ import { Button } from "@momots/design/components/button";
 </Button>
 ```
 
-## 事件语义
+## Event semantics
 
-`onTap` 原样遵循 Motion 的 tap 手势：指针或触摸完成轻触，以及按钮聚焦后使用 Enter 键。手势取消时不会调用 `onTap`。原生 Space 键产生的 click 与 `HTMLElement.click()` 不会被转换为 tap。
+`onTap` follows Motion tap gestures directly: completed pointer/touch taps and Enter on a focused button. Canceled gestures do not call `onTap`. Native Space-generated clicks and `HTMLElement.click()` are not converted into taps.
 
-`onClick` 仍是原生 click 的处理入口。需要响应按钮的原生点击激活时，使用 `onClick`。
+`onClick` handles native clicks. Use it when responding to native button activation.
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `variant` | `"default" \| "accent" \| "destructive" \| "outline" \| "secondary" \| "ghost" \| "link"` | 视觉变体 |
-| `size` | `"default" \| "inline" \| "xs" \| "sm" \| "lg" \| "xl" \| "icon" \| "icon-xs" \| "icon-sm" \| "icon-lg"` | 尺寸；`inline` 使用 `inline-flex`，宽高均为 `unset` |
-| `className` | `string` | 追加 Tailwind class |
-| `disabled` | `boolean` | 禁用按钮 |
-| `...props` | `HTMLMotionProps<"button">` | 其余原生 button / motion 属性 |
+| `variant` | `"default" \| "accent" \| "destructive" \| "outline" \| "secondary" \| "ghost" \| "link"` | Visual variant |
+| `size` | `"default" \| "inline" \| "xs" \| "sm" \| "lg" \| "xl" \| "icon" \| "icon-xs" \| "icon-sm" \| "icon-lg"` | Size; `inline` uses `inline-flex` with width and height `unset` |
+| `className` | `string` | Additional Tailwind classes |
+| `disabled` | `boolean` | Disables the button |
+| `...props` | `HTMLMotionProps<"button">` | Other native button / Motion props |

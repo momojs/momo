@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { usePrevious } from '../../../../../packages/design/src/hooks/use-previous';
 import { PlaygroundFrame } from './shared';
@@ -17,6 +19,7 @@ export function UsePreviousPlayground() {
 }
 
 function PreviousExample({ onReset }: { onReset: () => void }) {
+  const t = useSiteTranslations();
   const [page, setPage] = useState(1);
   const [rerenders, setRerenders] = useState(0);
   const previous = usePrevious(page);
@@ -30,13 +33,13 @@ function PreviousExample({ onReset }: { onReset: () => void }) {
             variant='outline'
             onClick={() => setRerenders((count) => count + 1)}
           >
-            仅重渲染，不改页码
+            {t('仅重渲染，不改页码')}
           </Button>
           <Button size='sm' variant='ghost' onClick={onReset}>
-            重新开始
+            {t('重新开始')}
           </Button>
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
-            先翻页，再触发一次无关渲染，观察 previous 如何追上当前页码。
+            {t('先翻页，再触发一次无关渲染，观察 previous 如何追上当前页码。')}
           </p>
         </>
       }
@@ -44,15 +47,19 @@ function PreviousExample({ onReset }: { onReset: () => void }) {
       <div className='grid w-full max-w-xl gap-momo-md'>
         <dl className='grid grid-cols-2 gap-momo-sm'>
           <div className='rounded-momo-md border border-momo-border-default bg-momo-bg-surface p-momo-md'>
-            <dt className='text-momo-caption text-momo-fg-muted'>当前 page</dt>
+            <dt className='text-momo-caption text-momo-fg-muted'>
+              {t('当前 page')}
+            </dt>
             <dd className='mt-momo-xs font-mono text-momo-title-lg'>
-              <output aria-label='当前页码'>{page}</output>
+              <output aria-label={t('当前页码')}>{page}</output>
             </dd>
           </div>
           <div className='rounded-momo-md border border-momo-border-default bg-momo-bg-surface p-momo-md'>
             <dt className='text-momo-caption text-momo-fg-muted'>previous</dt>
             <dd className='mt-momo-xs font-mono text-momo-title-lg'>
-              <output aria-label='上次记录的页码'>{String(previous)}</output>
+              <output aria-label={t('上次记录的页码')}>
+                {String(previous)}
+              </output>
             </dd>
           </div>
         </dl>
@@ -63,26 +70,27 @@ function PreviousExample({ onReset }: { onReset: () => void }) {
             disabled={page === 1}
             onClick={() => setPage((value) => value - 1)}
           >
-            上一页
+            {t('上一页')}
           </Button>
           <Button
             size='sm'
             variant='outline'
             onClick={() => setPage((value) => value + 1)}
           >
-            下一页
+            {t('下一页')}
           </Button>
         </div>
         <p className='text-momo-body-sm'>
           {previous === null
-            ? '首次渲染，还没有记录。'
+            ? t('首次渲染，还没有记录。')
             : previous === page
-              ? '记录值与当前页码相同。'
-              : `本次从第 ${previous} 页切换到第 ${page} 页。`}
+              ? t('记录值与当前页码相同。')
+              : t('本次从第 {0} 页切换到第 {1} 页。', previous, page)}
         </p>
         <p className='text-momo-caption text-momo-fg-muted'>
-          无关渲染次数：<output aria-label='无关渲染次数'>{rerenders}</output>。
-          Effect 保存记录不会主动更新界面，下一次渲染才能读到。
+          {t('无关渲染次数：')}
+          <output aria-label={t('无关渲染次数')}>{rerenders}</output>
+          {t('。 Effect 保存记录不会主动更新界面，下一次渲染才能读到。')}
         </p>
       </div>
     </PlaygroundFrame>

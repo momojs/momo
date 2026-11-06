@@ -1,22 +1,22 @@
 ---
 title: useMergedRefs
-description: 合并组件内部与外部的 refs，保留对象 ref、回调 ref 和清理函数的行为。
+description: Merge internal and external refs while preserving object refs, callback refs, and cleanup behavior.
 icon: GitMerge
 ---
 
-`useMergedRefs` 把多个 ref 合并为一个稳定的回调 ref，让组件内部和调用方获得同一个节点。它适用于需要内部测量、聚焦或第三方库绑定，同时又向外暴露节点的组件。
+`useMergedRefs` combines refs into one stable callback ref so the component and caller receive the same node. Use it for internal measurement, focus, or third-party binding while exposing the node externally.
 
 ## Playground
 
-输入一些文字，通过对象 ref 聚焦，再切换回调 A / B。事件记录会显示旧回调的清理和新回调的绑定，输入框仍保留原来的内容。卸载后再挂载，则会创建新的输入框。
+Enter text, focus through the object ref, then switch callback A / B. Event history shows old callback cleanup and new binding while preserving input content. Unmounting and mounting creates a new input.
 
 <UseMergedRefsPlayground />
 
-对象 ref 用于聚焦，回调 ref 负责监听焦点事件；两者通过同一个合并 ref 绑定节点。清空事件记录只重置演示日志，不会重新绑定 refs。
+The object ref handles focusing and the callback ref observes focus events; both bind through one merged ref. Clearing event history resets only demo logs without rebinding refs.
 
-## 内部 ref 与外部 ref
+## Internal and external refs
 
-下面的输入框用内部 ref 实现聚焦，同时保留调用方传入的 ref：
+This input uses an internal ref for focus while preserving the caller's ref:
 
 ```tsx
 import type { ComponentPropsWithRef } from "react";
@@ -34,7 +34,7 @@ function SearchInput({
     <div>
       <input {...props} ref={mergedRef} />
       <button type="button" onClick={() => inputRef.current?.focus()}>
-        聚焦输入框
+        Focus input
       </button>
     </div>
   );
@@ -42,24 +42,24 @@ function SearchInput({
 
 function Search() {
   const ref = useRef<HTMLInputElement>(null);
-  return <SearchInput ref={ref} aria-label="搜索项目" />;
+  return <SearchInput ref={ref} aria-label="Search projects" />;
 }
 ```
 
-也可以从 `@momots/design/hooks/use-merged-refs` 独立导入。以上示例使用 React 19 的 ref prop，不需要额外包裹 `forwardRef`。
+You can also import from `@momots/design/hooks/use-merged-refs`. The example uses React 19's ref prop without a `forwardRef` wrapper.
 
-## 挂载与清理
+## Mounting and cleanup
 
-**回调 ref** 是接收节点的函数；它可以返回一个清理函数，在节点脱离绑定时释放资源。
+A **callback ref** receives a node and may return a cleanup function to release resources when detached.
 
-| 输入 ref | 绑定节点时 | 解除绑定时 |
+| Input ref | On attachment | On detachment |
 | --- | --- | --- |
-| 对象 ref | 将节点写入 `.current` | 将 `.current` 设为 `null` |
-| 返回清理函数的回调 ref | 调用回调，保存清理函数 | 调用清理函数，不再额外调用 `ref(null)` |
-| 没有返回清理函数的回调 ref | 调用 `ref(node)` | 调用 `ref(null)` |
-| `null` / `undefined` | 忽略 | 忽略 |
+| Object ref | Writes the node to `.current` | Sets `.current` to `null` |
+| Callback returning cleanup | Calls the callback and stores cleanup | Calls cleanup without an additional `ref(null)` |
+| Callback without cleanup | Calls `ref(node)` | Calls `ref(null)` |
+| `null` / `undefined` | Ignored | Ignored |
 
-例如，可以把原生事件监听的生命周期交给回调 ref：
+For example, a callback ref can own native event-listener lifecycle:
 
 ```tsx
 import { useCallback, useRef } from "react";
@@ -69,21 +69,21 @@ function FocusProbe() {
   const localRef = useRef<HTMLInputElement>(null);
   const observe = useCallback((node: HTMLInputElement | null) => {
     if (!node) return;
-    const onFocus = () => console.log("输入框获得焦点");
+    const onFocus = () => console.log("Input focused");
     node.addEventListener("focus", onFocus);
     return () => node.removeEventListener("focus", onFocus);
   }, []);
   const ref = useMergedRefs(localRef, observe);
 
-  return <input ref={ref} aria-label="焦点示例" />;
+  return <input ref={ref} aria-label="Focus example" />;
 }
 ```
 
-## 输入 refs 变化时
+## When input refs change
 
-返回的合并回调在同一次组件挂载期间保持稳定。输入 refs 的数量、顺序或引用发生变化时，Hook 会在提交阶段清理旧的一组 refs，再把当前节点绑定到新的一组 refs；即使 DOM 节点没有变化，也会同步。
+The merged callback stays stable for one component mount. When input ref count, order, or references change, the hook cleans up the old group at commit and binds the current node to the new group, even if the DOM node is unchanged.
 
-因此，稳定的合并回调不代表输入回调永远只执行一次。内联创建的回调 ref 每次渲染都不同，会触发旧绑定清理和新绑定建立；需要避免这种重复工作时，用 `useCallback` 保持输入回调稳定。开发环境的 StrictMode 也可能额外执行绑定和清理。
+A stable merged callback therefore does not mean input callbacks run only once. Inline callback refs change each render, triggering cleanup and rebinding; use `useCallback` to avoid unnecessary work. Development StrictMode may also perform additional binding and cleanup.
 
 ## API
 
@@ -93,4 +93,4 @@ function useMergedRefs<Value>(
 ): React.RefCallback<Value>;
 ```
 
-所有输入 refs 应指向同一个值类型。一次调用返回的合并 ref 应只绑定一个节点；需要绑定多个节点时，为每个节点分别调用 Hook，或使用专门的节点注册机制。
+All input refs should target the same value type. Bind one merged ref to only one node. For multiple nodes, call the hook separately or use a dedicated node registry.

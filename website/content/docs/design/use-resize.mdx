@@ -1,29 +1,29 @@
 ---
 title: useResize
-description: 监听元素布局边框盒的物理尺寸，区分零尺寸、无效布局和暂停监听。
+description: Observe physical layout border-box dimensions, distinguishing zero size, invalid layout, and paused observation.
 icon: Ruler
 ---
 
-`useResize` 在绑定元素后读取初始尺寸，并通过 `ResizeObserver` 监听后续尺寸变化。它适合图表容器、自定义布局和滚动区域；需要登记多个内容面板并输出动画尺寸时，使用 [useAutoSize](/docs/design/use-auto-size)。
+`useResize` reads initial element dimensions and observes later changes through `ResizeObserver`. It suits chart containers, custom layouts, and scroll regions. Use [useAutoSize](/docs/design/use-auto-size) to register multiple content panels and produce animated dimensions.
 
 ## Playground
 
-修改容器宽度，观察边框盒测量结果；开启“缩放为 75%”，测量值不会随视觉缩放改变。还可以暂停监听、切换布局或更换逻辑 key。
+Adjust container width to observe border-box measurement. Enabling “Scale to 75%” does not change measured dimensions. You can also pause observation, switch layouts, or change the logical key.
 
-切换 `display` 时，演示会重新挂载被测节点，分别观察各布局的初次测量结果。
+Changing `display` remounts the measured node in the demo to show each layout's initial measurement.
 
 <UseResizePlayground />
 
-| 操作 | 观察结果 |
+| Action | Result |
 | --- | --- |
-| `display: none` | 报告 `0 × 0`，表示有效的零尺寸 |
-| `display: contents` | 报告 `null`，表示目标没有可测量的布局盒 |
-| 暂停监听后修改宽度 | 保留最后一次报告，恢复后读取当前尺寸 |
-| 更换逻辑 key | 即使尺寸相同，也重新报告一次初始尺寸 |
+| `display: none` | Reports `0 × 0`, a valid zero size |
+| `display: contents` | Reports `null`: the target has no measurable layout box |
+| Change width while paused | Retains the last report; reads current dimensions on resume |
+| Change logical key | Reports initial dimensions again even if unchanged |
 
-## 读取容器尺寸
+## Reading container dimensions
 
-用 callback ref 把节点保存到 state，再把节点传给 Hook：
+Store the node in state through a callback ref, then pass it to the hook:
 
 ```tsx
 import { useState } from "react";
@@ -39,11 +39,11 @@ function SizeProbe() {
   return (
     <section>
       <div ref={setTarget} className="w-full border p-4">
-        调整窗口宽度，观察这个容器的尺寸。
+        Resize the window to observe this container.
       </div>
       <output>
         {size === null
-          ? "尚未测量或布局不受支持"
+          ? "Not measured or unsupported layout"
           : `${size.width.toFixed(1)} × ${size.height.toFixed(1)} CSS px`}
       </output>
     </section>
@@ -51,29 +51,29 @@ function SizeProbe() {
 }
 ```
 
-不要仅在渲染时传入 `ref.current` 并期待它自动订阅。对象 ref 的赋值不会触发重渲染，而 callback ref 配合 state 可以让 Hook 收到初次挂载、替换和移除后的节点。
+Do not merely pass `ref.current` during rendering and expect automatic subscription. Object-ref assignments do not trigger rerenders; a callback ref with state lets the hook receive initial mounting, replacement, and removal.
 
-## 测量的是什么
+## What is measured
 
-**布局边框盒** 包括内容、内边距和边框，不包括外边距。返回的 `width` 和 `height` 是物理宽高，以 CSS 像素为单位，可能带小数；纵向书写模式也按物理轴返回。
+The **layout border box** includes content, padding, and borders, excluding margins. `width` and `height` are physical dimensions in CSS pixels and may be fractional; vertical writing modes still return physical axes.
 
-CSS transform 不改变这里测量的布局尺寸。例如，`scale(2)` 使元素看起来放大，但不会让返回值翻倍。Hook 也不追踪元素的位置或只发生滚动的变化。
+CSS transforms do not change these layout dimensions. For example, `scale(2)` visually enlarges an element without doubling the returned values. The hook does not track position or scroll-only changes.
 
-| 情况 | 行为 |
+| Condition | Behavior |
 | --- | --- |
-| `target === null` | 暂停监听，不调用回调，也不主动清空调用方已有尺寸 |
-| 有效布局盒的宽高为零 | 返回 `{ width: 0, height: 0 }` |
-| `display: none` | 返回有效的零尺寸 |
-| `display: contents` 或普通非替换行内元素 | 回调收到 `null`，开发环境发出警告 |
-| 不支持的布局变成有效布局盒 | 继续通过尺寸观察恢复测量 |
+| `target === null` | Pauses observation without calling back or clearing existing caller dimensions |
+| A valid layout box has zero dimensions | Returns `{ width: 0, height: 0 }` |
+| `display: none` | Returns a valid zero size |
+| `display: contents` or ordinary non-replaced inline element | Calls back with `null` and warns in development |
+| Unsupported layout becomes measurable | Resumes measurement through size observation |
 
-需要测量普通行内内容时，可增加 `inline-block`、`block`、`flex` 或 `grid` 包装。环境需要提供 `ResizeObserver`；Hook 不内置 polyfill。
+Wrap ordinary inline content with `inline-block`, `block`, `flex`, or `grid` for measurement. The environment must provide `ResizeObserver`; no polyfill is bundled.
 
-## 回调与逻辑绑定
+## Callbacks and logical binding
 
-Hook 在 layout effect 中开始监听并读取初始尺寸，之后只在宽高或测量有效性变化时通知。更新 `onResize` 会使用最近一次提交的回调，不会仅因回调引用变化而重新订阅。
+The hook subscribes and reads initial dimensions in a layout effect, then notifies only when dimensions or measurement validity change. Updating `onResize` uses the latest committed callback without resubscribing solely because its reference changed.
 
-有些虚拟列表会复用同一个 DOM 节点显示不同条目。这时可以用 `key` 表达新的逻辑绑定：
+Virtual lists may reuse one DOM node for different items. Use `key` to represent a new logical binding:
 
 ```tsx
 useResize(target, (_element, size) => {
@@ -81,9 +81,9 @@ useResize(target, (_element, size) => {
 }, { key: itemId });
 ```
 
-`key` 变化会重新订阅并报告初始尺寸，即使节点和尺寸没有变化。Hook 会忽略已清理监听器后续到达的通知；如果调用方另外安排了异步任务或队列更新，应用结果前仍需自行确认它属于当前条目。
+Changing `key` resubscribes and reports initial dimensions even if the node and dimensions are unchanged. Notifications from cleaned-up observers are ignored. If callers schedule additional asynchronous work or queued updates, they must still verify that results belong to the current item.
 
-不要让测量结果持续改变被测元素本身的尺寸，否则可能产生反馈循环。通常应测量内层内容，再更新外层容器或其他消费者。
+Avoid measurement results continually resizing the measured element, which can cause a feedback loop. Usually measure inner content and update an outer container or another consumer.
 
 ## API
 
@@ -104,4 +104,4 @@ function useResize<T extends HTMLElement>(
 ): void;
 ```
 
-Hook 不返回尺寸状态，由调用方选择如何使用回调结果。组件卸载、目标替换或 `key` 变化时，会断开旧的观察器。
+The hook returns no dimension state; callers decide how to use callback results. Unmounting, target replacement, or `key` changes disconnect the old observer.

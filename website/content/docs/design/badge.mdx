@@ -1,22 +1,22 @@
 ---
 title: Badge
-description: 用于状态、分类与元数据的轻量标签。
+description: Lightweight labels for status, categories, and metadata.
 icon: BadgeInfo
 ---
 
-`Badge` 基于 Base UI 的 `useRender` 封装，默认渲染为 `span`。它提供语义化的 variant、统一的尺寸与 momo semantic token，也可以通过 `render` 组合为链接。
+`Badge` wraps Base UI's `useRender` and renders a `span` by default. It provides semantic variants, consistent sizes, and momo semantic tokens, and can be composed as a link through `render`.
 
 <BadgePlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Badge } from "@momots/design/components/badge";
 
-<Badge variant="success">已同步</Badge>
+<Badge variant="success">Synced</Badge>
 ```
 
-图标可以直接作为子元素传入。装饰性图标应从可访问树中隐藏：
+Pass icons directly as children. Hide decorative icons from the accessibility tree:
 
 ```tsx
 import { Clock01Icon } from "@hugeicons/core-free-icons";
@@ -26,55 +26,55 @@ import { Badge } from "@momots/design/components/badge";
 
 <Badge variant="warning" size="md">
   <HugeiconsIcon icon={Clock01Icon} aria-hidden />
-  处理中
+  Processing
 </Badge>
 ```
 
-## 状态语义
+## Status semantics
 
-选择 variant 时应先表达内容语义，而不只是匹配页面颜色：
+Choose a variant to express the content's meaning, rather than only matching a page color:
 
-| Variant | 适用语义 |
+| Variant | Meaning |
 | --- | --- |
-| `default` | 中性信息或一般元数据 |
-| `brand` | 品牌标签、当前分类或需要突出显示的信息 |
-| `success` | 已完成、可用或运行正常 |
-| `warning` | 待处理、需要注意或可能存在风险 |
-| `danger` | 失败、不可用或高风险状态 |
-| `outline` | 低强调的分类与辅助元数据 |
+| `default` | Neutral information or general metadata |
+| `brand` | Brand labels, current categories, or highlighted information |
+| `success` | Completed, available, or operating normally |
+| `warning` | Pending, requiring attention, or potentially risky |
+| `danger` | Failed, unavailable, or high-risk status |
+| `outline` | Low-emphasis categories and supporting metadata |
 
-状态文字应明确说明含义，例如“已同步”或“等待审核”，不要只依赖颜色传达状态。
+Use clear status text such as “Synced” or “Awaiting review”; do not rely on color alone.
 
-## 多态链接
+## Polymorphic links
 
-传入 `render` 后，Badge 会把 class、数据属性与原生属性合并到目标元素。链接仍应使用真实的 `a` 元素：
+With `render`, Badge merges its classes, data attributes, and native attributes onto the target element. A link should still use a real `a` element:
 
 ```tsx
 <Badge
   variant="brand"
   render={<a href="/docs/design" />}
 >
-  查看组件文档
+  View component docs
 </Badge>
 ```
 
-默认的 Badge 是呈现型标签，不具备按钮交互语义。需要执行操作时使用 `Button`；只有内容确实导航到另一个位置时才组合为链接。
+The default Badge is a presentational label without button interaction semantics. Use `Button` to perform actions; compose Badge as a link only when its content navigates elsewhere.
 
-## 可访问性
+## Accessibility
 
-- Badge 不会自动添加 `role="status"` 或 `aria-live`，因此静态标签不会被辅助技术重复播报。
-- 动态更新且需要立即通知用户的状态，应由业务场景决定是否在外层使用 live region。
-- 装饰性图标添加 `aria-hidden`；有独立含义的图标需要可访问名称。
-- 使用颜色之外的清晰文字表达状态，保证不同视觉能力的用户都能理解。
-- 组合为链接时，链接文字应能脱离上下文表达目的，并保持可见的键盘焦点。
+- Badge does not automatically add `role="status"` or `aria-live`, so static labels are not repeatedly announced by assistive technology.
+- For dynamic status updates requiring immediate notification, decide at the application level whether to use an outer live region.
+- Add `aria-hidden` to decorative icons; icons with independent meaning need accessible names.
+- Express status with clear text as well as color so users with different visual abilities can understand it.
+- When composing a link, use text that conveys its purpose out of context and preserve visible keyboard focus.
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `variant` | `"default" \| "brand" \| "success" \| "warning" \| "danger" \| "outline"` | 状态语义与视觉变体，默认 `"default"` |
-| `size` | `"sm" \| "md" \| "lg"` | 标签尺寸，默认 `"md"` |
-| `children` | `ReactNode` | 标签内容，可直接包含 SVG 图标 |
-| `render` | `ReactElement \| ((props, state) => ReactElement)` | 将默认 `span` 组合为链接等其他元素 |
-| `className` | `string` | 追加 Tailwind class |
-| `...props` | `useRender.ComponentProps<"span">` | 其余原生属性与 Base UI render 属性 |
+| `variant` | `"default" \| "brand" \| "success" \| "warning" \| "danger" \| "outline"` | Status semantics and appearance; defaults to `"default"` |
+| `size` | `"sm" \| "md" \| "lg"` | Label size; defaults to `"md"` |
+| `children` | `ReactNode` | Label content, including SVG icons |
+| `render` | `ReactElement \| ((props, state) => ReactElement)` | Compose the default `span` as another element, such as a link |
+| `className` | `string` | Additional Tailwind classes |
+| `...props` | `useRender.ComponentProps<"span">` | Other native attributes and Base UI render props |

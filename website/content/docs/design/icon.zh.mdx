@@ -1,0 +1,96 @@
+---
+title: Icon
+description: 统一的线框图标入口，切换图标数据时自动变形，沿用 momo 动效主题。
+icon: Shapes
+---
+
+`Icon` 接收图标数据，首次渲染直接显示目标图形，后续改变 `icon` 时通过 Morphicons 平滑变形。尺寸、颜色和描边使用普通 SVG 属性；动效读取 momo 的 `snap` 配置，无需额外 Provider。
+
+<IconPlayground />
+
+## 使用
+
+```tsx
+import { CheckmarkCircle02Icon, Copy01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@momots/design/components/icon";
+
+<Icon icon={copied ? CheckmarkCircle02Icon : Copy01Icon} />;
+```
+
+Morphicons 是 `@momots/design` 的普通依赖，会随组件库安装。已有 Hugeicons 项目可以保留 `@hugeicons/core-free-icons` 的数据导入，把适合变形的 `HugeiconsIcon` 改为 `Icon`。不要根据当前图标设置 React `key`，否则组件会重新挂载，无法延续上一个形状。
+
+`Icon` 也从 `@momots/design` 和 `@momots/design/components` 导出；相关类型为 `IconProps` 和 `IconData`。
+
+## 图标数据
+
+`icon` 接受原始 SVG path 的 `d` 字符串，或 `[tag, attrs][]` 格式的节点数据。Hugeicons 的线框数据可以直接传入；其他图标库需要提供数据，而不是 React 组件或 `<svg>` 元素。
+
+```tsx
+import type { IconData } from "@momots/design/components/icon";
+
+const menu = [
+  ["path", { d: "M4 6h16M4 12h16M4 18h16" }],
+] as const satisfies IconData;
+
+<Icon icon={menu} size={24} />;
+```
+
+数据支持 `path`、`line`、`circle`、`ellipse`、`rect`、`polyline`、`polygon`，两端必须使用同一个坐标空间，默认是 `24 × 24`。自定义数据应在模块作用域定义或保持引用稳定，避免每次渲染创建新的数据对象。
+
+这个入口面向单色、统一描边的线框图标。它将几何合并为一条路径，不保留节点各自的颜色、描边宽度或透明度；不支持依赖 `g`、`transform`、mask、渐变或填充造型的图标。此类内容继续使用原图标组件或组件提供的自定义 slot。`morph={false}` 只关闭过渡，不改变数据支持范围。
+
+## 动效与 loading
+
+`Icon` 使用 `MotionUIThemeProvider` 中 `snap` 的 spring 参数；没有 Provider 时使用 momo 默认主题。连续切换时从当前形状继续向新目标运动。
+
+系统开启减少动态效果后，`calm` 和 `off` 模式均立即切换图形，并停止正在进行的变形。单个图标也可以显式关闭过渡：
+
+```tsx
+<Icon icon={currentIcon} morph={false} />;
+```
+
+加载状态使用 `Spinner`，`Icon` 不提供 `spin`。需要从 loading 平滑变成结果图标时，保留同一个 `Spinner`，通过 `icon` 传入目标：
+
+```tsx
+import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
+import { Spinner } from "@momots/design/components/spinner";
+
+<Spinner
+  icon={loading ? undefined : CheckmarkCircle02Icon}
+  aria-hidden
+/>;
+```
+
+未传 `icon` 时播放原有的圆弧伸缩和旋转；传入后，从当前可见圆弧（包含旋转角度）通过 Morphicons 变成目标。后续改变 `icon` 也会继续变形。重新移除 `icon` 会停止当前变形，立即开始新一轮 loading。
+
+循环末尾有一小段圆弧完全不可见的时间；若此时完成加载，会淡入结果图标，避免凭空闪出完整圆环。
+
+`Spinner` 与 `Icon` 共用路径变形逻辑和 `snap` 主题，描边默认统一为 `1.8`，可通过 `strokeWidth` 调整；尺寸沿用 Spinner 的 `width` / `height`，默认 `1em`。`morph={false}` 关闭形状过渡，系统减少动态效果同时停止 loading 循环和路径变形。直接在 `<Spinner />` 与 `<Icon />` 之间替换组件仍不会衔接动画。
+
+## 可访问性与 ref
+
+按钮中的装饰图标默认设置 `aria-hidden`，可访问名称由按钮提供：
+
+```tsx
+<button type="button" aria-label="复制" onClick={copy}>
+  <Icon icon={Copy01Icon} />
+</button>
+```
+
+独立表达含义时使用 `label`，组件会生成 `<title>` 和 `role="img"`。也支持原生 `aria-label`、`aria-labelledby`。`ref` 指向实际的 `SVGSVGElement`。
+
+```tsx
+<Icon icon={CheckmarkCircle02Icon} label="保存成功" />;
+```
+
+## Props
+
+| Prop | 类型 | 默认值 | 用途 |
+| --- | --- | --- | --- |
+| `icon` | `IconData` | 必填 | 当前线框图标数据或 path 字符串 |
+| `morph` | `boolean` | `true` | 是否过渡后续图标变化 |
+| `size` | `number \| string` | `18` | SVG 宽高，支持像素或 `"1em"` |
+| `strokeWidth` | `number \| string` | `1.8` | 统一描边宽度 |
+| `color` | `string` | `"currentColor"` | 描边颜色，默认跟随文字颜色 |
+| `label` | `string` | — | 独立图标的可访问名称 |
+| 其他 | SVG props | — | `className`、事件、ARIA 与原生 SVG ref |

@@ -1,0 +1,35 @@
+---
+title: Button
+description: 带 motion 点击反馈的基础按钮。
+icon: MousePointer2
+---
+
+`Button` 基于 `motion.button` 构建，提供 variant 与 size 变体，点击时有轻微缩放反馈，样式使用 momo semantic token。
+
+<ButtonPlayground />
+
+## 使用
+
+```tsx
+import { Button } from "@momots/design/components/button";
+
+<Button variant="default" size="default" onClick={() => console.log("clicked")}>
+  Continue
+</Button>
+```
+
+## 事件语义
+
+`onTap` 原样遵循 Motion 的 tap 手势：指针或触摸完成轻触，以及按钮聚焦后使用 Enter 键。手势取消时不会调用 `onTap`。原生 Space 键产生的 click 与 `HTMLElement.click()` 不会被转换为 tap。
+
+`onClick` 仍是原生 click 的处理入口。需要响应按钮的原生点击激活时，使用 `onClick`。
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `variant` | `"default" \| "accent" \| "destructive" \| "outline" \| "secondary" \| "ghost" \| "link"` | 视觉变体 |
+| `size` | `"default" \| "inline" \| "xs" \| "sm" \| "lg" \| "xl" \| "icon" \| "icon-xs" \| "icon-sm" \| "icon-lg"` | 尺寸；`inline` 使用 `inline-flex`，宽高均为 `unset` |
+| `className` | `string` | 追加 Tailwind class |
+| `disabled` | `boolean` | 禁用按钮 |
+| `...props` | `HTMLMotionProps<"button">` | 其余原生 button / motion 属性 |

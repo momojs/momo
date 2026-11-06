@@ -4,6 +4,8 @@ import { useLayoutEffect, useState } from 'react';
 
 import { motion, useReducedMotion } from 'motion/react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Select } from '../../../../../packages/design/src/components/select';
 import { useAutoSize } from '../../../../../packages/design/src/hooks/use-auto-size';
@@ -42,15 +44,16 @@ type Scenario = (typeof scenarios)[number]['value'];
 type Panel = 'summary' | 'details';
 
 function Description({ expanded = false }: { expanded?: boolean }) {
+  const t = useSiteTranslations();
   return (
     <div className='grid gap-momo-sm p-momo-md text-momo-body-sm leading-relaxed'>
-      <p className='font-medium'>{expanded ? '详细说明' : '内容摘要'}</p>
-      <p>内容按可用宽度自然换行，外层容器跟随实际测量的高度。</p>
+      <p className='font-medium'>{expanded ? t('详细说明') : t('内容摘要')}</p>
+      <p>{t('内容按可用宽度自然换行，外层容器跟随实际测量的高度。')}</p>
       {expanded && (
         <>
-          <p>新增的说明可以来自用户操作，也可以来自异步返回的数据。</p>
-          <p>不需要预先知道最终高度，也不需要为每段内容计算像素。</p>
-          <p>在动画结束前收起，Motion 会从当前显示高度转向新的目标。</p>
+          <p>{t('新增的说明可以来自用户操作，也可以来自异步返回的数据。')}</p>
+          <p>{t('不需要预先知道最终高度，也不需要为每段内容计算像素。')}</p>
+          <p>{t('在动画结束前收起，Motion 会从当前显示高度转向新的目标。')}</p>
         </>
       )}
     </div>
@@ -58,9 +61,12 @@ function Description({ expanded = false }: { expanded?: boolean }) {
 }
 
 function MonthDiagram({ weeks }: { weeks: number }) {
+  const t = useSiteTranslations();
   return (
     <div className='grid min-w-0 gap-momo-sm rounded-momo-md border border-momo-border-default p-momo-sm'>
-      <p className='text-momo-caption'>{weeks} 周月份示意</p>
+      <p className='text-momo-caption'>
+        {weeks} {t('周月份示意')}
+      </p>
       <div className='grid grid-cols-7 gap-1' aria-hidden>
         {Array.from({ length: weeks * 7 }, (_, day) => (
           <span key={day} className='h-4 rounded-sm bg-momo-bg-surface-muted' />
@@ -93,6 +99,7 @@ function SizeScenario({
   onScenarioChange: (scenario: Scenario) => void;
   onReset: () => void;
 }) {
+  const t = useSiteTranslations();
   const { register, activate, clear, width, height } = useAutoSize();
   const prefersReducedMotion = useReducedMotion();
   const [staticSize, setStaticSize] = useState(false);
@@ -127,12 +134,15 @@ function SizeScenario({
       controls={
         <>
           <div className='grid gap-2 text-xs font-medium text-momo-fg-muted'>
-            <span>场景</span>
+            <span>{t('场景')}</span>
             <Select<Scenario>
               size='sm'
               value={scenario}
-              options={scenarios.map(({ value, label }) => ({ value, label }))}
-              trigger={{ className: 'w-full text-xs', 'aria-label': '场景' }}
+              options={scenarios.map(({ value, label }) => ({
+                value,
+                label: t(label),
+              }))}
+              trigger={{ className: 'w-full text-xs', 'aria-label': t('场景') }}
               popup={{ className: 'text-xs' }}
               item={{ className: 'text-xs' }}
               onChange={onScenarioChange}
@@ -140,14 +150,14 @@ function SizeScenario({
           </div>
           {scenario === 'content' && (
             <CheckboxControl
-              label='缩窄内容'
+              label={t('缩窄内容')}
               checked={narrow}
               onChange={setNarrow}
             />
           )}
           {scenario === 'panels' && (
             <CheckboxControl
-              label='拒绝切换请求'
+              label={t('拒绝切换请求')}
               checked={reject}
               onChange={setReject}
             />
@@ -155,29 +165,29 @@ function SizeScenario({
           {scenario === 'calendar' && (
             <>
               <CheckboxControl
-                label='纵向排列'
+                label={t('纵向排列')}
                 checked={stacked}
                 onChange={setStacked}
               />
               <CheckboxControl
-                label='显示第二个月'
+                label={t('显示第二个月')}
                 checked={twoMonths}
                 onChange={setTwoMonths}
               />
             </>
           )}
           <CheckboxControl
-            label='立即更新尺寸'
+            label={t('立即更新尺寸')}
             checked={staticSize}
             onChange={setStaticSize}
           />
           <p className='text-xs leading-relaxed text-momo-fg-muted'>
             {prefersReducedMotion
-              ? '系统已开启减少动态效果，尺寸立即更新。'
-              : '默认使用弹簧动画；开启“立即更新尺寸”可只观察测量结果。'}
+              ? t('系统已开启减少动态效果，尺寸立即更新。')
+              : t('默认使用弹簧动画；开启“立即更新尺寸”可只观察测量结果。')}
           </p>
           <Button size='sm' variant='ghost' onClick={onReset}>
-            重新开始
+            {t('重新开始')}
           </Button>
         </>
       }
@@ -185,10 +195,13 @@ function SizeScenario({
       <div className='grid w-full min-w-0 max-w-xl gap-momo-md'>
         <div className='grid gap-momo-xs'>
           <h3 className='font-medium'>
-            {scenarios.find((item) => item.value === scenario)?.label}
+            {t(scenarios.find((item) => item.value === scenario)?.label ?? '')}
           </h3>
           <p className='text-momo-body-sm text-momo-fg-muted'>
-            {scenarios.find((item) => item.value === scenario)?.description}
+            {t(
+              scenarios.find((item) => item.value === scenario)?.description ??
+                '',
+            )}
           </p>
         </div>
         <div className='flex flex-wrap gap-momo-xs'>
@@ -199,14 +212,14 @@ function SizeScenario({
                 variant='outline'
                 onClick={() => setExpanded((previous) => !previous)}
               >
-                {expanded ? '显示简要状态' : '显示同步详情'}
+                {expanded ? t('显示简要状态') : t('显示同步详情')}
               </Button>
               <Button
                 size='sm'
                 variant='outline'
                 onClick={() => setCleared((previous) => !previous)}
               >
-                {cleared ? '重新激活' : 'clear()'}
+                {cleared ? t('重新激活') : 'clear()'}
               </Button>
             </>
           )}
@@ -216,7 +229,7 @@ function SizeScenario({
               variant='outline'
               onClick={() => setExpanded((previous) => !previous)}
             >
-              {expanded ? '移除补充内容' : '添加补充内容'}
+              {expanded ? t('移除补充内容') : t('添加补充内容')}
             </Button>
           )}
           {scenario === 'panels' && (
@@ -231,7 +244,7 @@ function SizeScenario({
                     if (!reject) setPanel(next);
                   }}
                 >
-                  {next === 'summary' ? '显示摘要' : '显示详情'}
+                  {next === 'summary' ? t('显示摘要') : t('显示详情')}
                 </Button>
               ))}
             </>
@@ -247,7 +260,7 @@ function SizeScenario({
                   setCleared(false);
                 }}
               >
-                等待新内容
+                {t('等待新内容')}
               </Button>
               <Button
                 size='sm'
@@ -255,7 +268,7 @@ function SizeScenario({
                 disabled={target !== 'remote' || mounted || cleared}
                 onClick={() => setMounted(true)}
               >
-                挂载新内容
+                {t('挂载新内容')}
               </Button>
               <Button
                 size='sm'
@@ -263,7 +276,7 @@ function SizeScenario({
                 disabled={target !== 'remote' || !mounted || cleared}
                 onClick={() => setMounted(false)}
               >
-                卸载当前内容
+                {t('卸载当前内容')}
               </Button>
               <Button
                 size='sm'
@@ -273,7 +286,7 @@ function SizeScenario({
                   setCleared(false);
                 }}
               >
-                真实零高
+                {t('真实零高')}
               </Button>
               <Button
                 size='sm'
@@ -288,7 +301,7 @@ function SizeScenario({
                 disabled={!cleared}
                 onClick={() => setCleared(false)}
               >
-                重新激活
+                {t('重新激活')}
               </Button>
             </>
           )}
@@ -305,7 +318,7 @@ function SizeScenario({
           }}
         >
           <motion.div
-            aria-label='尺寸动画容器'
+            aria-label={t('尺寸动画容器')}
             className='overflow-hidden'
             initial={false}
             animate={scenario === 'size' ? { width, height } : { height }}
@@ -321,12 +334,12 @@ function SizeScenario({
                 className='grid w-max gap-momo-sm p-momo-md text-momo-body-sm'
               >
                 <p className='font-medium'>
-                  {expanded ? '全部内容已保存' : '已保存'}
+                  {expanded ? t('全部内容已保存') : t('已保存')}
                 </p>
                 {expanded && (
                   <>
-                    <p>图片、说明与标签均已同步。</p>
-                    <p className='text-momo-fg-muted'>可以继续编辑。</p>
+                    <p>{t('图片、说明与标签均已同步。')}</p>
+                    <p className='text-momo-fg-muted'>{t('可以继续编辑。')}</p>
                   </>
                 )}
               </div>
@@ -361,7 +374,9 @@ function SizeScenario({
                 ref={register('content')}
                 className='grid gap-momo-md p-momo-md'
               >
-                <p className='text-momo-body-sm font-medium'>月份布局预览</p>
+                <p className='text-momo-body-sm font-medium'>
+                  {t('月份布局预览')}
+                </p>
                 <div
                   className={`grid gap-momo-sm ${twoMonths && !stacked ? 'grid-cols-2' : 'grid-cols-1'}`}
                 >
@@ -369,14 +384,16 @@ function SizeScenario({
                   {twoMonths && <MonthDiagram weeks={6} />}
                 </div>
                 <p className='text-momo-caption text-momo-fg-muted'>
-                  布局示意：此处标题、月份间距和底部说明均参与测量。
+                  {t('布局示意：此处标题、月份间距和底部说明均参与测量。')}
                 </p>
               </div>
             )}
           </motion.div>
         </div>
         <p className='border-t border-dashed border-momo-border-default pt-momo-sm text-momo-caption text-momo-fg-muted'>
-          后续内容：观察这条分界线如何跟随容器移动。面板只切换内层，动画容器保持挂载。
+          {t(
+            '后续内容：观察这条分界线如何跟随容器移动。面板只切换内层，动画容器保持挂载。',
+          )}
         </p>
       </div>
     </PlaygroundFrame>

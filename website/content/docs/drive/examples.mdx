@@ -1,17 +1,17 @@
 ---
-title: 示例
-description: "按常见任务查找 @momots/drive 的使用方式与边界提醒。"
+title: Examples
+description: "Find @momots/drive patterns and limitations by common task."
 icon: Code
 ---
 
-每个示例只解决一个问题。组合使用时，优先保持领域 API 简单，把跨接口的规则放到共享
-客户端。示例中的 `drive` 表示应用已经创建的服务客户端，`getToken()`、`file` 等其他
-未定义标识符代表应用侧依赖；代码用于说明 API 组合，不是完整应用。示例中的
-`/api/...` 假设浏览器同源环境；Bun/Node.js 通常应改用绝对 URL。
+Each example addresses one concern. When combining them, keep domain APIs simple and place rules shared across endpoints in a common
+client. `drive` represents an existing application service client; other undefined identifiers such as `getToken()` and `file`
+are application dependencies. These snippets illustrate API composition, not a complete application. The
+`/api/...` URLs assume a same-origin browser environment; Bun/Node.js generally require absolute URLs.
 
-## 基础调用速查
+## Basic calls at a glance
 
-优先使用显式字段，让数据的去向在调用处一眼可见：
+Prefer explicit fields so data destinations are visible at the call site:
 
 ```ts
 // query
@@ -31,11 +31,11 @@ const form = new FormData();
 form.set("avatar", file);
 await drive.post<void>({ api: "/api/avatar", body: form });
 
-// 原始文本必须使用 body，而不是 data
+// Raw text must use body rather than data
 await drive.post<void>({ api: "/api/source", body: "plain text" });
 ```
 
-数据含义明显时，也可以使用位置式写法：
+When the meaning is obvious, positional calls work too:
 
 ```ts
 const user = await drive.post<User>("/api/users", { name: "Ada" });
@@ -47,16 +47,16 @@ const users = await drive.get<User[]>(
 );
 ```
 
-`json` 与 `body` 互斥；`URLSearchParams` 若应作为表单 body，必须显式放在 `body`，放在
-`query` 或 `data` 中会进入 URL。位置式第二参就是 `data` 自动通道，与对象式
-`{ api, data }` 语义相同，不是旧接口；复杂请求仍建议使用显式字段。
+`json` and `body` are mutually exclusive. To send `URLSearchParams` as a form body, place it explicitly in `body`; in
+`query` or `data`, it enters the URL. The second positional argument is the automatic `data` channel, with the same semantics as
+`{ api, data }`, not a legacy API. Explicit fields remain preferable for complex requests.
 
-Drive 在合并 query 时保留 fragment，但 fragment 遵循 URL/Fetch 语义，不会进入 HTTP
-请求。
+Drive preserves fragments while merging query parameters, but URL/Fetch semantics mean fragments are not included in HTTP
+requests.
 
-## 把对象拼成查询串
+## Build query parameters from an object
 
-`query` 只接受 `URLSearchParams`。从普通对象构造时，使用 `toSearchParams`：
+`query` accepts only `URLSearchParams`. Use `toSearchParams` to construct it from a plain object:
 
 ```ts
 import { toSearchParams } from "@momots/drive";
@@ -69,7 +69,7 @@ function buildListUrl(params: { page?: number; size?: number; q?: string }) {
 buildListUrl({ page: 2, size: 20, q: undefined }); // => "/api/list?page=2&size=20"
 ```
 
-也可以直接交给 Drive 的 `query` 通道：
+You can also pass it directly to Drive's `query` channel:
 
 ```ts
 import { toSearchParams } from "@momots/drive";
@@ -80,9 +80,9 @@ const users = await drive.get<User[]>({
 });
 ```
 
-## 统一 HTTP 状态错误
+## Consistent HTTP status errors
 
-当一个服务明确把所有 `4xx` / `5xx` 视为异常时，在服务边界集中定义这项策略：
+When a service explicitly treats all `4xx` / `5xx` responses as exceptions, define that policy at the service boundary:
 
 ```ts
 import { Drive } from "@momots/drive";
@@ -96,12 +96,12 @@ export const drive = new Drive().use("/api/**", async (context, next) => {
 });
 ```
 
-Drive 本身不做这项判断。若不同接口的错误语义不同，分别使用
-`request()` 判断会比全局中间件更清楚。
+Drive does not make this decision itself. If error semantics differ between endpoints, individual
+`request()` checks are clearer than global middleware.
 
-## 为单次请求设置超时和主动取消
+## Timeout and manual cancellation
 
-`timeout` 为默认 Fetch 增加超时取消，调用方的 signal 保留业务主动取消能力：
+`timeout` adds timeout cancellation to default Fetch; the caller's signal retains application-controlled cancellation:
 
 ```ts
 const controller = new AbortController();
@@ -119,13 +119,13 @@ cancelButton.addEventListener("click", () => {
 const report = await request;
 ```
 
-默认 prepare 在编码后把 timeout 取消合并到 `req.signal`。这是协作式取消：自定义扩展
-必须自行观察 signal；它也不包含编码、外层中间件自身的工作或返回后的流消费。流交给
-调用方之后，应继续使用自己的 signal 管理下载生命周期。
+Default prepare combines timeout cancellation into `req.signal` after encoding. Cancellation is cooperative: custom extensions
+must observe the signal themselves. It excludes encoding, work in outer middleware, and stream consumption after return. Once the stream reaches the
+caller, continue using your own signal to manage its download lifecycle.
 
-## 下载大文件并显示进度
+## Download large files with progress
 
-使用 `request()` 取得流，在不预先读取全部响应的情况下观察下载进度：
+Use `request()` to obtain a stream and observe progress without reading the entire response in advance:
 
 ```ts
 async function download(url: string): Promise<Blob> {
@@ -147,13 +147,13 @@ async function download(url: string): Promise<Blob> {
 }
 ```
 
-消费 `res.stream` 才会推进读取。没有有效 `Content-Length` 时，`total` 和
-`percentage` 不存在；流式请求不能使用只返回响应体的快捷方法或 `exec()`。
+Consuming `res.stream` drives reads. Without a valid `Content-Length`, `total` and
+`percentage` are absent. Streaming requests cannot use body-only shortcuts or `exec()`.
 
-## 只为写操作添加 CSRF 头
+## Add CSRF headers only to writes
 
-使用 [CSRF recipe](/docs/drive/recipes#csrf)，在 prepare 已经确定 method 后校验来源并添加 token。
-从独立子路径导入后配置 `stages.send`：
+Use the [CSRF recipe](/docs/drive/recipes#csrf) to check origins and add tokens after prepare has finalized the method.
+Import its dedicated subpath and configure `stages.send`:
 
 ```ts
 import { Drive } from "@momots/drive";
@@ -170,13 +170,13 @@ export const drive = new Drive({
 });
 ```
 
-`getCsrfToken()` 是应用提供的函数，可以返回字符串或 Promise。recipe 覆盖显式方法
-与自动推断的 POST；目标来源不匹配或写请求缺少 token 时，会在发送前报错。它占用
-`stages.send`，当前不能与 `repeat` 同时配置。服务端仍须校验 token。
+`getCsrfToken()` is application-provided and may return a string or Promise. The recipe covers explicit methods
+and automatically inferred POST. An origin mismatch or missing token on a write fails before sending. It occupies
+`stages.send` and cannot currently be combined with `repeat`. The server must still validate the token.
 
-## 自定义 RPC 响应解析
+## Custom RPC response parsing
 
-将服务特有的 envelope 解析和错误转换集中在 parser：
+Centralize service-specific envelope parsing and error conversion in a parser:
 
 ```ts
 type RpcResponse<T> = {
@@ -196,13 +196,13 @@ const user = await drive.post<User>({
 });
 ```
 
-`parser` 是工厂，工厂返回解析函数。解析函数负责写入 `context.res.body`；它抛出的错误
-会使 Promise 拒绝。示例中的类型断言不做运行时结构校验；需要校验 envelope 时，应在
-这里调用应用选择的 schema 工具。
+`parser` is a factory returning a parsing function. That function writes `context.res.body`; errors it throws
+reject the Promise. Type assertions in this example do not validate structure at runtime; call your chosen schema tool
+here if envelope validation is needed.
 
-## 隔离不同服务边界
+## Isolate service boundaries
 
-使用不同实例，避免令牌、租户头和错误策略跨边界泄漏：
+Use separate instances to keep tokens, tenant headers, and error policies from leaking across boundaries:
 
 ```ts
 import { Drive } from "@momots/drive";
@@ -221,11 +221,11 @@ export const reportDrive = new Drive().use(
 );
 ```
 
-多实例的意义是表达不同策略边界，不是为每个端点创建一个客户端。
+Multiple instances express different policy boundaries; they are not intended as one client per endpoint.
 
-## 记录完整审计信息
+## Record complete audit information
 
-调用方确实需要原始 HTTP 结果时，使用 `request()`：
+Use `request()` when the caller needs the original HTTP result:
 
 ```ts
 async function audited<T>(api: string): Promise<T | undefined> {
@@ -242,12 +242,12 @@ async function audited<T>(api: string): Promise<T | undefined> {
 }
 ```
 
-`request()` 返回的 body 是可选的。若领域函数承诺 `Promise<T>`，应先验证
-body 存在或完成运行时 schema 校验。
+The returned body is optional. If a domain function promises `Promise<T>`, first check that the
+body exists or validate it with a runtime schema.
 
-## 对幂等请求按响应状态重复发送
+## Repeat idempotent requests based on response status
 
-当 Fetch 已取得 `503` 响应时，可以有限次重新发送安全的查询：
+After Fetch obtains a `503` response, a safe query can be sent again a limited number of times:
 
 ```ts
 import { Drive, repeat } from "@momots/drive";
@@ -265,12 +265,12 @@ export const reportDrive = new Drive({
 });
 ```
 
-`eligible` 只处理已取得的 Response；网络失败会直接传播。始终提供终止
-条件，并确认请求没有不可重放的 body 或重复副作用。
+`eligible` handles only obtained Responses; network failures propagate immediately. Always provide a stopping
+condition and ensure the request has no non-replayable body or duplicate side effects.
 
-## 首次 401 后刷新令牌
+## Refresh a token after the first 401
 
-刷新令牌时，把“是否继续”和“如何修改下一次请求”分开：
+Separate the decision to continue from changes to the next request when refreshing tokens:
 
 ```ts
 import { Drive, repeat } from "@momots/drive";
@@ -289,7 +289,7 @@ const authDrive = new Drive({
 });
 ```
 
-`eligible`、`effect` 或 `delay` 抛错都会终止 repeat。若判断必须读取响应体，
-应读取并及时消费 `snapshot.res.raw` 的克隆，不能消费原始响应。
+Errors from `eligible`, `effect`, or `delay` stop repeat. If the decision requires the response body,
+read and promptly consume a clone of `snapshot.res.raw`, never the original response.
 
-更多精确规则见 [API 参考](/docs/drive/guide)。
+See the [API reference](/docs/drive/guide) for exact rules.

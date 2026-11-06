@@ -1,14 +1,14 @@
 ---
 title: Switch
-description: 表单友好的开关控件。
+description: A form-friendly switch control.
 icon: ToggleRight
 ---
 
-`Switch` 使用 Base UI Switch 提供隐藏 input、受控/非受控状态和表单提交语义。组件只渲染开关本体，标签与说明文字由调用方组合；thumb 内容可通过 `checkedIcon` / `uncheckedIcon` 自定义。轨道、thumb 内容与 focus ring 消费 momo semantic token。
+`Switch` uses Base UI Switch for its hidden input, controlled/uncontrolled state, and form submission semantics. It renders only the switch itself; callers compose labels and descriptions. Customize thumb content with `checkedIcon` / `uncheckedIcon`. The track, thumb content, and focus ring consume momo semantic tokens.
 
 <SwitchPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Switch } from "@momots/design/components/switch";
@@ -21,7 +21,7 @@ import { Switch } from "@momots/design/components/switch";
 />
 ```
 
-需要 label 时，把 `Switch` 放进外部 `label` 或相邻布局中：
+To add a label, place `Switch` inside an external `label` or alongside one in the layout:
 
 ```tsx
 <label className="inline-flex items-start gap-3">
@@ -32,21 +32,21 @@ import { Switch } from "@momots/design/components/switch";
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `checked` | `boolean` | 受控开关状态 |
-| `defaultChecked` | `boolean` | 非受控默认状态 |
-| `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
-| `disabled` | `boolean` | 是否禁用 |
-| `readOnly` | `boolean` | 是否只读 |
-| `required` | `boolean` | 表单必填状态 |
-| `name` / `value` | `string` | 表单提交字段 |
-| `uncheckedValue` | `string` | 未开启时提交的值 |
-| `form` | `string` | 关联的 form id |
-| `nativeButton` | `boolean` | 是否使用原生 button 行为 |
-| `inputRef` | `Ref<HTMLInputElement>` | 访问隐藏 input |
-| `checkedIcon` | `ReactNode` | checked 状态下的 thumb 内容 |
-| `uncheckedIcon` | `ReactNode` | unchecked 状态下的 thumb 内容 |
-| `className` | `string` | 根节点追加 Tailwind class |
-| `onCheckedChange` | `(checked: boolean) => void` | 状态变化回调 |
-| `...props` | `HTMLMotionProps<"span">` | 传给 thumb motion span 的其余属性 |
+| `checked` | `boolean` | Controlled switch state |
+| `defaultChecked` | `boolean` | Uncontrolled initial state |
+| `size` | `"sm" \| "md" \| "lg"` | Control size |
+| `disabled` | `boolean` | Whether interaction is disabled |
+| `readOnly` | `boolean` | Whether the control is read-only |
+| `required` | `boolean` | Whether the form field is required |
+| `name` / `value` | `string` | Form submission fields |
+| `uncheckedValue` | `string` | Value submitted when off |
+| `form` | `string` | Associated form ID |
+| `nativeButton` | `boolean` | Whether to use native button behavior |
+| `inputRef` | `Ref<HTMLInputElement>` | Access the hidden input |
+| `checkedIcon` | `ReactNode` | Thumb content in the checked state |
+| `uncheckedIcon` | `ReactNode` | Thumb content in the unchecked state |
+| `className` | `string` | Additional Tailwind classes on the root |
+| `onCheckedChange` | `(checked: boolean) => void` | State change callback |
+| `...props` | `HTMLMotionProps<"span">` | Other props forwarded to the thumb's motion span |

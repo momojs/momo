@@ -1,0 +1,13 @@
+{
+  "title": "momo",
+  "root": true,
+  "pages": [
+    "index",
+    "core",
+    "refine",
+    "host",
+    "drive",
+    "design",
+    "cli"
+  ]
+}

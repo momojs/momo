@@ -1,0 +1,43 @@
+---
+title: Accordion
+description: 带 motion 展开动画的折叠面板。
+icon: ListCollapse
+---
+
+`Accordion` 使用 Base UI Accordion 提供 disclosure 语义，使用 motion 处理展开高度与焦点反馈；箭头通过 [Icon](/docs/design/icon) 在向下和向上图形之间过渡。组件样式消费 `--momo-bg-*`、`--momo-fg-*`、`--momo-border-*` 和 `--momo-ring-*` 语义 token。
+
+<AccordionPlayground />
+
+## 使用
+
+```tsx
+import { Accordion } from "@momots/design/components/accordion";
+
+<Accordion
+  value={openItems}
+  onValueChange={setOpenItems}
+  options={[
+    {
+      value: "tokens",
+      label: "Semantic tokens",
+      content: "Accordion follows the active momo theme.",
+    },
+    {
+      value: "motion",
+      label: "Motion first",
+      content: "Height and focus feedback are animated with motion.",
+    },
+  ]}
+/>
+```
+
+## Props
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `value` | `T \| T[]` | 当前展开项；`multiple` 为 `true` 时使用数组 |
+| `defaultValue` | `T \| T[]` | 非受控默认展开项；`multiple` 为 `true` 时使用数组 |
+| `options` | `AccordionOption<T>[]` | 面板列表；当前简化渲染消费 `value`、`label` 与 `content` |
+| `multiple` | `boolean` | 是否允许同时展开多项 |
+| `className` | `string` | 根节点追加 Tailwind class |
+| `onValueChange` | Base UI callback | 展开项变化回调，值形状随 `multiple` 改变 |

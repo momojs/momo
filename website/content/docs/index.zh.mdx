@@ -1,0 +1,34 @@
+---
+title: momo
+description: 函数式工具库、Web Platform 工具、React 组件、HTTP 客户端与辅助命令。
+icon: Rocket
+---
+
+**momo** 读作 mo-mo。
+
+## 简介
+
+React 项目里有不少代码不属于组件本身，例如类型守卫、数据转换、URL 与 Storage 读写、DOM / CSS / Blob 处理、请求中间件和包构建配置。这些代码通常分散在各个业务目录里，很难在项目之间复用，也不便于打包器移除没用到的部分。
+
+momo 把这类代码整理成几个可以单独安装的包：
+
+<Cards>
+  <Card title="@momots/core" href="/docs/core">
+    纯函数数据工具：大小写转换、树结构操作、守卫、单例、惰性求值等，不依赖
+    DOM、Fetch 等宿主 API。
+  </Card>
+  <Card title="@momots/host" href="/docs/host">
+    浏览器 / 运行时工具：环境探测守卫、存储封装、URL、二进制、CSS
+    颜色、指纹、fetch→cURL。
+  </Card>
+  <Card title="@momots/drive" href="/docs/drive">
+    基于 Fetch 的 HTTP
+    客户端：洋葱模型中间件、按路径匹配中间件、请求编码与响应解析。
+  </Card>
+  <Card title="@momots/design" href="/docs/design">
+    React 19.2+ 组件库：Base UI 交互原语、motion 动效与 Tailwind CSS 样式组合。
+  </Card>
+  <Card title="@momots/cli" href="/docs/cli">
+    momo 命令行工具：统一类型生成与 Bun.build 包构建流程。
+  </Card>
+</Cards>

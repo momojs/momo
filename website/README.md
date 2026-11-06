@@ -41,3 +41,33 @@ The pinned `@tanstack/start-static-server-functions` dependency has a Bun patch
 in `patches/` so browser requests for prerendered document data respect the
 TanStack router base path. Keep this patch until the dependency supports
 subdirectory deployments itself. Static search is exported as `api/search.json`.
+
+## Languages
+
+The site uses Fumadocs' built-in internationalization with `en` (English) and
+`zh` (简体中文). Both the default and fallback language are English. The language
+switcher keeps the current document and remembers the selection when browser
+storage is available. Explicit `/en/...` and `/zh/...` URLs take priority.
+Unprefixed legacy URLs render English for static hosting, then select a supported
+browser language on the client (or the saved selection). Unavailable language
+information and unsupported languages fall back to English.
+The generated `404.html` shell lets GitHub Pages resolve unsupported locale URLs
+to English without losing the document path. Other static hosts should use this
+file as their fallback page.
+
+English documents use `page.mdx` and `meta.json`; the preserved Chinese versions
+use `page.zh.mdx` and `meta.zh.json`. Missing Chinese documents fall back to the
+English file through Fumadocs. Add the English file first when adding a page.
+Site UI translations live in `src/lib/site-translations.ts` and Fumadocs UI
+translations in `src/lib/ui-translations.ts`.
+
+The build exports both languages' HTML, Markdown and LLM files, along with
+separate search indexes in `api/search.json`. Chinese search uses the same
+`Intl.Segmenter` tokenizer during indexing and client-side queries.
+
+```sh
+bun test website/src/lib/i18n.test.ts
+bun run --cwd website types:check
+bun run --cwd website build
+bun run --cwd website check:static
+```

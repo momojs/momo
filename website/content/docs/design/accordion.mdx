@@ -1,14 +1,14 @@
 ---
 title: Accordion
-description: 带 motion 展开动画的折叠面板。
+description: Collapsible panels with Motion expansion animation.
 icon: ListCollapse
 ---
 
-`Accordion` 使用 Base UI Accordion 提供 disclosure 语义，使用 motion 处理展开高度与焦点反馈；箭头通过 [Icon](/docs/design/icon) 在向下和向上图形之间过渡。组件样式消费 `--momo-bg-*`、`--momo-fg-*`、`--momo-border-*` 和 `--momo-ring-*` 语义 token。
+`Accordion` uses Base UI Accordion for disclosure semantics and Motion for expanded height and focus feedback. Arrows transition between up/down shapes through [Icon](/docs/design/icon). Styles consume `--momo-bg-*`, `--momo-fg-*`, `--momo-border-*`, and `--momo-ring-*` semantic tokens.
 
 <AccordionPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Accordion } from "@momots/design/components/accordion";
@@ -33,11 +33,11 @@ import { Accordion } from "@momots/design/components/accordion";
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `value` | `T \| T[]` | 当前展开项；`multiple` 为 `true` 时使用数组 |
-| `defaultValue` | `T \| T[]` | 非受控默认展开项；`multiple` 为 `true` 时使用数组 |
-| `options` | `AccordionOption<T>[]` | 面板列表；当前简化渲染消费 `value`、`label` 与 `content` |
-| `multiple` | `boolean` | 是否允许同时展开多项 |
-| `className` | `string` | 根节点追加 Tailwind class |
-| `onValueChange` | Base UI callback | 展开项变化回调，值形状随 `multiple` 改变 |
+| `value` | `T \| T[]` | Expanded item; use an array when `multiple` is `true` |
+| `defaultValue` | `T \| T[]` | Uncontrolled initial expanded item; use an array when `multiple` is `true` |
+| `options` | `AccordionOption<T>[]` | Panel list; simplified rendering currently consumes `value`, `label`, and `content` |
+| `multiple` | `boolean` | Allows multiple expanded panels |
+| `className` | `string` | Additional Tailwind classes on the root |
+| `onValueChange` | Base UI callback | Expanded-item change callback; value shape follows `multiple` |

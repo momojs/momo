@@ -5,6 +5,8 @@ import { useId, useState } from 'react';
 import { DirectionProvider } from '@base-ui/react/direction-provider';
 import { Code2 } from 'lucide-react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Combobox } from '../../../../../packages/design/src/components/combobox';
 import type { ControlSizeValue } from './shared';
 import {
@@ -34,6 +36,7 @@ const options = [
 ];
 
 export function ComboboxPlayground() {
+  const t = useSiteTranslations();
   const id = useId();
   const [value, setValue] = useState<string | null>('react');
   const [values, setValues] = useState<string[]>(['react', 'vue']);
@@ -43,16 +46,19 @@ export function ComboboxPlayground() {
   const [readOnly, setReadOnly] = useState(false);
   const [clearable, setClearable] = useState(true);
   const [rtl, setRtl] = useState(false);
-  const [placeholder, setPlaceholder] = useState('搜索框架…');
+  const [placeholder, setPlaceholder] = useState(t('搜索框架…'));
   const direction = rtl ? 'rtl' : 'ltr';
   const shared = {
-    options,
+    options: options.map((option) => ({
+      ...option,
+      extra: t(option.extra ?? ''),
+    })),
     size,
     disabled,
     readOnly,
     clearable,
     placeholder,
-    emptyText: '没有匹配的框架',
+    emptyText: t('没有匹配的框架'),
     slots: { input: { id } },
   };
   return (
@@ -97,7 +103,7 @@ export function ComboboxPlayground() {
       <DirectionProvider direction={direction}>
         <div dir={direction} className='grid w-full max-w-sm gap-momo-sm'>
           <label htmlFor={id} className='text-momo-body-sm'>
-            选择框架
+            {t('选择框架')}
           </label>
           {multiple ? (
             <Combobox

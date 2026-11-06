@@ -1,0 +1,69 @@
+---
+title: Substitute
+description: 将文本占位符替换为字符串或 React 节点。
+icon: TextCursorInput
+---
+
+`substitute` 将模板文本拆成字符串和 React 节点组成的数组，适合在提示文案中插入链接、强调文字或其他行内内容。
+
+## 导入
+
+```tsx
+import { substitute } from "@momots/design/shared";
+```
+
+这个版本保留 React 节点。只需要纯字符串时，使用 [`@momots/core/substitute`](/docs/core/guide#substitute)。
+
+## 文本与节点插值
+
+```tsx
+function Agreement() {
+  return (
+    <p>
+      {substitute("继续即表示同意 {{terms}}，试用期为 {{days}} 天。", {
+        terms: <a key="terms" href="https://example.com/terms">服务条款</a>,
+        days: 14,
+      })}
+    </p>
+  );
+}
+```
+
+插入的节点保留自身属性；字符串、数字和 symbol 会转换为字符串，其他值保持原值再经过空值过滤。React 元素作为数组中的子项时，应提供稳定的 `key`；同一个元素需要重复出现时，可以为各个位置使用不同的占位名和 key。
+
+## 默认值
+
+占位符支持 `{{key}}` 和 `{{key|默认文本}}`。key 由英文字母、数字或下划线组成，不会自动去除空格，也不支持路径访问。
+
+```tsx
+substitute("姓名 {{name|未知}}", {});
+// ["姓名 ", "未知"]
+
+substitute("姓名 {{name}}", {});
+// ["姓名 ", "name"]
+
+substitute("数量 {{count|无}}", { count: 0 });
+// ["数量 ", "0"]
+
+substitute("前{{name|}}后", {});
+// ["前", "后"]
+```
+
+只有插值对象自身的属性会被读取。字段缺失、`null` 或 `undefined` 会使用默认文本；没有默认文本则返回 key。`false`、空字符串和空数组不会触发默认值，但会在结果的空值过滤阶段移除。`0` 与 `bigint` 会保留可渲染的值。
+
+第一个 `|` 后的内容全部作为默认文本，可以包含后续的 `|`，但不支持包含花括号的嵌套表达式。插值结果不会再次作为模板解析。
+
+## API 与边界
+
+```ts
+function substitute<T = PropertyKey | React.ReactNode>(
+  data?: string,
+  interpolation?: Record<string, T>,
+): (T | string)[];
+```
+
+- 空模板返回空数组。
+- 普通花括号、无法识别的占位符和未闭合文本保留原文；例如 `{name}` 与 `{{bad key}}` 不会插值。
+- 函数不会解析 HTML 字符串；传入的字符串仍作为 React 文本渲染。
+- 泛型允许保留自定义值，但直接交给 React 渲染时，调用方必须保证值属于可渲染内容。
+- 返回数组经过 `compact` 过滤；除空字符串、`false` 和空数组外，空对象等值也可能被过滤，具体规则见 [`compact`](/docs/core/guide#compact)。

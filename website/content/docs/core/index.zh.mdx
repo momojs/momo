@@ -1,0 +1,97 @@
+---
+title: 开始
+description: "@momots/core —— 数组、对象、字符串、树结构与属性路径工具。"
+icon: Rocket
+---
+
+`@momots/core` 提供数组、对象、字符串与树结构的数据处理工具。例如，将单个值包装成数组、批量转换对象键名、把带父子关系的列表转成树，以及按路径读取嵌套属性。
+
+包内还提供类型守卫、TypeScript 类型工具、单例缓存、异步调用去重与内存投递队列。这些能力不依赖 DOM、Fetch 或 Storage 等宿主 API；使用缓存和回调时，仍需了解各自的状态与执行行为。
+
+## 安装
+
+```bash
+bun add @momots/core@beta remeda type-fest
+```
+
+当前发布通道为 `beta`。`remeda` 与 `type-fest` 是 peer dependencies，需要一并安装。
+
+## 从输入和输出开始
+
+```ts
+import { asArray, PropertyPath, toCamelCasedProperties } from '@momots/core';
+
+asArray('momo'); // => ['momo']
+toCamelCasedProperties({ user_name: 'Momo' }); // => { userName: 'Momo' }
+PropertyPath.read({ user: { name: 'Momo' } }, 'user.name');
+// => { exists: true, value: 'Momo' }
+```
+
+`asArray` 遇到数组时返回原引用；`toCamelCasedProperties` 只转换顶层键名，保留值的引用；`PropertyPath.read` 用 `exists` 区分属性不存在和属性值为 `undefined`。各函数的规则与例外见[向导](/docs/core/guide)。
+
+## 两种导入方式
+
+常用函数可以从根入口导入；所有公开 API 都可以从对应子路径导入。子路径有助于明确代码依赖了哪个模块。标记为“仅子路径”的 API 不从根入口重新导出：
+
+```ts
+// 从根入口导入
+import { eliminate, unflat, toCamelCasedProperties } from "@momots/core";
+
+// 按子路径导入
+import { eliminate } from "@momots/core/eliminate";
+import { unflat } from "@momots/core/tree/unflat";
+import { toCamelCasedProperties } from "@momots/core/casing";
+```
+
+## 能力地图
+
+| 主题       | 子路径                | 代表 API                                    |
+| ---------- | --------------------- | ------------------------------------------- |
+| 数组       | `as/array`、`compact` | `asArray`、`compact`                        |
+| 集合基数   | `cardinality`         | `cardinality`                               |
+| 键名大小写 | `casing/*`            | `toCamelCasedProperties`、`toSnakeCasedProperties` …      |
+| 值替换     | `eliminate`           | `eliminate`                                 |
+| 错误文本   | `error`、`error/*`     | `toErrorMessage`、`toErrorSummary`            |
+| 惰性求值   | `realize`             | `realize`                                   |
+| 类型守卫   | `guard/*`             | `isUndefined`、`isStringArray` …            |
+| 单例缓存   | `singleton`           | `singleton`                                 |
+| 并发去重   | `singleflight`        | `Singleflight`                              |
+| 等待超时   | `timeout`             | `timeout`、`TimeoutError`                    |
+| 投递队列   | `delivery-queue`      | `DeliveryQueue`                             |
+| 模板插值   | `substitute`          | `substitute`                                |
+| 文本遮罩   | `veil`                | `veil`                                      |
+| 数值转换   | `toFinite`            | `toFinite`                                  |
+| 数位求和   | `sumdig`              | `sumdig`                                    |
+| 属性路径   | `property-path`       | `PropertyPath`                              |
+| 树结构     | `tree/*`              | `unflat`、`flat`、`visit`、`prune` …        |
+| 类型断言   | `cast/*`              | `writable`                                  |
+| 类型工具   | `types`               | `MaybeArray`、`Realizable`、`Updater` …     |
+
+接下来可以查阅 [向导](/docs/core/guide) 了解每个 API，或前往 [示例](/docs/core/examples) 获取可直接使用的代码片段。
+
+## 状态与回调行为
+
+多数数据转换函数直接根据输入返回结果。以下 API 还会保存状态或执行调用方的函数：
+
+- `singleton` 默认把创建的值保存到指定作用域，默认作用域是 `globalThis`。同一作用域中，相同 key 的后续调用复用该值；设置 `pass` 可跳过缓存。不要用默认作用域存储用户或请求专属状态。
+- `Singleflight` 在实例中保存进行中的 Promise。同一实例上的重叠调用会共享它，即使传入的参数不同；完成或失败后，下一次调用会重新执行。
+- `timeout` 通过调用方提供的 `Timer` 安排和取消计时。期限先到时结束等待，源任务仍会继续执行。
+- `DeliveryQueue` 在实例中保留尚未确认的条目及其引用。`enqueue()` 只接纳条目，`flush()` 才按顺序发送；失败后保留未确认条目，后续调用 `flush()` 可显式重试。
+- `realize` 遇到函数时立即用给定参数调用它，否则返回传入值。回调可以有副作用；如果函数本身就是需要保留的业务值，不要直接交给 `realize`。
+
+`package.json` 中的 `sideEffects: false` 用于让打包器移除未使用的模块，不代表每个 API 调用都没有副作用。是否修改状态、调用回调或保留引用，应以对应 API 的说明为准。
+
+## 根据任务选择 API
+
+| 要处理的问题 | 可查看的 API | 使用前需要确认 |
+| --- | --- | --- |
+| 参数允许传单值或数组 | `asArray` | 数组输入会保留原引用 |
+| 接口对象的键名需要转换 | `toCamelCasedProperties`、`toCamelCasedPropertiesDeep` | 前者只转换顶层，后者递归处理 |
+| 列表包含 `id` 与 `parent`，需要生成树 | `unflat` | 父节点缺失时的处理方式，以及输入是否存在环 |
+| 读取嵌套属性，并区分缺失与 `undefined` | `PropertyPath.read` | 字符串片段访问普通对象，数字片段访问数组 |
+| 从错误中提取提示文本或诊断摘要 | `toErrorMessage`、`toErrorSummary` | 两者不执行脱敏或长度裁剪 |
+| 复用实例，或合并重叠的异步调用 | `singleton`、`Singleflight` | 共享状态的作用域，以及不同参数是否允许共用结果 |
+| 为已有 Promise 设置等待期限 | `timeout` | 显式提供 `Timer`；超时不会取消源任务 |
+| 先收集条目，再按顺序分批投递 | `DeliveryQueue` | 容量包含在途条目，每次 `flush()` 只等待调用时已有条目 |
+
+通用集合变换可以继续使用项目已有的工具库，按需要引入这里的 API。涉及 DOM、Fetch 或存储的能力，请查阅 [`@momots/host`](/docs/host)；请求中间件与响应解析请查阅 [`@momots/drive`](/docs/drive)。

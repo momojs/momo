@@ -1,0 +1,5 @@
+{
+  "title": "@momots/host",
+  "icon": "Globe",
+  "pages": ["index", "guide", "examples"]
+}

@@ -1,14 +1,14 @@
 ---
 title: Slider
-description: 带 motion 动画与键盘交互的滑块控件。
+description: A slider with Motion animation and keyboard interaction.
 icon: SlidersHorizontal
 ---
 
-`Slider` 提供受控/非受控数值选择，支持拖拽、点击定位与键盘微调。内部使用 motion 驱动填充与手柄动画，并在 coarse 步进（≤10 档）时显示刻度线。
+`Slider` supports controlled/uncontrolled numeric selection, dragging, click positioning, and keyboard adjustment. Motion animates fill and thumb, with tick marks for coarse steps (at most 10 intervals).
 
 <SliderPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { Slider } from "@momots/design/components/slider";
@@ -25,22 +25,22 @@ import { Slider } from "@momots/design/components/slider";
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `label` | `string` | 轨道内左侧标签 |
-| `value` | `number` | 受控值 |
-| `defaultValue` | `number` | 非受控默认值，默认为 `min` |
-| `onValueChange` | `(value: number) => void` | 值变化回调 |
-| `min` | `number` | 最小值，默认 `0` |
-| `max` | `number` | 最大值，默认 `1` |
-| `step` | `number` | 最小步进，默认 `0.01` |
-| `formatValue` | `(value: number) => string` | 自定义右侧显示格式 |
-| `className` | `string` | 容器追加 Tailwind class |
-| `aria-label` | `string` | 无障碍名称，默认使用 `label` |
+| `label` | `string` | Label on the left inside the track |
+| `value` | `number` | Controlled value |
+| `defaultValue` | `number` | Uncontrolled initial value; defaults to `min` |
+| `onValueChange` | `(value: number) => void` | Value-change callback |
+| `min` | `number` | Minimum; defaults to `0` |
+| `max` | `number` | Maximum; defaults to `1` |
+| `step` | `number` | Minimum increment; defaults to `0.01` |
+| `formatValue` | `(value: number) => string` | Custom right-side display formatting |
+| `className` | `string` | Additional Tailwind classes on the container |
+| `aria-label` | `string` | Accessible name; defaults to `label` |
 
-## 交互说明
+## Interaction details
 
-- **拖拽**：超出边界时有 rubber band 回弹效果（尊重 `prefers-reduced-motion`）。
-- **数值显示**：使用 `TweenNumber`，拖拽时即时跟随；点击、键盘及外部值更新时平滑过渡，保留步进精度和 `formatValue` 格式。减弱动效时直接更新。
-- **点击**：步进 ≤10 档时吸附到最近 step；连续滑块会吸附到最近 10% 刻度。
-- **键盘**：`ArrowLeft`/`ArrowRight` 按 `step` 微调；`Shift` + 方向键按 `10 × step` 快速调整；`Home`/`End` 跳到最小/最大值。
+- **Dragging**: exceeding bounds produces a rubber-band return, respecting `prefers-reduced-motion`.
+- **Value display**: `TweenNumber` follows dragging immediately and smoothly transitions click, keyboard, and external updates, preserving step precision and `formatValue`. Reduced motion updates immediately.
+- **Clicking**: with at most 10 steps, snaps to the nearest step; continuous sliders snap to the nearest 10% tick.
+- **Keyboard**: `ArrowLeft`/`ArrowRight` adjust by `step`; `Shift` + arrows by `10 × step`; `Home`/`End` jump to minimum/maximum.

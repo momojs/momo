@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import { Section } from '../../../../../packages/design/src/components/section';
 import type { SkeletonRevealMode } from '../../../../../packages/design/src/components/skeleton';
@@ -34,6 +36,7 @@ function ReloadButton({
   pending: boolean;
   onReload: () => void;
 }) {
+  const t = useSiteTranslations();
   return (
     <Button
       size='sm'
@@ -42,7 +45,7 @@ function ReloadButton({
       disabled={pending}
       onClick={onReload}
     >
-      {pending ? '加载中…' : '重新加载'}
+      {pending ? t('加载中…') : t('重新加载')}
     </Button>
   );
 }
@@ -65,6 +68,7 @@ const PROFILE = {
 
 /** A profile card where every piece wipes in from its own default skeleton. */
 export function SkeletonProfileDemo() {
+  const t = useSiteTranslations();
   const [pending, reload] = useSimulatedLoad(1600);
   const [reveal, setReveal] = useState<SkeletonRevealMode>('wipe');
 
@@ -84,7 +88,7 @@ export function SkeletonProfileDemo() {
     >
       <article
         aria-busy={pending || undefined}
-        aria-label='个人资料'
+        aria-label={t('个人资料')}
         className='w-full max-w-xs overflow-hidden rounded-momo-lg border border-momo-border-default bg-momo-bg-surface-raised shadow-momo-sm'
       >
         <SkeletonReveal pending={pending} reveal={reveal}>
@@ -130,7 +134,7 @@ export function SkeletonProfileDemo() {
             }
           >
             <p className='text-momo-body-sm text-momo-fg-muted'>
-              {PROFILE.bio}
+              {t(PROFILE.bio)}
             </p>
           </SkeletonReveal>
           <dl className='grid grid-cols-3 gap-momo-xs'>
@@ -143,7 +147,7 @@ export function SkeletonProfileDemo() {
               >
                 <div className='grid rounded-momo-sm bg-momo-bg-surface-muted px-momo-xs py-momo-xxs text-center'>
                   <dt className='text-momo-caption text-momo-fg-muted'>
-                    {stat.label}
+                    {t(stat.label)}
                   </dt>
                   <dd className='font-momo-display text-momo-title-sm'>
                     {stat.value}
@@ -167,6 +171,7 @@ const MESSAGES = [
 
 /** A list whose rows share one request but reveal one after another. */
 export function SkeletonListDemo() {
+  const t = useSiteTranslations();
   const [pending, reload] = useSimulatedLoad(1400);
 
   return (
@@ -175,7 +180,7 @@ export function SkeletonListDemo() {
     >
       <ul
         aria-busy={pending || undefined}
-        aria-label='消息'
+        aria-label={t('消息')}
         className='grid w-full max-w-sm divide-y divide-momo-border-default rounded-momo-lg border border-momo-border-default bg-momo-bg-surface-raised'
       >
         {MESSAGES.map((message, index) => (
@@ -195,17 +200,17 @@ export function SkeletonListDemo() {
             >
               <div className='flex h-16 items-center gap-momo-sm px-momo-md'>
                 <span className='grid size-10 shrink-0 place-items-center rounded-momo-full bg-momo-bg-surface-muted font-medium'>
-                  {message.from.slice(0, 1)}
+                  {t(message.from).slice(0, 1)}
                 </span>
                 <div className='grid min-w-0 flex-1'>
                   <span className='flex items-baseline justify-between gap-momo-xs'>
-                    <span className='font-medium'>{message.from}</span>
+                    <span className='font-medium'>{t(message.from)}</span>
                     <span className='text-momo-caption text-momo-fg-muted'>
-                      {message.time}
+                      {t(message.time)}
                     </span>
                   </span>
                   <span className='truncate text-momo-body-sm text-momo-fg-muted'>
-                    {message.text}
+                    {t(message.text)}
                   </span>
                 </div>
               </div>
@@ -222,6 +227,7 @@ const ARTICLE =
 
 /** Long-form text: lines keep the real line height and fade in. */
 export function SkeletonArticleDemo() {
+  const t = useSiteTranslations();
   const [pending, reload] = useSimulatedLoad(1200);
 
   return (
@@ -243,7 +249,7 @@ export function SkeletonArticleDemo() {
           }
         >
           <h3 className='font-momo-display text-momo-title-md'>
-            骨架屏为什么要贴合最终布局
+            {t('骨架屏为什么要贴合最终布局')}
           </h3>
         </SkeletonReveal>
         <SkeletonReveal
@@ -258,7 +264,7 @@ export function SkeletonArticleDemo() {
             />
           }
         >
-          <p className='text-momo-body-md text-momo-fg-muted'>{ARTICLE}</p>
+          <p className='text-momo-body-md text-momo-fg-muted'>{t(ARTICLE)}</p>
         </SkeletonReveal>
       </article>
     </PlaygroundFrame>
@@ -276,6 +282,7 @@ const TILES = [
 
 /** A media grid: fixed aspect ratios reserve the space before images load. */
 export function SkeletonGalleryDemo() {
+  const t = useSiteTranslations();
   const [pending, reload] = useSimulatedLoad(1500);
 
   return (
@@ -284,7 +291,7 @@ export function SkeletonGalleryDemo() {
     >
       <div
         aria-busy={pending || undefined}
-        aria-label='相册'
+        aria-label={t('相册')}
         role='group'
         className='grid w-full max-w-sm grid-cols-3 gap-momo-xs'
       >
@@ -313,6 +320,7 @@ const METRICS = [
 
 /** Inside a Section: only the values wait, the section frame stays put. */
 export function SkeletonSectionDemo() {
+  const t = useSiteTranslations();
   const [pending, reload] = useSimulatedLoad(1300);
 
   return (
@@ -320,8 +328,8 @@ export function SkeletonSectionDemo() {
       controls={<ReloadButton pending={pending} onReload={reload} />}
     >
       <Section
-        title='本月概览'
-        description='数据每天凌晨同步一次。'
+        title={t('本月概览')}
+        description={t('数据每天凌晨同步一次。')}
         aria-busy={pending || undefined}
         className='w-full max-w-sm'
       >
@@ -332,7 +340,7 @@ export function SkeletonSectionDemo() {
               className='grid gap-momo-xxs rounded-momo-sm bg-momo-bg-surface-raised p-momo-xs'
             >
               <dt className='text-momo-caption text-momo-fg-muted'>
-                {metric.label}
+                {t(metric.label)}
               </dt>
               <SkeletonReveal
                 pending={pending}
@@ -342,7 +350,7 @@ export function SkeletonSectionDemo() {
                 <dd className='font-momo-display text-momo-title-md'>
                   {metric.value}
                   <span className='ml-0.5 text-momo-caption text-momo-fg-muted'>
-                    {metric.unit}
+                    {t(metric.unit)}
                   </span>
                 </dd>
               </SkeletonReveal>

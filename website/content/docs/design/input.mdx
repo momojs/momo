@@ -1,21 +1,21 @@
 ---
 title: Input
-description: 支持 Base UI 表单状态与三档尺寸的原子输入框。
+description: An atomic input with Base UI form states and three sizes.
 icon: TextCursorInput
 ---
 
-`Input` 基于 Base UI Input 封装，默认渲染原生 `input`。它保留受控与非受控值、原生表单属性、`render` 组合和 ref，并使用 momo semantic token 统一尺寸、焦点、禁用与校验状态。
+`Input` wraps Base UI Input and renders a native `input` by default. It preserves controlled and uncontrolled values, native form attributes, `render` composition, and refs, while using momo semantic tokens for consistent sizing, focus, disabled, and validation states.
 
 <InputPlayground />
 
-## 使用
+## Usage
 
-`Input` 不会自动渲染标签。独立使用时，应通过原生 `label` 提供可访问名称：
+`Input` does not render a label automatically. When used independently, provide an accessible name through a native `label`:
 
 ```tsx
 import { Input } from "@momots/design/components/input";
 
-<label htmlFor="account-email">邮箱</label>
+<label htmlFor="account-email">Email</label>
 <Input
   id="account-email"
   name="email"
@@ -24,9 +24,9 @@ import { Input } from "@momots/design/components/input";
 />
 ```
 
-## 受控与非受控
+## Controlled and uncontrolled values
 
-使用 `value` 与 `onValueChange` 管理受控值：
+Use `value` and `onValueChange` to manage a controlled value:
 
 ```tsx
 const [email, setEmail] = useState("");
@@ -38,17 +38,17 @@ const [email, setEmail] = useState("");
 />
 ```
 
-只需要组件管理初始值时，使用 `defaultValue`：
+Use `defaultValue` when the component only needs to manage its initial value:
 
 ```tsx
 <Input defaultValue="Momo workspace" />
 ```
 
-原生 `onChange` 仍会透传。`onValueChange` 直接提供新的字符串值与 Base UI event details，适合受控状态；避免同时在两个回调中重复执行同一项业务更新。
+Native `onChange` is still forwarded. `onValueChange` directly provides the new string value and Base UI event details, making it suitable for controlled state. Avoid performing the same application update in both callbacks.
 
-## Field 集成
+## Field integration
 
-Input 会自动接入 momo Field。Field 可以关联标签、说明与错误，并把 `valid`、`invalid`、`dirty`、`touched`、`filled` 和 `focused` 状态传给 Input：
+Input integrates automatically with momo Field. Field associates labels, descriptions, and errors and passes `valid`, `invalid`, `dirty`, `touched`, `filled`, and `focused` states to Input:
 
 ```tsx
 import { Field } from "@momots/design/components/field";
@@ -56,39 +56,39 @@ import { Input } from "@momots/design/components/input";
 
 <Field
   name="email"
-  label="邮箱"
+  label="Email"
   variant="stacked"
-  description="用于接收工作区通知。"
-  error="请输入有效的邮箱地址。"
+  description="Used for workspace notifications."
+  error="Enter a valid email address."
   validationMode="onBlur"
 >
   <Input type="email" required />
 </Field>
 ```
 
-不使用 Field 时，可以通过 `aria-invalid` 表达外部校验状态，并用 `aria-describedby` 关联错误说明。
+Without Field, express external validation state through `aria-invalid` and associate error text with `aria-describedby`.
 
-## 组件边界
+## Component boundaries
 
-`Input` 只负责单行原子输入控件，不内置 label、description、error、前后缀、清空按钮或密码显隐按钮。这些结构应由 Field 或调用方在外层组合。
+`Input` handles only an atomic single-line input. It does not include a label, description, error, prefix, suffix, clear button, or password visibility button. Compose these outside it using Field or application code.
 
-需要步进按钮、数字格式化或拖拽调值时使用 `Numeric`；多行内容应使用原生 `textarea` 或对应的多行输入组件。`type="file"` 等原生输入类型仍可直接透传。
+Use `Numeric` for step buttons, number formatting, or dragging to adjust values. Use native `textarea` or a suitable multiline component for multiline content. Native input types such as `type="file"` can still be forwarded directly.
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `size` | `"sm" \| "md" \| "lg"` | 视觉尺寸，默认 `"md"` |
-| `nativeSize` | `number` | 映射到原生 `size` 字符宽度提示；页面布局优先使用 CSS width |
-| `value` | 原生 input value | 受控值 |
-| `defaultValue` | 原生 input default value | 非受控初始值 |
-| `onValueChange` | `(value: string, details) => void` | Base UI 值变化回调 |
-| `onChange` | 原生 input change handler | 原生 change 事件回调 |
-| `type` | 原生 input type | 输入类型，例如 `"text"`、`"email"`、`"search"` 或 `"file"` |
-| `name` / `form` / `autoComplete` | 原生 input props | 表单字段名、所属表单与自动填充提示 |
-| `disabled` / `readOnly` / `required` | `boolean` | 禁用、只读与必填状态 |
-| `aria-invalid` | `boolean \| "true" \| "false"` | 独立使用时表达外部校验状态 |
-| `className` | `string \| ((state: InputState) => string \| undefined)` | 追加样式，回调可读取 Base UI Field 状态 |
-| `render` | Base UI render prop | 组合或替换底层元素 |
-| `ref` | React ref | 获取底层元素 |
-| `...props` | Base UI Input props | 其余 Base UI 与原生 input 属性 |
+| `size` | `"sm" \| "md" \| "lg"` | Visual size; defaults to `"md"` |
+| `nativeSize` | `number` | Maps to the native `size` character-width hint; prefer CSS width for page layout |
+| `value` | Native input value | Controlled value |
+| `defaultValue` | Native input default value | Uncontrolled initial value |
+| `onValueChange` | `(value: string, details) => void` | Base UI value change callback |
+| `onChange` | Native input change handler | Native change event callback |
+| `type` | Native input type | Input type, such as `"text"`, `"email"`, `"search"`, or `"file"` |
+| `name` / `form` / `autoComplete` | Native input props | Form field name, associated form, and autofill hint |
+| `disabled` / `readOnly` / `required` | `boolean` | Disabled, read-only, and required states |
+| `aria-invalid` | `boolean \| "true" \| "false"` | External validation state when used independently |
+| `className` | `string \| ((state: InputState) => string \| undefined)` | Additional styles; the callback can read Base UI Field state |
+| `render` | Base UI render prop | Compose or replace the underlying element |
+| `ref` | React ref | Access the underlying element |
+| `...props` | Base UI Input props | Other Base UI and native input attributes |

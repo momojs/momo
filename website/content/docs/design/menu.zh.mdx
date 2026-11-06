@@ -1,0 +1,240 @@
+---
+title: Menu
+description: 基于 Base UI 与 motion 的操作菜单，支持分组、链接、单选、复选和子菜单。
+icon: ListCollapse
+---
+
+`Menu` 将一组操作放在触发器旁的浮层中，适合项目操作、用户菜单和视图设置。它沿用库内浮层的定位、主题与动效约定，复用 `Highlight` 提供连续移动的菜单项高亮，并通过公共内容属性与 `slots` 配置内容节点。Base UI 负责焦点、键盘导航和菜单语义。
+
+<MenuPlayground />
+
+## 基本用法
+
+```tsx
+import { Button } from '@momots/design/components/button';
+import { Menu, MenuItem, MenuSeparator } from '@momots/design/components/menu';
+
+<Menu trigger={<Button variant='outline'>项目操作</Button>}>
+  <MenuItem onClick={editProject}>编辑项目</MenuItem>
+  <MenuItem onClick={copyLink} shortcut='⌘C'>复制链接</MenuItem>
+  <MenuItem disabled>归档项目</MenuItem>
+  <MenuSeparator />
+  <MenuItem variant='danger' onClick={confirmDelete}>删除项目</MenuItem>
+</Menu>
+```
+
+内容通过菜单子组件组合。普通项用 `onClick` 执行操作；`variant='danger'` 只表达危险操作的视觉状态，确认流程由调用方决定。`icon` 接受图标节点，`extra` 用于当前值等辅助信息，`shortcut` 是视觉提示，不会注册全局快捷键；需要向辅助技术声明快捷键时，另外设置 `aria-keyshortcuts`。
+
+菜单项与 Select 选项使用相同的列顺序：`[图标或占位] [标题／说明] [可选辅助信息] [指示器]`。图标列和末端指示器列固定宽度，普通项、可选项、子菜单与分组标签的标题起点一致。没有图标、未选中或通过 slot 隐藏指示器时仍保留列宽。正文可换行；辅助信息过长时省略，最多占一行可用宽度的 40%，避免挤占整个标题区域。
+
+复选项、单选项可以同时显示 `shortcut` 和末端 `✓`。子菜单触发项只显示 `›`，当前子项的值通过 `triggerProps.extra` 显示，不再附加 `✓`。`extra` 与 `shortcut` 也可以同时传入，在辅助信息列内依次排列。
+
+## 容器属性
+
+| 属性 | 默认值 | 说明 |
+| --- | --- | --- |
+| `title` / `description` / `children` / `footer` | — | 标题、说明、菜单项和页脚内容，与 Popover 等组件共用 `ContentProps` |
+| `slots` | — | `header`、`title`、`description`、`content`、`footer` 的节点配置 |
+| `trigger` | — | 触发元素或 `(props, state) => JSX`，state 包含 `open`、`disabled` |
+| `open` / `defaultOpen` | — / `false` | 受控或非受控打开状态 |
+| `onChange` | — | 未被取消的打开状态变更请求 |
+| `onOpenChange` | — | Base UI 完整事件；调用 `details.cancel()` 可取消请求 |
+| `size` | `md` | `sm` / `md` / `lg`，调整菜单项密度；子菜单继承此值 |
+| `side` / `align` | `bottom` / `start` | 浮层方向与对齐，遇边界时自动调整 |
+| `sideOffset` / `alignOffset` | `8` / `0` | 与触发器的间距和对齐偏移 |
+| `showArrow` | `false` | 显示指向触发器的箭头 |
+| `disabled` | `false` | 禁用触发器交互 |
+| `modal` | `true` | 限制菜单外的指针交互并锁定页面滚动；设为 `false` 可与外部控件交互 |
+| `className` | — | 浮层样式，例如 `w-56` 指定宽度 |
+
+`triggerProps`、`portalProps`、`positionerProps`、`popupProps` 和 `arrowProps` 用于传入对应节点的原生属性、ref 和 Base UI 配置。触发器与定位层也可以分别设置 `triggerClassName`、`positionerClassName`。菜单过长时正文自动滚动，宽高受可用视口约束。
+
+## 内容与节点
+
+`Menu` 与 `MenuSubmenu` 继承同一组 `ContentProps` 和 `ContentSlotsProps`，遵循 [Content Slots](/docs/design/content-slots) 约定：内容放在顶层属性中，承载内容的节点通过 `slots` 配置。
+
+```tsx
+<Menu
+  trigger={<Button variant='outline'>项目操作</Button>}
+  title='工作区'
+  description='管理当前项目。'
+  footer={<MenuItem variant='danger' onClick={confirmDelete}>删除项目</MenuItem>}
+  slots={{
+    header: <header />,
+    title: { render: <h3 />, id: 'workspace-menu-title' },
+    content: (props, state) => <section {...props} />,
+    footer: { render: <footer />, className: 'p-momo-xs' },
+  }}
+>
+  <MenuItem onClick={editProject}>编辑项目</MenuItem>
+</Menu>
+```
+
+五个内容节点默认使用 `div`，都接受 props 对象、render 元素、`(props, state) => JSX` 回调和 `false`。这些容器的 `state` 为空对象；回调必须透传 `props`，保留内容、ref、事件和默认样式。`0` 与空字符串仍是有效内容，`undefined`、`null` 和 `false` 不生成内容节点。
+
+标题和说明会自动关联浮层的 `aria-labelledby`、`aria-describedby`。render 元素上非空的 ID 优先于 slot 的 ID。`slots.header=false` 同时隐藏标题和说明；未显示标题时，菜单默认继续由触发器命名，也可以通过 `popupProps` 指定可访问名称。
+
+正文过长时独立滚动，header 和 footer 保持可见。footer 可放说明或 `MenuItem`，其中的菜单项继续参与键盘导航与高亮；需要输入框或表单时使用 Popover。
+
+## 分组与链接
+
+```tsx
+import {
+  Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuLinkItem, MenuSeparator,
+} from '@momots/design/components/menu';
+
+<Menu trigger={<button type='button'>工作区</button>}>
+  <MenuGroup>
+    <MenuGroupLabel>项目</MenuGroupLabel>
+    <MenuItem onClick={createProject}>新建项目</MenuItem>
+    <MenuItem onClick={importProject}>导入项目</MenuItem>
+  </MenuGroup>
+  <MenuSeparator />
+  <MenuLinkItem href='/docs/design'>组件文档</MenuLinkItem>
+</Menu>
+```
+
+`MenuGroupLabel` 自动关联最近的 `MenuGroup` 或 `MenuRadioGroup`，提供可访问名称。`MenuLinkItem` 默认渲染为 `a`，保留 `href`、`target` 等原生链接能力，也可以用 `render` 接入路由链接。
+
+普通项与链接项默认在点击后关闭。需要保留菜单时，设置 `closeOnClick={false}`。
+
+## 单选与复选
+
+```tsx
+const [notifications, setNotifications] = useState(true);
+const [sort, setSort] = useState('date');
+
+<Menu trigger={<Button>视图设置</Button>}>
+  <MenuCheckboxItem
+    checked={notifications}
+    onCheckedChange={setNotifications}
+    shortcut='⌘⇧N'
+    aria-keyshortcuts='Meta+Shift+N'
+  >
+    接收通知
+  </MenuCheckboxItem>
+  <MenuSeparator />
+  <MenuRadioGroup value={sort} onValueChange={setSort}>
+    <MenuGroupLabel>排序依据</MenuGroupLabel>
+    <MenuRadioItem value='date'>最近更新</MenuRadioItem>
+    <MenuRadioItem value='name'>项目名称</MenuRadioItem>
+  </MenuRadioGroup>
+</Menu>
+```
+
+复选项与单选项默认保持菜单打开，也支持 `closeOnClick`。`onCheckedChange`、`onValueChange` 的第二个参数保留 Base UI 的取消语义。单选值使用与其他控件一致的 `string | number | null`。
+
+`defaultChecked`、`defaultValue` 可用于非受控初值。退出动画完成后菜单内容会卸载，非受控菜单项会在下次打开时重新初始化；需要跨次打开保留选择时，使用上面的受控写法，将状态放在 `Menu` 外部。
+
+## 子菜单
+
+```tsx
+<Menu trigger={<Button>更多操作</Button>}>
+  <MenuItem onClick={editProject}>编辑项目</MenuItem>
+  <MenuSubmenu label='导出'>
+    <MenuItem onClick={exportPDF}>PDF</MenuItem>
+    <MenuItem onClick={exportCSV}>CSV</MenuItem>
+  </MenuSubmenu>
+</Menu>
+```
+
+`MenuSubmenu` 接受 `label`、`icon`、`triggerProps`，以及与 `Menu` 相同的内容、slots、尺寸、定位和打开状态属性。默认向行内末端展开（LTR 为右侧），`sideOffset=4`、`alignOffset=-4`；尺寸继承父菜单，也可以单独指定。
+
+```tsx
+<MenuSubmenu
+  label='排序方式'
+  triggerProps={{ extra: sort === 'date' ? '最近更新' : '项目名称' }}
+>
+  <MenuRadioGroup value={sort} onValueChange={setSort}>
+    <MenuRadioItem value='date'>最近更新</MenuRadioItem>
+    <MenuRadioItem value='name'>项目名称</MenuRadioItem>
+  </MenuRadioGroup>
+</MenuSubmenu>
+```
+
+方向键进入和离开子菜单，点击子菜单中的普通项会关闭整棵菜单。Escape 默认只关闭当前子菜单；`closeParentOnEsc` 可改为同时关闭上层。`triggerProps` 可配置悬停延迟、`openOnHover` 或自定义 `render`；`triggerProps.slots` 配置父菜单中的触发项内容，顶层 `slots` 配置子菜单浮层的内容。
+
+## 菜单项内容 slots
+
+普通项、链接项、复选项和单选项共享 `children`、`description`、`icon`、`extra`、`shortcut` 与内容 slots。`content` 包裹正文和说明，`description` 是其中的说明节点。`extra` 保留可访问文本，`icon`、`shortcut` 和指示器默认对辅助技术隐藏，选中状态由 Base UI 的 `aria-checked` 表达。
+
+| 组件 | 内容 slots | render 状态 |
+| --- | --- | --- |
+| `MenuItem` | `icon`、`content`、`description`、`extra`、`shortcut` | `highlighted`、`disabled` |
+| `MenuLinkItem` | 同上 | `highlighted` |
+| `MenuCheckboxItem` / `MenuRadioItem` | 同上，加 `indicator` | 内容节点有 `highlighted`、`disabled`、`checked`；indicator 有 `checked` 等原生状态 |
+| `MenuSubmenu.triggerProps` | 同上，加 `arrow` | `highlighted`、`disabled`、`open` |
+
+```tsx
+<MenuItem
+  description='修改名称和项目资料。'
+  icon={<ProjectIcon />}
+  shortcut='⌘E'
+  slots={{
+    icon: { className: 'text-momo-fg-brand' },
+    content: (props, state) => (
+      <span {...props} data-active={state.highlighted} />
+    ),
+    shortcut: <kbd />,
+  }}
+  onClick={editProject}
+>
+  编辑项目
+</MenuItem>
+```
+
+菜单项 slots 同样接受对象、元素、回调与 `false`，可以只替换图标、内容、快捷键或选中标记的容器。`slots.content=false` 会同时移除正文和说明；关闭可见内容时应另行提供可访问名称。复选项和单选项的 indicator 默认保留占位，内部勾选图标随状态淡入、缩放；自定义 render 透传 `props.children` 即可保留这个动效。
+
+## RTL
+
+图标、正文与指示器按逻辑方向 start / end 排列。使用 Base UI 的 `DirectionProvider` 设置交互方向，同时在应用容器设置 `dir`；浮层会将 provider 的方向带入 Portal，子菜单箭头和进入／返回方向键随之镜像。
+
+```tsx
+import { DirectionProvider } from '@base-ui/react/direction-provider';
+
+<DirectionProvider direction='rtl'>
+  <div dir='rtl'>
+    <Menu trigger={<Button>操作</Button>}>
+      <MenuItem>编辑项目</MenuItem>
+    </Menu>
+  </div>
+</DirectionProvider>
+```
+
+## render 与节点定制
+
+```tsx
+<Menu
+  trigger={(props, state) => (
+    <button {...props} data-active={state.open}>项目操作</button>
+  )}
+>
+  <MenuItem
+    render={(props, state) => (
+      <div {...props} data-active={state.highlighted} />
+    )}
+    icon={<ProjectIcon />}
+    onClick={editProject}
+  >
+    编辑项目
+  </MenuItem>
+  <MenuGroup>
+    <MenuGroupLabel render={<span />}>帮助</MenuGroupLabel>
+    <MenuLinkItem href='/docs/design'>使用文档</MenuLinkItem>
+  </MenuGroup>
+</Menu>
+```
+
+菜单项、分组、分组标签与分隔线都支持 Base UI 的 `render` 元素或回调、状态 className 和 ref。回调应转发完整 `props`，其中包含事件、children、可访问属性和 ref。菜单项默认使用 `div`；若改为原生按钮，需要同时设置 `nativeButton`。复杂 JSX 标签可用 `label` 提供纯文本，便于按字符定位。
+
+浮层的 `render` 由内部 Motion 节点负责，使用 `popupProps` 定制其余属性。浮层复用 `useFeel('ui')` 的淡入、轻微缩放与位移；菜单项复用 `Highlight` 和 `useFeel('snap')` 的移动高亮，选中标记也使用 `snap`。主菜单、子菜单和独立 footer 各自管理高亮位置，滚动与尺寸变化后重新测量。所有动效遵循主题的减少动态效果设置；退出期间禁用指针交互，动画完成后卸载。
+
+## 键盘与使用边界
+
+- 在触发器上使用 Enter、Space 或方向键打开菜单。
+- 菜单中用上下方向键、Home、End 移动焦点，也支持输入文字定位。
+- Enter 或 Space 激活当前项；禁用项不能执行操作。
+- Escape 关闭当前菜单并返回触发器；Tab 关闭菜单并继续焦点导航。
+- 菜单项应表达动作或选项。需要承载输入框、表单和自由布局时，使用 [Popover](/docs/design/popover)。
+
+底层行为参见 [Base UI Menu](https://base-ui.com/react/components/menu)。

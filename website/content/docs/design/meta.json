@@ -4,7 +4,7 @@
   "pages": [
     "index",
     "theme",
-    "---组件---",
+    "---Components---",
     "alert",
     "toast",
     "accordion",
@@ -44,7 +44,7 @@
     "use-previous",
     "use-resize",
     "use-storagefy",
-    "---通用约定---",
+    "---Shared conventions---",
     "content-slots",
     "---Utils---",
     "class-utilities",

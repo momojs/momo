@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Button } from '../../../../../packages/design/src/components/button';
 import {
   Tooltip,
@@ -28,6 +30,7 @@ const alignOptions = [
 ] as const;
 
 export function TooltipPlayground() {
+  const t = useSiteTranslations();
   const [open, setOpen] = useState(false);
   const [side, setSide] =
     useState<(typeof sideOptions)[number]['value']>('top');
@@ -38,7 +41,7 @@ export function TooltipPlayground() {
   const [closeDelay, setCloseDelay] = useState(0);
   const [showArrow, setShowArrow] = useState(true);
   const [disabled, setDisabled] = useState(false);
-  const [content, setContent] = useState('保存当前工作区的更改');
+  const [content, setContent] = useState(t('保存当前工作区的更改'));
 
   return (
     <PlaygroundFrame
@@ -102,7 +105,7 @@ export function TooltipPlayground() {
             sideOffset={sideOffset}
             showArrow={showArrow}
             disabled={disabled}
-            trigger={<Button variant='outline'>保存更改</Button>}
+            trigger={<Button variant='outline'>{t('保存更改')}</Button>}
           >
             {content}
           </Tooltip>
@@ -112,9 +115,9 @@ export function TooltipPlayground() {
             sideOffset={sideOffset}
             showArrow={showArrow}
             disabled={disabled}
-            trigger={<Button variant='ghost'>查看历史</Button>}
+            trigger={<Button variant='ghost'>{t('查看历史')}</Button>}
           >
-            查看工作区的修改记录
+            {t('查看工作区的修改记录')}
           </Tooltip>
         </div>
       </TooltipProvider>

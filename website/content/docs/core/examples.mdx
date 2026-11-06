@@ -1,16 +1,16 @@
 ---
-title: 示例
-description: 用具体输入和输出说明 @momots/core 的常见用法。
+title: Examples
+description: Common @momots/core use cases with concrete inputs and outputs.
 icon: Code
 ---
 
-以下示例分别处理可选参数、配置读取、数据转换和共享缓存。每个片段都给出输入与结果，
-可按当前需求选择阅读。
+These examples cover optional parameters, configuration reads, data transformation, and shared caches.
+Each snippet includes inputs and results, so you can focus on the task at hand.
 
-## 多条件可选载荷
+## Optional payloads with multiple conditions
 
-只有模块可见、还有更多数据，而且流水号非空时，才生成埋点参数；其余情况返回
-`undefined`。先把三个条件写成布尔判断，再用 `eliminate` 处理判断失败的结果：
+Generate analytics parameters only when the module is visible, more data is available, and the flow ID is nonempty; otherwise return
+`undefined`. Express the three conditions as boolean checks, then use `eliminate` to handle a failed check:
 
 ```ts
 import { eliminate } from '@momots/core/eliminate';
@@ -32,14 +32,14 @@ createTrackPayload(false, true, 'flow-42', 20); // => undefined
 createTrackPayload(true, true, '', 20); // => undefined
 ```
 
-本例的条件都是布尔值，因此失败时 `&&` 返回 `false`，`eliminate` 再将它转换为
-`undefined`。一般的 `&&` 表达式也可能返回 `0`、空字符串等值；默认的 `eliminate`
-只替换 `false`，不会消除所有假值。
+All conditions in this example are booleans, so `&&` returns `false` on failure, and `eliminate` converts it to
+`undefined`. A general `&&` expression can also return `0`, an empty string, or other values. By default, `eliminate`
+replaces only `false`; it does not remove every falsy value.
 
-## 为未设置的端口计算默认值
+## Compute a default for an unset port
 
-假设配置读取器用 `-1` 表示未设置端口。用 `eliminate` 将这个约定值转换为
-`undefined`，再在需要时计算默认端口：
+Suppose a configuration reader uses `-1` to indicate an unset port. Convert this sentinel to
+`undefined` with `eliminate`, then compute the default port only when needed:
 
 ```ts
 import { eliminate } from '@momots/core/eliminate';
@@ -53,13 +53,13 @@ readPort(8080); // => 8080
 readPort(-1);   // => 3000
 ```
 
-`??` 保证只有缺省时才调用 `fallback`；`realize` 负责执行这个函数并返回结果。
-这段代码只处理 `-1` 的约定，不检查端口是否在有效范围内。
+`??` ensures that `fallback` is called only for a missing value; `realize` executes the function and returns its result.
+This code handles only the `-1` convention. It does not validate the port range.
 
-## 只为不存在的配置项使用默认值
+## Apply defaults only to missing configuration properties
 
-有些配置把“没有设置属性”和“属性存在，但值为 `undefined`”区分开来。
-`PropertyPath.read` 返回的 `exists` 可以保留这项区别：
+Some configurations distinguish “the property is absent” from “the property exists but its value is `undefined`.”
+The `exists` field returned by `PropertyPath.read` preserves this distinction:
 
 ```ts
 import { PropertyPath } from '@momots/core/property-path';
@@ -80,12 +80,12 @@ readConfig(config, 'logging.level', 'info'); // => undefined
 readConfig(config, 'logging.file', 'app.log'); // => 'app.log'
 ```
 
-读取结果的 `value` 是 `unknown`，使用前仍需检查类型。本例只遍历普通对象；读取数组
-元素时使用 `items[0]` 这样的数字下标。完整规则见 [向导](/docs/core/guide#propertypathread)。
+The returned `value` has type `unknown`, so check its type before using it. This example traverses only plain objects. Use numeric
+indices such as `items[0]` to read array elements. See the [guide](/docs/core/guide#propertypathread) for the complete rules.
 
-## 归一化「单值或数组」参数
+## Normalize single-value-or-array parameters
 
-一个函数同时接受单个路径和路径数组时，先用 `asArray` 转成数组，后续只写一套循环：
+When a function accepts either one path or an array of paths, normalize the input with `asArray` so the rest of the code needs only one loop:
 
 ```ts
 import { asArray } from '@momots/core/as/array';
@@ -93,7 +93,7 @@ import type { MaybeArray } from '@momots/core/types';
 
 function watch(paths: MaybeArray<string>) {
   for (const path of asArray(paths)) {
-    // 无论传入 'a' 还是 ['a', 'b'] 都能统一处理
+    // Handle both 'a' and ['a', 'b'] in the same way
     console.log('watching', path);
   }
 }
@@ -102,9 +102,9 @@ watch('src');
 watch(['src', 'test']);
 ```
 
-## 清理标签列表中的空项
+## Remove empty entries from a tag list
 
-提交标签前，移除空字符串和空值，得到一个新数组：
+Before submitting tags, remove empty strings and nullish values to produce a new array:
 
 ```ts
 import { compact } from '@momots/core/compact';
@@ -113,47 +113,47 @@ const tags = ['react', '', null, 'bun', undefined, 'momo'];
 compact(tags); // => ['react', 'bun', 'momo']
 ```
 
-原数组不变。`compact` 还会移除 `false` 和空数组、空对象等空容器，但保留 `0` 与 `NaN`。
+The original array is unchanged. `compact` also removes `false` and empty containers such as empty arrays and objects, but preserves `0` and `NaN`.
 
-## 适配后端 snake_case 响应
+## Adapt snake_case API responses
 
-后端使用 `user_name`，应用内部使用 `userName` 时，可以在请求和响应处转换属性名：
+When the backend uses `user_name` and your application uses `userName`, convert property names at request and response boundaries:
 
 ```ts
 import { toCamelCasedProperties } from '@momots/core/casing/toCamelCasedProperties';
 import { toSnakeCasedProperties } from '@momots/core/casing/toSnakeCasedProperties';
 
-// 入站：snake_case -> camelCase
+// Inbound: snake_case -> camelCase
 const user = toCamelCasedProperties({ user_name: 'Momo', is_admin: true });
 // => { userName: 'Momo', isAdmin: true }
 
-// 出站：camelCase -> snake_case
+// Outbound: camelCase -> snake_case
 const payload = toSnakeCasedProperties({ userName: 'Momo', isAdmin: true });
 // => { user_name: 'Momo', is_admin: true }
 ```
 
-## 国际化文案插值
+## Interpolate localized text
 
-为模板填入姓名和消息数量。模板中的 `name|访客` 表示缺少姓名时使用“访客”：
+Fill a template with a name and a message count. `name|Guest` in the template uses “Guest” when the name is missing:
 
 ```ts
 import { substitute } from '@momots/core/substitute';
 
 const t = {
-  greeting: '你好，{{name|访客}}！你有 {{count}} 条新消息。',
+  greeting: 'Hello, {{name|Guest}}! You have {{count}} new messages.',
 };
 
 substitute(t.greeting, { name: 'Momo', count: 3 });
-// => '你好，Momo！你有 3 条新消息。'
+// => 'Hello, Momo! You have 3 new messages.'
 
 substitute(t.greeting, { count: 0 });
-// => '你好，访客！你有 0 条新消息。'
+// => 'Hello, Guest! You have 0 new messages.'
 ```
 
-## 在同一全局作用域中复用缓存
+## Reuse a cache in the same global scope
 
-多个模块需要访问同一份内存缓存时，可以约定一个键，由 `singleton` 在首次调用时创建
-缓存。后续调用使用相同的作用域和键，就会取回已保存的值：
+When several modules need the same in-memory cache, agree on a key and let `singleton` create the cache on the first call.
+Subsequent calls using the same scope and key retrieve the stored value:
 
 ```ts
 import { singleton } from '@momots/core/singleton';
@@ -169,24 +169,24 @@ getCache().get('visits'); // => 1
 getCache() === getCache(); // => true
 ```
 
-默认缓存保存在 `globalThis` 上，独立进程、Worker 或页面各有自己的缓存。模块热更新
-期间也只有全局作用域和键都保留时才能复用。`pass: true` 会跳过缓存；服务端不要在默认
-作用域中保存用户令牌等请求专属状态。
+The default cache is stored on `globalThis`; separate processes, workers, or pages each have their own cache. Reuse during hot module replacement
+also requires both the global scope and key to persist. `pass: true` bypasses the cache. On the server, do not store request-specific state
+such as user tokens in the default scope.
 
-## 把组织架构表渲染成树
+## Render an organization table as a tree
 
-数据表通过 `id` 和 `parent` 表示上下级关系。先用 `unflat` 生成带 `children` 的树，
-再用 `visit` 按层遍历；根节点的深度为 `0`：
+The data table represents reporting relationships through `id` and `parent`. Use `unflat` to build a tree with `children`,
+then traverse it by level with `visit`. Root nodes have a depth of `0`:
 
 ```ts
 import { unflat } from '@momots/core/tree/unflat';
 import { visit } from '@momots/core/tree/visit';
 
 const employees = [
-  { id: 'ceo', parent: null, name: '张总' },
-  { id: 'cto', parent: 'ceo', name: '李工' },
-  { id: 'dev1', parent: 'cto', name: '小王' },
-  { id: 'dev2', parent: 'cto', name: '小赵' },
+  { id: 'ceo', parent: null, name: 'Zhang' },
+  { id: 'cto', parent: 'ceo', name: 'Li' },
+  { id: 'dev1', parent: 'cto', name: 'Wang' },
+  { id: 'dev2', parent: 'cto', name: 'Zhao' },
 ];
 
 const org = unflat(employees);
@@ -194,23 +194,23 @@ const org = unflat(employees);
 visit(org, (node, depth) => {
   console.log('  '.repeat(depth) + node.name);
 });
-// 张总
-//   李工
-//     小王
-//     小赵
+// Zhang
+//   Li
+//     Wang
+//     Zhao
 ```
 
-## 计算数字各位之和
+## Sum the digits of a number
 
-需要将一串数字逐位相加时，使用 `sumdig`：
+Use `sumdig` to add a sequence of digits:
 
 ```ts
 import { sumdig } from '@momots/core/sumdig';
 
-sumdig(2026); // => 10，即 2 + 0 + 2 + 6
+sumdig(2026); // => 10, i.e. 2 + 0 + 2 + 6
 sumdig('00129'); // => 12
 sumdig('12x'); // => NaN
 ```
 
-输入应使用纯数字字符串或普通非负整数。`sumdig` 不校验输入格式：空白字符按 `0` 参与求和，
-无法转换成数字的字符使结果成为 `NaN`，例如负号、小数点和科学计数法中的字母。
+Inputs should be digit-only strings or ordinary nonnegative integers. `sumdig` does not validate the input format: whitespace contributes `0`,
+and characters that cannot be converted to numbers produce `NaN`, including minus signs, decimal points, and letters in scientific notation.

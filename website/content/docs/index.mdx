@@ -1,34 +1,34 @@
 ---
 title: momo
-description: 函数式工具库、Web Platform 工具、React 组件、HTTP 客户端与辅助命令。
+description: Functional utilities, Web Platform tools, React components, an HTTP client, and companion commands.
 icon: Rocket
 ---
 
-**momo** 读作 mo-mo。
+**momo** is pronounced mo-mo.
 
-## 简介
+## Introduction
 
-React 项目里有不少代码不属于组件本身，例如类型守卫、数据转换、URL 与 Storage 读写、DOM / CSS / Blob 处理、请求中间件和包构建配置。这些代码通常分散在各个业务目录里，很难在项目之间复用，也不便于打包器移除没用到的部分。
+React projects contain plenty of code outside components: type guards, data transformations, URL and Storage access, DOM / CSS / Blob handling, request middleware, and package build configuration. This code is often scattered across feature directories, making it difficult to reuse across projects and difficult for bundlers to remove unused parts.
 
-momo 把这类代码整理成几个可以单独安装的包：
+momo organizes these capabilities into independently installable packages:
 
 <Cards>
   <Card title="@momots/core" href="/docs/core">
-    纯函数数据工具：大小写转换、树结构操作、守卫、单例、惰性求值等，不依赖
-    DOM、Fetch 等宿主 API。
+    Pure data utilities: case conversion, tree operations, guards, singletons,
+    and lazy evaluation, without host APIs such as DOM or Fetch.
   </Card>
   <Card title="@momots/host" href="/docs/host">
-    浏览器 / 运行时工具：环境探测守卫、存储封装、URL、二进制、CSS
-    颜色、指纹、fetch→cURL。
+    Browser / runtime tools: environment guards, storage wrappers, URLs, binary data, CSS
+    colors, fingerprints, and fetch-to-cURL conversion.
   </Card>
   <Card title="@momots/drive" href="/docs/drive">
-    基于 Fetch 的 HTTP
-    客户端：洋葱模型中间件、按路径匹配中间件、请求编码与响应解析。
+    A Fetch-based HTTP
+    client with onion middleware, path-matched middleware, request encoding, and response parsing.
   </Card>
   <Card title="@momots/design" href="/docs/design">
-    React 19.2+ 组件库：Base UI 交互原语、motion 动效与 Tailwind CSS 样式组合。
+    A React 19.2+ component library combining Base UI interaction primitives, motion animations, and Tailwind CSS styles.
   </Card>
   <Card title="@momots/cli" href="/docs/cli">
-    momo 命令行工具：统一类型生成与 Bun.build 包构建流程。
+    The momo CLI unifies declaration generation and the Bun.build package build process.
   </Card>
 </Cards>

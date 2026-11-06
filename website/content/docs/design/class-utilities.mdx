@@ -1,12 +1,12 @@
 ---
-title: 类名与样式变体
-description: 用 cx、cva 与 asClass 组合条件类名、组件变体和状态样式。
+title: Class names and style variants
+description: Compose conditional class names, component variants, and state styles with cx, cva, and asClass.
 icon: SwatchBook
 ---
 
-`cx` 合并类名并处理 Tailwind 冲突，`cva` 定义可复用的样式变体，`asClass` 将静态类名与状态回调组合起来。它们适合封装业务组件并沿用 momo 的主题 token。
+`cx` merges class names and resolves Tailwind conflicts, `cva` defines reusable style variants, and `asClass` combines static classes with state callbacks. Use them to wrap application components while retaining momo theme tokens.
 
-## 导入
+## Imports
 
 ```tsx
 import { cva, cx } from "@momots/design/tailwind";
@@ -14,9 +14,9 @@ import { asClass } from "@momots/design/shared";
 import type { VariantProps } from "cva";
 ```
 
-## cx：合并类名
+## cx: merge class names
 
-`cx` 接受字符串、条件对象和嵌套数组，忽略无效的条件项，并按输入顺序处理相互冲突的 utility。调用者传入的覆盖类名通常放在最后。
+`cx` accepts strings, conditional objects, and nested arrays, ignores inactive conditional entries, and resolves conflicting utilities in input order. Caller-supplied overrides usually belong last.
 
 ```tsx
 cx("px-2", "px-4");
@@ -30,7 +30,7 @@ cx(
 // "text-momo-body-md px-4 text-momo-fg-danger"
 ```
 
-momo 的合并配置把 `text-momo-body-md` 等语义排版 token 注册为字号类，因此它们可以与 `text-momo-fg-danger` 等颜色类并存。同属字号或同属颜色的冲突仍会被合并。
+momo's merge configuration registers semantic typography tokens such as `text-momo-body-md` as font-size classes, allowing them to coexist with color classes such as `text-momo-fg-danger`. Conflicts within font-size or color groups are still resolved.
 
 ```tsx
 cx("text-momo-body-sm", "text-momo-body-md");
@@ -40,11 +40,11 @@ cx("text-momo-body-md", "text-momo-fg-danger");
 // "text-momo-body-md text-momo-fg-danger"
 ```
 
-`hover:` 等修饰符区分不同状态下的冲突。合并器依据已配置的 Tailwind 类组判断冲突，不会读取浏览器的计算样式，也不会自动理解任意自定义 CSS 类之间的覆盖关系。
+Modifiers such as `hover:` distinguish conflicts in different states. The merger uses configured Tailwind class groups rather than browser computed styles; it does not automatically understand override relationships between arbitrary custom CSS classes.
 
-## cva：定义样式变体
+## cva: define style variants
 
-`cva` 使用同一套类名合并配置。`base` 提供基础样式，`variants` 定义变体，`defaultVariants` 指定默认值，`compoundVariants` 为满足多个条件的组合添加样式。
+`cva` uses the same class merging configuration. `base` provides base styles, `variants` defines variants, `defaultVariants` specifies defaults, and `compoundVariants` adds styles to combinations meeting multiple conditions.
 
 ```tsx
 const label = cva({
@@ -73,11 +73,11 @@ label({ invalid: true, className: "text-lg text-momo-fg-muted" });
 // "font-semibold text-lg text-momo-fg-muted"
 ```
 
-调用时的 `className` 可以覆盖默认样式与变体中的冲突类。所有类名都需要能被应用的 Tailwind 扫描器发现；这些函数只组织类名，不生成 CSS。
+A caller's `className` can override conflicting classes in base styles and variants. All classes must be discoverable by the application's Tailwind scanner; these functions organize class names but do not generate CSS.
 
-## asClass：组合状态样式
+## asClass: compose state styles
 
-一些组件的 `className` 同时接受字符串或状态回调。`asClass` 将多个输入转换为一个 `(state) => string`，每次调用时用同一个 state 求值，再通过 `cx` 合并。
+Some components accept either a string or a state callback for `className`. `asClass` converts multiple inputs into one `(state) => string`, evaluates each with the same state, and merges the results through `cx`.
 
 ```tsx
 type FieldState = { disabled: boolean; invalid: boolean };
@@ -92,11 +92,11 @@ className({ disabled: true, invalid: false });
 // "px-3 text-momo-body-md opacity-50"
 ```
 
-每项输入的类型为 `string | undefined | ((state: S) => string | undefined)`。它不直接接受 `cx` 的条件对象或数组；需要这些形式时，在回调内调用 `cx`。返回函数适合传给支持状态回调的组件，原生 DOM 元素则需要先调用该函数取得字符串。
+Each input has type `string | undefined | ((state: S) => string | undefined)`. Conditional objects and arrays accepted by `cx` are not accepted directly; call `cx` inside a callback to use them. The returned function suits components supporting state callbacks; for native DOM elements, call it first to obtain a string.
 
-## asData：生成数据属性
+## asData: generate data attributes
 
-封装组件时，可以使用同一 `shared` 入口的 `asData` 统一生成数据属性：
+When wrapping components, use `asData` from the same `shared` entry point to generate data attributes consistently:
 
 ```tsx
 import { asData } from "@momots/design/shared";
@@ -110,4 +110,4 @@ asData({ slot: "label", state: "invalid" });
 <span {...asData("label")} className={label({ invalid: true })} />;
 ```
 
-对象的键不要包含 `data-` 前缀，函数只添加前缀，不会把 camelCase 转成 kebab-case。值接受字符串或 `undefined`，省略参数返回空对象。这些属性提供选择器和调试标记，不会自动添加交互行为。
+Do not include the `data-` prefix in object keys. The function only adds that prefix; it does not convert camelCase to kebab-case. Values may be strings or `undefined`; omitting the argument returns an empty object. These attributes provide selectors and debugging markers without adding interaction behavior.

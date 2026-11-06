@@ -1,0 +1,49 @@
+diff --git a/node_modules/@tanstack/start-static-server-functions/.bun-tag-5061f5fab701f6fb b/.bun-tag-5061f5fab701f6fb
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/esm/staticFunctionMiddleware.js b/dist/esm/staticFunctionMiddleware.js
+index c6fecf9ebb3ce93e574642f49bf66495bc62d9a0..2b45a9f5eac62a322f070bdc9f37b98145946e80 100644
+--- a/dist/esm/staticFunctionMiddleware.js
++++ b/dist/esm/staticFunctionMiddleware.js
+@@ -1,6 +1,6 @@
+ import fs from "node:fs/promises";
+ import path from "node:path";
+-import { createMiddleware, getDefaultSerovalPlugins } from "@tanstack/start-client-core";
++import { createMiddleware, getDefaultSerovalPlugins, getRouterInstance } from "@tanstack/start-client-core";
+ import { fromJSON, toJSONAsync } from "seroval";
+ //#region src/staticFunctionMiddleware.ts
+ /**
+@@ -57,7 +57,9 @@ var fetchItem = async ({ data, functionId }) => {
+ 		hash: jsonToFilenameSafeString(data)
+ 	});
+ 	let result = staticClientCache?.get(url);
+-	result = await fetch(url, { method: "GET" }).then((r) => r.json()).then((d) => fromJSON(d, { plugins: getDefaultSerovalPlugins() }));
++	const router = await getRouterInstance();
++	const basepath = router.basepath.replace(/^\/+|\/+$/g, "");
++	result = await fetch(`${basepath ? `/${basepath}` : ""}${url}`, { method: "GET" }).then((r) => r.json()).then((d) => fromJSON(d, { plugins: getDefaultSerovalPlugins() }));
+ 	return result;
+ };
+ var staticFunctionMiddleware = createMiddleware({ type: "function" }).client(async (ctx) => {
+diff --git a/src/staticFunctionMiddleware.ts b/src/staticFunctionMiddleware.ts
+index e6681fce1d781e0c97696e04b54346af74564659..b93f9fd5835d543186a05b2775002c031cab6cf9 100644
+--- a/src/staticFunctionMiddleware.ts
++++ b/src/staticFunctionMiddleware.ts
+@@ -3,6 +3,7 @@ import path from 'node:path'
+ import {
+   createMiddleware,
+   getDefaultSerovalPlugins,
++  getRouterInstance,
+ } from '@tanstack/start-client-core'
+ import { fromJSON, toJSONAsync } from 'seroval'
+ 
+@@ -116,7 +117,9 @@ const fetchItem = async ({
+ 
+   let result: any = staticClientCache?.get(url)
+ 
+-  result = await fetch(url, {
++  const router = await getRouterInstance()
++  const basepath = router.basepath.replace(/^\/+|\/+$/g, '')
++  result = await fetch(`${basepath ? `/${basepath}` : ""}${url}`, {
+     method: 'GET',
+   })
+     .then((r) => r.json())

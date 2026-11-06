@@ -1,14 +1,14 @@
 ---
 title: ToggleGroup
-description: 图标工具组，适合单选工具栏和编辑器控制。
+description: An icon control group for single-selection toolbars and editor controls.
 icon: MousePointerClick
 ---
 
-`ToggleGroup` 使用 Base UI ToggleGroup 提供键盘和选择语义，用 motion 绘制选中态指示器，支持 `button`、`segmented` 与 `tabbar` 视觉变体。按钮、指示器、边框与 focus ring 都消费 momo semantic token。
+`ToggleGroup` uses Base UI ToggleGroup for keyboard and selection semantics and motion for its selection indicator. It supports `button`, `segmented`, and `tabbar` variants. Buttons, the indicator, borders, and focus rings all consume momo semantic tokens.
 
 <ToggleGroupPlayground />
 
-## 使用
+## Usage
 
 ```tsx
 import { ToggleGroup } from "@momots/design/components/toggle-group";
@@ -28,11 +28,11 @@ import { ToggleGroup } from "@momots/design/components/toggle-group";
 
 ## Props
 
-| Prop | 类型 | 说明 |
+| Prop | Type | Description |
 | --- | --- | --- |
-| `value` | `T` | 当前选中值 |
-| `defaultValue` | `T` | 非受控默认值 |
-| `options` | `ControlOption<T>[]` | 选项列表，支持 `label`、`icon`、`disabled`、`className`、`style` |
-| `size` | `"sm" \| "md" \| "lg"` | 控件尺寸 |
-| `variant` | `"button" \| "segmented" \| "tabbar"` | 视觉变体 |
-| `onChange` | `(value: T \| undefined) => void` | 选中项变化回调；取消全部选中时为 `undefined` |
+| `value` | `T` | Current selected value |
+| `defaultValue` | `T` | Uncontrolled initial value |
+| `options` | `ControlOption<T>[]` | Options supporting `label`, `icon`, `disabled`, `className`, and `style` |
+| `size` | `"sm" \| "md" \| "lg"` | Control size |
+| `variant` | `"button" \| "segmented" \| "tabbar"` | Appearance variant |
+| `onChange` | `(value: T \| undefined) => void` | Selection change callback; `undefined` when all options are deselected |

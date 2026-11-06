@@ -1,14 +1,14 @@
 ---
 title: Control Types
-description: momo/design 控件共享的值、尺寸、方向与选项类型。
+description: Shared value, size, direction, and option types for momo/design controls.
 icon: ListChecks
 ---
 
-`@momots/design/shared` 提供一组轻量类型，用来统一控件之间常见的数据形状。它们是结构约定，不是运行时模型：组件只读取自己需要的字段，不会自动实现 `ControlOption` 中的全部能力。
+`@momots/design/shared` provides lightweight types for common data shapes across controls. These are structural conventions, not runtime models: components read only the fields they need and do not automatically implement every capability in `ControlOption`.
 
 <ControlTypesPlayground />
 
-## 导入
+## Imports
 
 ```tsx
 import type {
@@ -20,20 +20,20 @@ import type {
 } from "@momots/design/shared";
 ```
 
-## 基础类型
+## Basic types
 
-| 类型 | 定义 | 当前用途 |
+| Type | Definition | Current use |
 | --- | --- | --- |
-| `ControlValue` | `string \| number \| null` | Select、Accordion、RadioGroup，以及 Highlight / AutoSize registrar 的键 |
-| `ControlSize` | `"sm" \| "md" \| "lg"` | 共享尺寸词汇；当前组件的 `size` 多由各自 variant 推导，并没有直接引用该 alias |
-| `ControlAxis` | `"x" \| "y"` | Drawer 内部布局与测量方向 |
-| `ControlDirection` | `"up" \| "down" \| "left" \| "right"` | `asAxis` 的方向输入；Drawer 的公开方向类型目前由 Base UI 推导 |
+| `ControlValue` | `string \| number \| null` | Select, Accordion, RadioGroup, and keys for Highlight / AutoSize registrars |
+| `ControlSize` | `"sm" \| "md" \| "lg"` | Shared size vocabulary; component `size` types are currently mostly inferred from their own variants and do not directly reference this alias |
+| `ControlAxis` | `"x" \| "y"` | Internal Drawer layout and measurement axis |
+| `ControlDirection` | `"up" \| "down" \| "left" \| "right"` | Direction input for `asAxis`; Drawer's public direction type is currently inferred from Base UI |
 
-这些类型是结构兼容的。例如一个 `ControlSize` 变量可以传给同样接受 `"sm" | "md" | "lg"` 的组件，但这不表示所有组件都直接依赖该类型别名。
+These types are structurally compatible. For example, a `ControlSize` variable can be passed to a component accepting `"sm" | "md" | "lg"`, but this does not mean every component directly depends on that type alias.
 
-### asAxis：方向转轴
+### asAxis: convert a direction to an axis
 
-同一入口还导出 `asAxis`，将方向转换为布局或测量所需的轴：
+The same entry point exports `asAxis`, which converts a direction to the axis needed for layout or measurement:
 
 ```ts
 import { asAxis } from "@momots/design/shared";
@@ -45,7 +45,7 @@ asAxis("down");  // "y"
 asAxis();        // undefined
 ```
 
-输入为 `ControlDirection | undefined`，返回 `ControlAxis | undefined`。它只确定轴，不包含移动正负方向，也不会处理 RTL 下的逻辑方向转换。
+It accepts `ControlDirection | undefined` and returns `ControlAxis | undefined`. It only determines the axis, without encoding positive or negative movement or converting logical directions for RTL.
 
 ## ControlOption
 
@@ -64,7 +64,7 @@ type ControlOption<TValue extends ControlValue, TMeta = unknown> = {
 };
 ```
 
-`value` 与 `label` 是必填字段。`TMeta` 可以为业务元数据提供准确类型，但 momo 组件不会读取或修改 `meta`：调用方仍需自行使用它。
+`value` and `label` are required. `TMeta` gives application metadata a precise type, but momo components do not read or modify `meta`; the caller must use it explicitly.
 
 ```tsx
 type PlanMeta = { seats: number };
@@ -85,22 +85,22 @@ const plans: ControlOption<"starter" | "team", PlanMeta>[] = [
 ];
 ```
 
-### 组件实际消费的字段
+### Fields consumed by components
 
-| 组件 | 显式读取的标准字段 | 扩展字段 / 备注 |
+| Component | Standard fields explicitly read | Extra fields / notes |
 | --- | --- | --- |
-| `Select` | `value`、`label`、`style`、`icon`、`textValue`、`className`、`disabled` | `textValue` 用于非纯文本 label 的可访问名称 |
-| `ToggleGroup` | `value`、`label`、`style`、`icon`、`textValue`、`className`、`disabled` | `textValue` 会作为按钮的 `aria-label` 回退值 |
-| `Tabs` | `value`、`label`、`style`、`icon`、`className`、`disabled` | `TabOption` 额外增加 `content` |
-| `Accordion` | `value`、`label` | `AccordionOption` 额外增加 `content`；其余标准字段目前不会传给 Item |
-| `PickerCore` | `value`、`label`、`textValue`、`disabled` | `textValue` 用于滚轮 option 的可访问名称 |
-| `RadioGroup` | `value` | 当前封装不会自动渲染 `label`，调用时需要另外提供可访问名称 |
+| `Select` | `value`, `label`, `style`, `icon`, `textValue`, `className`, `disabled` | `textValue` supplies the accessible name for non-text labels |
+| `ToggleGroup` | `value`, `label`, `style`, `icon`, `textValue`, `className`, `disabled` | `textValue` is the fallback for the button's `aria-label` |
+| `Tabs` | `value`, `label`, `style`, `icon`, `className`, `disabled` | `TabOption` also adds `content` |
+| `Accordion` | `value`, `label` | `AccordionOption` also adds `content`; other standard fields are not currently passed to Item |
+| `PickerCore` | `value`, `label`, `textValue`, `disabled` | `textValue` supplies the accessible name for wheel options |
+| `RadioGroup` | `value` | The current wrapper does not automatically render `label`; provide an accessible name separately |
 
-目前没有组件自动消费 `extra`、`href` 或 `meta`。不要因为字段出现在共享类型中，就假设组件会渲染徽标、创建链接或执行导航。需要这些行为时，应在调用侧组合 UI，或者先为对应组件增加明确的 API。
+No component currently consumes `extra`, `href`, or `meta` automatically. A field's presence in the shared type does not imply that a component renders a badge, creates a link, or performs navigation. Compose those behaviors at the call site, or first add an explicit API to the relevant component.
 
-## 复用同一组选项
+## Reusing an option array
 
-当两个组件消费的字段交集满足需求时，可以安全复用数组：
+An array can safely be shared when the intersection of fields consumed by two components meets your needs:
 
 ```tsx
 const options: ControlOption<"grid" | "list">[] = [
@@ -112,4 +112,4 @@ const options: ControlOption<"grid" | "list">[] = [
 <Select options={options} value={view} onChange={setView} />
 ```
 
-如果某个字段只对其中一个消费者有意义，它会被另一个组件忽略；共享数组本身不会为不同组件补齐行为。
+If a field matters to only one consumer, the other component ignores it. Sharing the array does not supply missing behavior to either component.

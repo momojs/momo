@@ -1,14 +1,14 @@
 ---
 title: Combobox
-description: 带搜索过滤、多选标签和 Motion 弹层动画的选择控件。
+description: A selection control with search filtering, multi-select tags, and Motion popup animation.
 icon: ListFilter
 ---
 
-`Combobox` 基于 Base UI Combobox，使用与 `Select` 一致的选项结构、尺寸和主题 token。适合需要输入关键词筛选的预定义选项；选中值与输入文本分别管理。
+`Combobox` builds on Base UI Combobox with the same option structure, dimensions, and theme tokens as `Select`. Use it for predefined options filtered by typed keywords; selection and input text are managed separately.
 
 <ComboboxPlayground />
 
-## 基本用法
+## Basic usage
 
 ```tsx
 import { Combobox } from '@momots/design/components/combobox';
@@ -19,100 +19,100 @@ const options = [
   { value: 'svelte', label: 'Svelte', disabled: true },
 ];
 
-<label htmlFor='framework'>框架</label>
+<label htmlFor='framework'>Framework</label>
 <Combobox
   options={options}
   defaultValue='react'
   name='framework'
-  placeholder='搜索框架…'
+  placeholder='Search frameworks…'
   clearable
-  emptyText='没有匹配结果'
+  emptyText='No matching results'
   slots={{ input: { id: 'framework' } }}
 />
 ```
 
-每个选项使用唯一的字符串或数字 `value`。`null` 表示单选未选择，不能用作选项值。`label` 支持 JSX；复杂标签应提供 `textValue`，用于搜索和输入框显示。选项还支持 `disabled`、`icon`、`extra`、`className` 和 `style`。
+Each option needs a unique string or numeric `value`. `null` means no single selection and cannot be an option value. `label` supports JSX; provide `textValue` for complex labels to support search and input display. Options also support `disabled`, `icon`, `extra`, `className`, and `style`.
 
-输入框应有对应的 `label`、`Field.Label` 或 `slots.input['aria-label']`；placeholder 只提供输入提示。
+Associate the input with a `label`, `Field.Label`, or `slots.input['aria-label']`; placeholders are only hints.
 
-## 选项布局
+## Option layout
 
-默认选项按逻辑方向排列为四列：`[图标或占位] [标题] [可选辅助信息] [末尾勾选]`。`icon` 位于逻辑起点，`extra` 位于标题与勾选之间；没有图标时仍保留图标列，未选中或 `slots.itemIndicator={false}` 时仍保留末尾列，因此标题起点不会随选项内容或选中状态改变。选中状态使用勾选表达，不增加文字字重。
+Options use four logical columns: `[icon or placeholder] [label] [optional extra information] [trailing check]`. `icon` is at the logical start, and `extra` sits between label and check. The icon column remains without an icon, and the trailing column remains when unchecked or `slots.itemIndicator={false}`, keeping labels aligned. Checks indicate selection without increasing font weight.
 
 ```tsx
 <Combobox
   options={[
-    { value: 'personal', label: '个人空间', extra: '免费' },
-    { value: 'team', label: '团队空间', icon: <TeamIcon />, extra: '适合多人协作的专业版空间' },
+    { value: 'personal', label: 'Personal workspace', extra: 'Free' },
+    { value: 'team', label: 'Team workspace', icon: <TeamIcon />, extra: 'Pro workspace for team collaboration' },
   ]}
-  slots={{ input: { 'aria-label': '选择空间' } }}
+  slots={{ input: { 'aria-label': 'Choose a workspace' } }}
 />
 ```
 
-标题与过长的辅助信息使用单行省略显示，`extra` 最多占可用行宽的 40%，为标题保留空间。辅助信息的完整文本仍可由辅助技术读取；图标与勾选属于装饰内容，对辅助技术隐藏，选中状态由 Base UI 的 `aria-selected` 表达。搜索文本、单选输入框和多选标签的文字仍取自 `textValue` / `label`，不包含 `extra`。
+Labels and long extra information truncate to one line. `extra` takes at most 40% of available row width, leaving space for the label. Assistive technology can read its complete text. Icons and checks are decorative and hidden; Base UI's `aria-selected` communicates selection. Search, single-select input, and multi-select chip text come from `textValue` / `label`, excluding `extra`.
 
-## 受控与多选
+## Controlled and multiple selection
 
 ```tsx
 const [value, setValue] = useState<string | null>(null);
 const [values, setValues] = useState<string[]>(['react']);
 
 <Combobox options={options} value={value} onChange={setValue}
-  slots={{ input: { 'aria-label': '主要框架' } }} clearable />
+  slots={{ input: { 'aria-label': 'Primary framework' } }} clearable />
 
 <Combobox options={options} multiple value={values} onChange={setValues}
-  slots={{ input: { 'aria-label': '使用的框架' } }} clearable />
+  slots={{ input: { 'aria-label': 'Frameworks used' } }} clearable />
 ```
 
-单选清空时 `onChange` 收到 `null`，多选清空时收到 `[]`。多选通过标签展示已选项，可点击移除按钮或使用键盘删除。`defaultValue` 提供非受控初始值；使用 `value` 时由调用方更新它。`multiple` 决定值的类型，切换模式时应重新挂载组件。
+Clearing sends `null` to `onChange` for single selection and `[]` for multiple selection. Multi-select chips can be removed with their buttons or the keyboard. `defaultValue` initializes uncontrolled state; callers update controlled `value`. `multiple` determines the value type; remount when changing modes.
 
-`onValueChange(value, details)` 先于 `onChange` 调用；`details.cancel()` 可阻止这次选择及简化回调。`open`、`defaultOpen` 和 `onOpenChange` 管理弹层，取消 `onOpenChange` 同样会阻止开关。`disabled` 禁用交互，`readOnly` 保留可读状态但禁止修改。
+`onValueChange(value, details)` runs before `onChange`; `details.cancel()` prevents both selection and the simplified callback. `open`, `defaultOpen`, and `onOpenChange` manage the popup; canceling `onOpenChange` prevents toggling. `disabled` disables interaction; `readOnly` keeps content readable but prevents changes.
 
-## 搜索
+## Search
 
-默认使用 Base UI 的文本过滤。`inputValue` / `defaultInputValue` 与 `onInputValueChange` 管理搜索文本，`value` 管理选中的选项值。自定义 `filter(value, query, itemToString)` 可改变匹配规则；`filter={null}` 关闭本地过滤。
+Base UI text filtering is the default. `inputValue` / `defaultInputValue` and `onInputValueChange` manage search text; `value` manages selected options. Customize matching with `filter(value, query, itemToString)`; `filter={null}` disables local filtering.
 
-异步搜索时，通过 `inputValue` 与 `onInputValueChange` 驱动请求，再更新 `options`。调用方负责加载状态与请求竞态，并应保留当前已选项的数据，以维持标签显示。也可以保留完整 `options`，用 `filteredItems` 提供要展示的选项值数组。
+For asynchronous search, drive requests with `inputValue` and `onInputValueChange`, then update `options`. Callers handle loading and request races and should retain selected option data for chip labels. Alternatively, keep all `options` and pass the visible option values through `filteredItems`.
 
-`itemToStringLabel` 可覆盖 `textValue` / 字符串标签的默认转换；表单提交使用原始选项值，`itemToStringValue` 可自定义序列化。
+`itemToStringLabel` overrides default `textValue` / string-label conversion. Forms submit raw option values; `itemToStringValue` customizes serialization.
 
-## 自定义节点
+## Custom nodes
 
-`slots` 复用内容插槽的归一方式，支持属性对象、元素简写和 `(props, state) => JSX`：
+`slots` uses content-slot normalization, accepting props objects, element shorthand, and `(props, state) => JSX`:
 
 ```tsx
 <Combobox
   options={options}
   slots={{
-    input: { 'aria-label': '框架', className: 'font-medium' },
+    input: { 'aria-label': 'Framework', className: 'font-medium' },
     trigger: (props, state) => (
       <button {...props} type='button' data-expanded={state.open} />
     ),
     item: <div className='tracking-wide' />,
-    clear: { 'aria-label': '清空选择' },
+    clear: { 'aria-label': 'Clear selection' },
   }}
   renderOption={(option) => <span>{option.label}</span>}
 />
 ```
 
-可配置 `control`、`input`、`trigger`、`clear`、`item`、`itemIndicator`、`chip`、`chipRemove`、`empty`。`trigger`、`clear`、`itemIndicator`、`chipRemove` 支持 `false` 隐藏。render 回调需转发传入的 props 和 ref，以保留语义、交互和定位。`renderOption` 替换默认的图标、标题和辅助信息，承载节点占据前三列，末尾勾选仍由 `itemIndicator` 管理；自定义内容的内部布局、截断与可访问文本由调用方负责。
+Configure `control`, `input`, `trigger`, `clear`, `item`, `itemIndicator`, `chip`, `chipRemove`, and `empty`. `trigger`, `clear`, `itemIndicator`, and `chipRemove` accept `false` to hide them. Forward props and ref in render callbacks to retain semantics, interaction, and positioning. `renderOption` replaces icon, label, and extra information across the first three columns; `itemIndicator` still manages the trailing check. Callers handle custom layout, truncation, and accessible text.
 
-后缀区域只有一个图标位。`trigger` 与 `clear` 是覆盖在该位置上的透明按钮，图标由组件统一渲染，不读取它们的 `children`，所以 render 回调不需要提供图标或文字。同一时刻只挂载其中一个按钮：
+The suffix has one icon position. `trigger` and `clear` are transparent buttons over it; the component renders their icon without reading their `children`, so render callbacks need no icon or text. Only one button is mounted at a time:
 
-| 状态 | 后缀 |
+| State | Suffix |
 | --- | --- |
-| `clearable`，已有选中值，且输入组处于鼠标悬停或聚焦 | `clear`（×） |
-| 其他情况 | `trigger`，收起时为下箭头，展开时为上箭头 |
+| `clearable`, a selection exists, and the input group is hovered or focused | `clear` (×) |
+| Otherwise | `trigger`: down arrow when closed, up arrow when open |
 
-单选以 `value` 不为 `null` 判断有值，多选以至少一个标签判断；只输入了搜索文字不算有值。触屏点按不计为悬停，触屏用户聚焦输入框后即可看到清空按钮。`disabled`、`readOnly` 或 `slots.clear={false}` 时始终显示箭头；`slots.trigger={false}` 时，不满足清空条件就不显示后缀。图标切换使用 [`Icon`](/docs/design/icon) 的路径变形，减少动效时直接切换。
+Single selection is present when `value` is not `null`; multiple selection requires at least one chip. Search text alone is not a selection. Touch taps are not hover; focusing the input reveals clear for touch users. `disabled`, `readOnly`, or `slots.clear={false}` always shows the arrow. With `slots.trigger={false}`, no suffix appears unless clearing is available. Icons morph through [`Icon`](/docs/design/icon), switching directly with reduced motion.
 
-`slots` 遵循 [Content Slots](/docs/design/content-slots) 的配置规则；内容仍由顶层属性提供。`emptyText` 是空结果的内容，`slots.empty` 配置承载它的节点；`emptyText` 为 `undefined`、`null` 或 `false` 时不显示文字，但空结果节点保持挂载，以便读屏器播报结果变化。
+`slots` follows [Content Slots](/docs/design/content-slots); top-level props still supply content. `emptyText` supplies empty-result content and `slots.empty` configures its node. With `undefined`, `null`, or `false` text, the empty-result node remains mounted without visible text so screen readers can announce result changes.
 
-`className` 用于整个输入组。`portalProps`、`positionerProps`、`popupProps`、`listProps` 配置对应层；弹层的 render 由 Motion 管理。默认 Portal 挂载到 `body`，局部主题可用 `portalProps.container` 指定挂载位置。
+`className` applies to the whole input group. `portalProps`, `positionerProps`, `popupProps`, and `listProps` configure their layers; Motion controls popup rendering. Portal defaults to `body`; use `portalProps.container` for a locally themed container.
 
 ## RTL
 
-使用 Base UI 的 `DirectionProvider` 设置交互方向，并在应用容器设置对应的 `dir`。弹层会把 provider 的方向带入 Portal，即使默认挂载到 `body`，图标、辅助信息与末尾勾选也会按逻辑方向镜像排列。
+Set interaction direction with Base UI `DirectionProvider` and the matching `dir` on the application container. The popup carries provider direction into its Portal, mirroring icons, extra information, and checks logically even when mounted to `body`.
 
 ```tsx
 import { DirectionProvider } from '@base-ui/react/direction-provider';
@@ -121,24 +121,24 @@ import { DirectionProvider } from '@base-ui/react/direction-provider';
   <div dir='rtl'>
     <Combobox
       options={options}
-      slots={{ input: { 'aria-label': '选择框架' } }}
+      slots={{ input: { 'aria-label': 'Choose a framework' } }}
     />
   </div>
 </DirectionProvider>
 ```
 
-## 尺寸与定位
+## Dimensions and positioning
 
-| 属性 | 默认值 | 说明 |
+| Property | Default | Description |
 | --- | --- | --- |
 | `size` | `md` | `sm` / `md` / `lg` |
-| `clearable` | `false` | 有值时在悬停或聚焦状态下把后缀切换为清空按钮 |
-| `side` / `align` | `bottom` / `start` | 弹层首选方向与对齐 |
-| `sideOffset` / `alignOffset` | `6` / `0` | 定位偏移 |
-| `emptyText` | `No results found.` | 无匹配结果时的内容 |
+| `clearable` | `false` | Switches the suffix to a clear button on hover/focus when a selection exists |
+| `side` / `align` | `bottom` / `start` | Preferred popup direction and alignment |
+| `sideOffset` / `alignOffset` | `6` / `0` | Positioning offsets |
+| `emptyText` | `No results found.` | Content when there are no matching options |
 
-弹层宽度跟随输入组，并受视口可用空间约束。方向键导航选项，Enter 选择，Escape 关闭；焦点留在输入框。
+Popup width follows the input group and is constrained by viewport space. Arrow keys navigate, Enter selects, and Escape closes; focus stays in the input.
 
-动画与 `Select` 一致：弹层使用 `useFeel('ui')`，从锚点方向以 `travel.hover` 的位移和轻微缩放进入，退出完成后再卸载；减少动效时只保留透明度。高亮项由共享的 `Highlight` 层跟随，键盘导航与指针悬停移动同一层；`highlightItemOnHover={false}` 时只跟随键盘。
+Animation matches `Select`: the popup uses `useFeel('ui')`, entering from the anchor with `travel.hover` displacement and slight scale, and unmounting after exit. Reduced motion retains only opacity. A shared `Highlight` layer follows both keyboard and pointer selection; `highlightItemOnHover={false}` makes it follow only the keyboard.
 
-Combobox 选择预定义值，不能把任意输入文本当作选项提交。完整的交互语义见 [Base UI Combobox 文档](https://base-ui.com/react/components/combobox)。
+Combobox selects predefined values; arbitrary input text cannot be submitted as an option. See [Base UI Combobox](https://base-ui.com/react/components/combobox) for complete interaction semantics.

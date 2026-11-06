@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { useSiteTranslations } from '@/lib/site-translations';
+
 import { Select } from '../../../../../packages/design/src/components/select';
 import { ToggleGroup } from '../../../../../packages/design/src/components/toggle-group';
 import type { ControlOption } from '../../../../../packages/design/src/shared/control';
@@ -15,6 +17,7 @@ type PlanMeta = {
 };
 
 export function ControlTypesPlayground() {
+  const t = useSiteTranslations();
   const [value, setValue] = useState<Plan>('team');
   const [disableScale, setDisableScale] = useState(false);
 
@@ -24,14 +27,14 @@ export function ControlTypesPlayground() {
       label: 'Starter',
       textValue: 'Starter plan',
       icon: <span aria-hidden>1</span>,
-      meta: { description: '适合个人项目', seats: 1 },
+      meta: { description: t('适合个人项目'), seats: 1 },
     },
     {
       value: 'team',
       label: 'Team',
       textValue: 'Team plan',
       icon: <span aria-hidden>5</span>,
-      meta: { description: '适合协作团队', seats: 5 },
+      meta: { description: t('适合协作团队'), seats: 5 },
     },
     {
       value: 'scale',
@@ -41,7 +44,7 @@ export function ControlTypesPlayground() {
       disabled: disableScale,
       extra: 'Popular',
       href: '/pricing',
-      meta: { description: '适合大型组织', seats: 100 },
+      meta: { description: t('适合大型组织'), seats: 100 },
     },
   ];
 

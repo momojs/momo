@@ -1,0 +1,216 @@
+---
+title: 示例
+description: 用具体输入和输出说明 @momots/core 的常见用法。
+icon: Code
+---
+
+以下示例分别处理可选参数、配置读取、数据转换和共享缓存。每个片段都给出输入与结果，
+可按当前需求选择阅读。
+
+## 多条件可选载荷
+
+只有模块可见、还有更多数据，而且流水号非空时，才生成埋点参数；其余情况返回
+`undefined`。先把三个条件写成布尔判断，再用 `eliminate` 处理判断失败的结果：
+
+```ts
+import { eliminate } from '@momots/core/eliminate';
+
+function createTrackPayload(
+  moduleVisible: boolean,
+  hasMore: boolean,
+  flowID: string,
+  pageSize: number,
+) {
+  return eliminate(
+    moduleVisible && hasMore && flowID !== '' && { flowID, pageSize },
+  );
+}
+
+createTrackPayload(true, true, 'flow-42', 20);
+// => { flowID: 'flow-42', pageSize: 20 }
+createTrackPayload(false, true, 'flow-42', 20); // => undefined
+createTrackPayload(true, true, '', 20); // => undefined
+```
+
+本例的条件都是布尔值，因此失败时 `&&` 返回 `false`，`eliminate` 再将它转换为
+`undefined`。一般的 `&&` 表达式也可能返回 `0`、空字符串等值；默认的 `eliminate`
+只替换 `false`，不会消除所有假值。
+
+## 为未设置的端口计算默认值
+
+假设配置读取器用 `-1` 表示未设置端口。用 `eliminate` 将这个约定值转换为
+`undefined`，再在需要时计算默认端口：
+
+```ts
+import { eliminate } from '@momots/core/eliminate';
+import { realize } from '@momots/core/realize';
+
+function readPort(raw: number, fallback: () => number = () => 3000) {
+  return eliminate(raw, -1) ?? realize(fallback);
+}
+
+readPort(8080); // => 8080
+readPort(-1);   // => 3000
+```
+
+`??` 保证只有缺省时才调用 `fallback`；`realize` 负责执行这个函数并返回结果。
+这段代码只处理 `-1` 的约定，不检查端口是否在有效范围内。
+
+## 只为不存在的配置项使用默认值
+
+有些配置把“没有设置属性”和“属性存在，但值为 `undefined`”区分开来。
+`PropertyPath.read` 返回的 `exists` 可以保留这项区别：
+
+```ts
+import { PropertyPath } from '@momots/core/property-path';
+
+const config = { logging: { level: undefined } };
+
+PropertyPath.read(config, 'logging.level');
+// => { exists: true, value: undefined }
+PropertyPath.read(config, 'logging.file');
+// => { exists: false }
+
+function readConfig(source: unknown, path: string, fallback: unknown) {
+  const result = PropertyPath.read(source, path);
+  return result.exists ? result.value : fallback;
+}
+
+readConfig(config, 'logging.level', 'info'); // => undefined
+readConfig(config, 'logging.file', 'app.log'); // => 'app.log'
+```
+
+读取结果的 `value` 是 `unknown`，使用前仍需检查类型。本例只遍历普通对象；读取数组
+元素时使用 `items[0]` 这样的数字下标。完整规则见 [向导](/docs/core/guide#propertypathread)。
+
+## 归一化「单值或数组」参数
+
+一个函数同时接受单个路径和路径数组时，先用 `asArray` 转成数组，后续只写一套循环：
+
+```ts
+import { asArray } from '@momots/core/as/array';
+import type { MaybeArray } from '@momots/core/types';
+
+function watch(paths: MaybeArray<string>) {
+  for (const path of asArray(paths)) {
+    // 无论传入 'a' 还是 ['a', 'b'] 都能统一处理
+    console.log('watching', path);
+  }
+}
+
+watch('src');
+watch(['src', 'test']);
+```
+
+## 清理标签列表中的空项
+
+提交标签前，移除空字符串和空值，得到一个新数组：
+
+```ts
+import { compact } from '@momots/core/compact';
+
+const tags = ['react', '', null, 'bun', undefined, 'momo'];
+compact(tags); // => ['react', 'bun', 'momo']
+```
+
+原数组不变。`compact` 还会移除 `false` 和空数组、空对象等空容器，但保留 `0` 与 `NaN`。
+
+## 适配后端 snake_case 响应
+
+后端使用 `user_name`，应用内部使用 `userName` 时，可以在请求和响应处转换属性名：
+
+```ts
+import { toCamelCasedProperties } from '@momots/core/casing/toCamelCasedProperties';
+import { toSnakeCasedProperties } from '@momots/core/casing/toSnakeCasedProperties';
+
+// 入站：snake_case -> camelCase
+const user = toCamelCasedProperties({ user_name: 'Momo', is_admin: true });
+// => { userName: 'Momo', isAdmin: true }
+
+// 出站：camelCase -> snake_case
+const payload = toSnakeCasedProperties({ userName: 'Momo', isAdmin: true });
+// => { user_name: 'Momo', is_admin: true }
+```
+
+## 国际化文案插值
+
+为模板填入姓名和消息数量。模板中的 `name|访客` 表示缺少姓名时使用“访客”：
+
+```ts
+import { substitute } from '@momots/core/substitute';
+
+const t = {
+  greeting: '你好，{{name|访客}}！你有 {{count}} 条新消息。',
+};
+
+substitute(t.greeting, { name: 'Momo', count: 3 });
+// => '你好，Momo！你有 3 条新消息。'
+
+substitute(t.greeting, { count: 0 });
+// => '你好，访客！你有 0 条新消息。'
+```
+
+## 在同一全局作用域中复用缓存
+
+多个模块需要访问同一份内存缓存时，可以约定一个键，由 `singleton` 在首次调用时创建
+缓存。后续调用使用相同的作用域和键，就会取回已保存的值：
+
+```ts
+import { singleton } from '@momots/core/singleton';
+
+const cacheKey = Symbol.for('example:core:cache');
+
+function getCache() {
+  return singleton(cacheKey, () => new Map<string, number>());
+}
+
+getCache().set('visits', 1);
+getCache().get('visits'); // => 1
+getCache() === getCache(); // => true
+```
+
+默认缓存保存在 `globalThis` 上，独立进程、Worker 或页面各有自己的缓存。模块热更新
+期间也只有全局作用域和键都保留时才能复用。`pass: true` 会跳过缓存；服务端不要在默认
+作用域中保存用户令牌等请求专属状态。
+
+## 把组织架构表渲染成树
+
+数据表通过 `id` 和 `parent` 表示上下级关系。先用 `unflat` 生成带 `children` 的树，
+再用 `visit` 按层遍历；根节点的深度为 `0`：
+
+```ts
+import { unflat } from '@momots/core/tree/unflat';
+import { visit } from '@momots/core/tree/visit';
+
+const employees = [
+  { id: 'ceo', parent: null, name: '张总' },
+  { id: 'cto', parent: 'ceo', name: '李工' },
+  { id: 'dev1', parent: 'cto', name: '小王' },
+  { id: 'dev2', parent: 'cto', name: '小赵' },
+];
+
+const org = unflat(employees);
+
+visit(org, (node, depth) => {
+  console.log('  '.repeat(depth) + node.name);
+});
+// 张总
+//   李工
+//     小王
+//     小赵
+```
+
+## 计算数字各位之和
+
+需要将一串数字逐位相加时，使用 `sumdig`：
+
+```ts
+import { sumdig } from '@momots/core/sumdig';
+
+sumdig(2026); // => 10，即 2 + 0 + 2 + 6
+sumdig('00129'); // => 12
+sumdig('12x'); // => NaN
+```
+
+输入应使用纯数字字符串或普通非负整数。`sumdig` 不校验输入格式：空白字符按 `0` 参与求和，
+无法转换成数字的字符使结果成为 `NaN`，例如负号、小数点和科学计数法中的字母。

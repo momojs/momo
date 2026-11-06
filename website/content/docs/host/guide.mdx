@@ -1,68 +1,68 @@
 ---
-title: API 向导
-description: "@momots/host 全部公开函数的用法说明。"
+title: API guide
+description: "Usage reference for every public @momots/host function."
 icon: BookOpen
 ---
 
-欢迎查阅 `@momots/host` 的 API 参考。下文按 [能力地图](/docs/host#能力地图) 中的主题分类，逐函数列出签名、参数、返回值与示例。除特别说明外，所有 API 均可从根入口或对应子路径导入。
+Welcome to the `@momots/host` API reference. Topics follow the [capability map](/docs/host#capability-map), with signatures, parameters, return values, and examples for each function. Unless stated otherwise, APIs are available from the root and corresponding subpaths.
 
-在 Bun 服务中，模块可以安全导入，但部分 API 会降级或采用服务端宿主语义。请先查看[运行时兼容性矩阵](/docs/host#运行时兼容性)，并优先使用子路径导入。这里的“安全导入”不等于 DOM、Canvas 或浏览器访客信息可用。
+Modules are safe to import in Bun services, but some APIs degrade or use server-host semantics. Check the [runtime compatibility matrix](/docs/host#runtime-compatibility) first and prefer subpath imports. Safe import does not mean DOM, Canvas, or browser-visitor data is available.
 
 ```ts
 import { isMobile, measureText, Storagefy } from '@momots/host';
 ```
 
-需要可复制的实战片段，请前往 [示例](/docs/host/examples)。
+For reusable practical snippets, see [examples](/docs/host/examples).
 
-## 守卫
+## Guards
 
-子路径：`guard/is-*`
+Subpath: `guard/is-*`
 
-守卫统一放在 `guard/is-*` 子路径下，覆盖环境探测、DOM/元素类型、Body/二进制类型、字符串格式等场景。
+Guards live under `guard/is-*`, covering environment detection, DOM/element types, body/binary types, and string formats.
 
-UA 类守卫默认读取 `navigator.userAgent`（或 `location.hostname`），也可传入字符串以便在 SSR 或单元测试中注入。在 Bun 服务中判断请求方设备时，应显式传入请求头中的 UA；默认值描述的是 Bun 服务自身。DOM 类守卫在没有 DOM 的环境中安全返回 `false`，Web API 类守卫仍可正常判断 Bun 提供的对象。
+UA guards default to `navigator.userAgent` (or `location.hostname`) and accept explicit strings for SSR and tests. To detect a requester's device in Bun, pass the request UA header; the default describes Bun itself. DOM guards safely return `false` without a DOM, while Web API guards recognize objects provided by Bun.
 
 ### isAndroid
 
-断言 UA 是否表示 Android 系统。
+Check whether a UA identifies Android.
 
-**社区对照：** [UAParser.js 的 `getOS()`](https://docs.uaparser.dev/api/main/get-os.html) 返回系统名称与版本；`isAndroid` 只返回 Android 判定结果，适合简单条件分支，也可显式传入 UA 用于 SSR 或测试。
+**Community comparison:** [UAParser.js `getOS()`](https://docs.uaparser.dev/api/main/get-os.html) returns OS name and version; `isAndroid` returns only a boolean for simple branches and accepts explicit UA input for SSR or tests.
 
 ```ts
 const isAndroid = (ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent` |
+| `ua` | `string` | Optional UA string, default `navigator.userAgent` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | UA 含 `android`（不区分大小写）时为 `true` |
+| `boolean` | `true` when the UA contains `android`, case-insensitively |
 
 ```ts
 import { isAndroid } from '@momots/host/guard/is-android';
 
-isAndroid(); // 当前环境
+isAndroid(); // Current environment
 ```
 
 ### isIOS
 
-根据 UA 判断是否 iOS 系统。
+Check whether a UA identifies iOS.
 
-**社区对照：** [UAParser.js 的 `getOS()`](https://docs.uaparser.dev/api/main/get-os.html) 可解析系统名称与版本；`isIOS` 只检查 UA 中的 iOS 相关标记，适合布尔判断，不提供版本信息。
+**Community comparison:** [UAParser.js `getOS()`](https://docs.uaparser.dev/api/main/get-os.html) parses OS name and version; `isIOS` checks only iOS markers for boolean decisions, without version information.
 
 ```ts
 function isIOS(ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent` |
+| `ua` | `string` | Optional UA string, default `navigator.userAgent` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | UA 匹配 `ip(hone\|ad\|od)` 或 `ios` 时为 `true` |
+| `boolean` | `true` when the UA matches `ip(hone\|ad\|od)` or `ios` |
 
 ```ts
 import { isIOS } from '@momots/host/guard/is-ios';
@@ -72,139 +72,139 @@ isIOS('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'); // => true
 
 ### isMobile
 
-根据 UA 判断是否移动端。
+Check whether a UA identifies a mobile device.
 
-**社区对照：** [UAParser.js](https://docs.uaparser.dev/v1/) 可解析设备类型、型号与厂商，[Bowser](https://github.com/bowser-js/bowser) 提供浏览器、系统与平台信息。`isMobile` 将常见移动端 UA 统一判为 `true`，不区分手机和平板；需要细分设备信息时可使用这些解析库。
+**Community comparison:** [UAParser.js](https://docs.uaparser.dev/v1/) parses device type, model, and vendor; [Bowser](https://github.com/bowser-js/bowser) provides browser, OS, and platform data. `isMobile` returns `true` for common mobile UAs without distinguishing phones from tablets; use those parsers for detailed device information.
 
 ```ts
 function isMobile(ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent` |
+| `ua` | `string` | Optional UA string, default `navigator.userAgent` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | UA 匹配 `android\|iphone\|ipad\|ipod\|mobile` 时为 `true` |
+| `boolean` | `true` when the UA matches `android\|iphone\|ipad\|ipod\|mobile` |
 
 ```ts
 import { isMobile } from '@momots/host/guard/is-mobile';
 
-isMobile(); // 当前环境
+isMobile(); // Current environment
 ```
 
 ### isWechat
 
-断言是否处于微信内置浏览器（公众号 WebView）。
+Check whether the environment is WeChat's embedded browser (official-account WebView).
 
-**社区对照：** [UAParser.js](https://docs.uaparser.dev/v1/) 和 [Bowser](https://github.com/bowser-js/bowser) 提供浏览器名称、版本等解析结果；`isWechat` 只检查 `micromessenger` 标记，适合微信渠道分支。需要进一步区分小程序时，配合 `isMiniprogram` 或使用 `isWechatWeb`。
+**Community comparison:** [UAParser.js](https://docs.uaparser.dev/v1/) and [Bowser](https://github.com/bowser-js/bowser) parse browser names and versions; `isWechat` checks only `micromessenger` for WeChat-specific branches. Use `isMiniprogram` or `isWechatWeb` to distinguish Mini Programs.
 
 ```ts
 const isWechat = (ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent`（小写） |
+| `ua` | `string` | Optional UA string, default lowercase `navigator.userAgent` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | UA 含 `micromessenger` 时为 `true` |
+| `boolean` | `true` when the UA contains `micromessenger` |
 
 ```ts
 import { isWechat } from '@momots/host/guard/is-wechat';
 
-isWechat(); // 是否在微信内
+isWechat(); // Whether running inside WeChat
 ```
 
 ### isMiniprogram
 
-断言是否处于微信小程序 WebView。UA 含 `miniprogram`，或 `window.__wxjs_environment === 'miniprogram'` 时返回 `true`。
+Check for a WeChat Mini Program WebView. Returns `true` if the UA contains `miniprogram` or `window.__wxjs_environment === 'miniprogram'`.
 
-**社区对照：** [UAParser.js](https://docs.uaparser.dev/v1/) 和 [Bowser](https://github.com/bowser-js/bowser) 可用于解析 UA 中的浏览器与系统信息；`isMiniprogram` 用于小程序渠道判定，并额外读取微信注入的 `window.__wxjs_environment` 标记，可与通用 UA 解析结果组合使用。
+**Community comparison:** [UAParser.js](https://docs.uaparser.dev/v1/) and [Bowser](https://github.com/bowser-js/bowser) parse browser and OS information from UAs. `isMiniprogram` additionally reads WeChat's injected `window.__wxjs_environment` marker and can be combined with general UA parsing.
 
 ```ts
 const isMiniprogram = (ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串，默认 `navigator.userAgent`（小写） |
+| `ua` | `string` | Optional UA string, default lowercase `navigator.userAgent` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | 微信小程序环境时为 `true` |
+| `boolean` | `true` in a WeChat Mini Program environment |
 
 ```ts
 import { isMiniprogram } from '@momots/host/guard/is-miniprogram';
 
-isMiniprogram(); // 是否在小程序 webview
+isMiniprogram(); // Whether in a Mini Program WebView
 ```
 
 ### isAndroidWeb
 
-断言是否为 Android 系统浏览器（排除微信与小程序）。
+Check for an Android system browser, excluding WeChat and Mini Programs.
 
 ```ts
 const isAndroidWeb = (ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串 |
+| `ua` | `string` | Optional UA string |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
 | `boolean` | `isAndroid && !isWechat && !isMiniprogram` |
 
 ### isIOSWeb
 
-断言是否为 iOS 系统浏览器（排除微信与小程序）。
+Check for an iOS system browser, excluding WeChat and Mini Programs.
 
 ```ts
 const isIOSWeb = (ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串 |
+| `ua` | `string` | Optional UA string |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
 | `boolean` | `isIOS && !isWechat && !isMiniprogram` |
 
 ### isWechatWeb
 
-断言是否为微信内置浏览器且非小程序。
+Check for the WeChat embedded browser outside Mini Programs.
 
 ```ts
 const isWechatWeb = (ua?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `ua` | `string` | 可选 UA 字符串 |
+| `ua` | `string` | Optional UA string |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
 | `boolean` | `isWechat && !isMiniprogram` |
 
 ### isLocalhost
 
-断言 hostname 是否为本地开发环境。
+Check whether a hostname indicates local development.
 
 ```ts
 const isLocalhost = (hostname?: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `hostname` | `string` | 可选主机名，默认 `location.hostname` |
+| `hostname` | `string` | Optional hostname, default `location.hostname` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | hostname 含 `localhost` 或 `127.0.0.1` 时为 `true` |
+| `boolean` | `true` when hostname contains `localhost` or `127.0.0.1` |
 
 ```ts
 import { isLocalhost } from '@momots/host/guard/is-localhost';
@@ -214,71 +214,71 @@ isLocalhost('127.0.0.1:3000'); // => true
 
 ### isSSR
 
-断言当前是否为 SSR 环境（无 `window` 或 `document`）。
+Check for an SSR environment without `window` or `document`.
 
 ```ts
 function isSSR(): boolean;
 ```
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | `window` 或 `document` 为 `undefined` 时为 `true` |
+| `boolean` | `true` when `window` or `document` is `undefined` |
 
 ```ts
 import { isSSR } from '@momots/host/guard/is-ssr';
 
-if (isSSR()) return 'desktop'; // 服务端安全默认值
+if (isSSR()) return 'desktop'; // Safe server-side default
 ```
 
 ### isTouchDevice
 
-断言当前是否为触摸设备。检测 `pointer: coarse` 媒体查询或 `ontouchstart` + `TouchEvent`。
+Check for a touch device using the `pointer: coarse` media query or `ontouchstart` plus `TouchEvent`.
 
 ```ts
 function isTouchDevice(): boolean;
 ```
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | 触摸设备时为 `true`；无 `window` 时为 `false` |
+| `boolean` | `true` for touch devices; `false` without `window` |
 
-DOM / 元素类守卫接受 `unknown` 或 `HTMLElement` 输入，用于跨 realm 和真实布局场景下的类型与状态判断。
+DOM/element guards accept `unknown` or `HTMLElement` for type and state checks in cross-realm and real-layout scenarios.
 
 ### isElement
 
-断言目标值是否为 `Element` 实例。
+Check whether a value is an `Element` instance.
 
 ```ts
 const isElement = (target: unknown): target is Element;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `target` | `unknown` | 待判断的值 |
+| `target` | `unknown` | Value to check |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `target is Element` | `instanceof Element` 时为 `true`；无 `Element` 全局时为 `false` |
+| `target is Element` | `true` for `instanceof Element`; `false` without the `Element` global |
 
 ### isHTMLElement
 
-断言目标值是否为 `HTMLElement` 实例。
+Check whether a value is an `HTMLElement` instance.
 
 ```ts
 const isHTMLElement = (target: unknown): target is HTMLElement;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `target` | `unknown` | 待判断的值 |
+| `target` | `unknown` | Value to check |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `target is HTMLElement` | `instanceof HTMLElement` 时为 `true` |
+| `target is HTMLElement` | `true` for `instanceof HTMLElement` |
 
 ### isInputElement
 
-断言目标值是否为 `HTMLInputElement` 实例。
+Check whether a value is an `HTMLInputElement` instance.
 
 ```ts
 const isInputElement = (target: unknown): target is HTMLInputElement;
@@ -286,7 +286,7 @@ const isInputElement = (target: unknown): target is HTMLInputElement;
 
 ### isTextAreaElement
 
-断言目标值是否为 `HTMLTextAreaElement` 实例。
+Check whether a value is an `HTMLTextAreaElement` instance.
 
 ```ts
 const isTextAreaElement = (target: unknown): target is HTMLTextAreaElement;
@@ -294,19 +294,19 @@ const isTextAreaElement = (target: unknown): target is HTMLTextAreaElement;
 
 ### isCSSStyleRule
 
-断言目标值是否为浏览器 CSSOM 中的 `CSSStyleRule` 实例。SSR、Bun、Node 等没有 `CSSStyleRule` 全局对象的环境会返回 `false`，不会抛错。
+Check whether a value is a browser CSSOM `CSSStyleRule` instance. SSR, Bun, Node, and other environments without that global return `false` without throwing.
 
 ```ts
 const isCSSStyleRule = (data: unknown): data is CSSStyleRule;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `data` | `unknown` | 待判断的值 |
+| `data` | `unknown` | Value to check |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `data is CSSStyleRule` | `CSSStyleRule` 全局存在且 `data instanceof CSSStyleRule` 时为 `true` |
+| `data is CSSStyleRule` | `true` when the global exists and `data instanceof CSSStyleRule` |
 
 ```ts
 import { isCSSStyleRule } from '@momots/host/guard/is-css-style-rule';
@@ -319,50 +319,50 @@ if (isCSSStyleRule(rule)) {
 
 ### isScrollable
 
-断言元素是否处于可滚动状态（`scrollHeight > clientHeight` 或 `scrollWidth > clientWidth`）。
+Check whether an element scrolls (`scrollHeight > clientHeight` or `scrollWidth > clientWidth`).
 
 ```ts
 function isScrollable(element: HTMLElement): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `element` | `HTMLElement` | 待检测的 DOM 元素 |
+| `element` | `HTMLElement` | DOM element to check |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | 内容超出可视区域、产生滚动时为 `true` |
+| `boolean` | `true` when content exceeds the visible area and creates scrolling |
 
 ```ts
 import { isScrollable } from '@momots/host/guard/is-scrollable';
 
-isScrollable(div); // 是否产生滚动
+isScrollable(div); // Whether scrolling occurs
 ```
 
 ### isOverflow
 
-断言元素内容是否溢出可视框（含容差，默认 2px）。
+Check whether content overflows the visible box, with a tolerance of 2px by default.
 
 ```ts
 function isOverflow(element: HTMLElement, tolerance?: number): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `element` | `HTMLElement` | 待检测的 DOM 元素 |
-| `tolerance` | `number` | 容差像素，默认 `2` |
+| `element` | `HTMLElement` | DOM element to check |
+| `tolerance` | `number` | Pixel tolerance, default `2` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | `offsetWidth + tolerance < scrollWidth` 或高度方向等价条件时为 `true` |
+| `boolean` | `true` for `offsetWidth + tolerance < scrollWidth` or its height equivalent |
 
 ```ts
 import { isOverflow } from '@momots/host/guard/is-overflow';
 
-isOverflow(div); // 内容是否溢出（默认容差 2px）
+isOverflow(div); // Whether content overflows (2px default tolerance)
 ```
 
-Body / 二进制类守卫均接受 `unknown` 输入，返回 TypeScript 类型谓词。
+Body/binary guards accept `unknown` and return TypeScript type predicates.
 
 ### isArrayBuffer
 
@@ -376,14 +376,14 @@ function isArrayBuffer(data: unknown): data is ArrayBuffer;
 function isSharedArrayBuffer(data: unknown): data is SharedArrayBuffer;
 ```
 
-仅接受 `SharedArrayBuffer` 本体，不接受 TypedArray 或 DataView 视图。
-环境未提供 `SharedArrayBuffer` 全局时返回 `false`，不会抛错。
+Accepts only `SharedArrayBuffer` itself, not TypedArray or DataView views.
+Returns `false` without throwing when the runtime has no `SharedArrayBuffer` global.
 
 ```ts
 import { isSharedArrayBuffer } from '@momots/host/guard/is-shared-array-buffer';
 
 if (isSharedArrayBuffer(value)) {
-  // value 已收窄为 SharedArrayBuffer
+  // value is narrowed to SharedArrayBuffer
   console.log(value.byteLength);
 }
 ```
@@ -406,9 +406,9 @@ function isArrayBufferView(data: unknown): data is ArrayBufferView;
 function isArrayBufferLike(data: unknown): data is ArrayBufferLike;
 ```
 
-接受 `ArrayBuffer` 和 `SharedArrayBuffer`，不接受 TypedArray、DataView 或普通包装对象。
-等价于 `isArrayBuffer(data) || isSharedArrayBuffer(data)`，在没有 `SharedArrayBuffer`
-全局的环境中仍可调用。
+Accepts `ArrayBuffer` and `SharedArrayBuffer`, not TypedArray, DataView, or ordinary wrapper objects.
+Equivalent to `isArrayBuffer(data) || isSharedArrayBuffer(data)` and callable even when the
+`SharedArrayBuffer` global is absent.
 
 ### isBufferSource
 
@@ -416,8 +416,8 @@ function isArrayBufferLike(data: unknown): data is ArrayBufferLike;
 function isBufferSource(data: unknown): data is BufferSource;
 ```
 
-接受非共享 `ArrayBuffer` 及其 TypedArray / DataView 视图。共享 buffer 及其视图返回
-`false`，避免把共享内存误当作可跨运行时使用的 Fetch body。
+Accepts non-shared `ArrayBuffer` and its TypedArray / DataView views. Shared buffers and views return
+`false` to avoid treating shared memory as a portable Fetch body.
 
 ### isBlob
 
@@ -445,7 +445,7 @@ function isURLSearchParams(data: unknown): data is URLSearchParams;
 
 ### isNonRawBodyInit
 
-判断 `BodyInit` 是否为「非纯文本」类型（排除 `string` 与 `URLSearchParams`）。等价于 `isBlob || isFormData || isBufferSource || isReadableStream`。
+Check for non-plain-text `BodyInit`, excluding `string` and `URLSearchParams`. Equivalent to `isBlob || isFormData || isBufferSource || isReadableStream`.
 
 ```ts
 function isNonRawBodyInit(
@@ -453,13 +453,13 @@ function isNonRawBodyInit(
 ): data is Exclude<BodyInit, string | URLSearchParams>;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `data` | `unknown` | 待判断的值 |
+| `data` | `unknown` | Value to check |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `data is Exclude<BodyInit, string \| URLSearchParams>` | 二进制或结构化 body 时为 `true` |
+| `data is Exclude<BodyInit, string \| URLSearchParams>` | `true` for binary or structured bodies |
 
 ```ts
 import { isNonRawBodyInit } from '@momots/host/guard/is-non-raw-body-init';
@@ -474,38 +474,38 @@ isNonRawBodyInit('hello');    // => false
 function isStorage(data: unknown): data is Storage;
 ```
 
-判断是否为当前运行环境的原生 `Storage` 实例，例如 `localStorage` 或 `sessionStorage`。
-`MemoryStorage` 等自定义实现返回 `false`；环境未提供 `Storage` 全局时也返回 `false`。
-判断过程不会读取 `localStorage` 或 `sessionStorage`，不会触发这些全局属性的访问异常。
+Check for a native `Storage` instance in the current runtime, such as `localStorage` or `sessionStorage`.
+Custom implementations such as `MemoryStorage` return `false`, as does an environment without the `Storage` global.
+The check does not access `localStorage` or `sessionStorage`, avoiding exceptions from those global getters.
 
 ```ts
 import { isStorage } from '@momots/host/guard/is-storage';
 
 if (isStorage(value)) {
-  // value 已收窄为 Storage
+  // value is narrowed to Storage
   console.log(value.length);
 }
 ```
 
-## 字符串守卫
+## String guards
 
-子路径：`guard/is-hex-string`
+Subpath: `guard/is-hex-string`
 
 ### isHexString
 
-判断字符串是否为 CSS hex 颜色字面量（`#RGB` / `#RGBA` / `#RRGGBB` / `#RRGGBBAA`）。
+Check for a CSS hex color literal (`#RGB` / `#RGBA` / `#RRGGBB` / `#RRGGBBAA`).
 
 ```ts
 function isHexString(val: string): boolean;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `val` | `string` | 待判断的颜色字符串 |
+| `val` | `string` | Color string to check |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `boolean` | 符合 hex 颜色语法时为 `true` |
+| `boolean` | `true` for valid hex color syntax |
 
 ```ts
 import { isHexString } from '@momots/host/guard/is-hex-string';
@@ -514,19 +514,19 @@ isHexString('#0f08'); // => true
 isHexString('rgb(1, 2, 3)'); // => false
 ```
 
-## 存储
+## Storage
 
-子路径：`storage`
+Subpath: `storage`
 
 ### memory
 
-基于 `@momots/core` 的 `singleton` 创建的全局 `MemoryStorage` 单例。`Storagefy` 在运行时没有 `localStorage` 时使用此实例；访问已有 `localStorage` 被拒绝时直接抛出原始异常。
+A global `MemoryStorage` singleton created with `@momots/core`'s `singleton`. `Storagefy` uses it when `localStorage` is absent; denied access to existing `localStorage` propagates the original exception.
 
-在 Bun 中，该单例只属于当前进程：不会跨进程或重启保留，也不会产生浏览器的跨标签页 `StorageEvent`。需要持久化时请显式注入实现了 `Storage` 接口的外部存储。
+In Bun, this singleton belongs only to the current process: it does not survive restarts, span processes, or emit browser cross-tab `StorageEvent`s. For persistence, explicitly inject external storage implementing `Storage`.
 
 ### MemoryStorage
 
-实现了 `Storage` 接口的内存版（基于 `Map`），常用于测试或降级。
+An in-memory `Storage` implementation backed by `Map`, useful for tests and fallback.
 
 ```ts
 class MemoryStorage implements Storage {
@@ -541,9 +541,9 @@ class MemoryStorage implements Storage {
 
 ### Storagefy&lt;T&gt;
 
-类型化的同步存储单元。键存为 `Storagefy:<key>`，值包装为 `{ value, expired }` JSON。默认使用 `localStorage`，运行时没有该 API 时使用 `memory`；浏览器拒绝访问时直接抛错，不静默写入内存。需要内存存储时可显式传入 `MemoryStorage`。过期时间单位为**秒**；变更时会派发 `StorageEvent`。
+A typed synchronous storage unit. Keys are stored as `Storagefy:<key>` and values as `{ value, expired }` JSON. Defaults to `localStorage`, falling back to `memory` only if the API is absent; browser access denial throws instead of silently using memory. Pass `MemoryStorage` explicitly when desired. Expiration is in **seconds**; changes dispatch `StorageEvent`.
 
-**社区对照：** [localForage](https://github.com/localForage/localForage) 提供异步存储抽象，[idb-keyval](https://github.com/jakearchibald/idb-keyval) 提供基于 IndexedDB 的 Promise 键值存储。`Storagefy` 适合需要同步 `Storage` 读写、类型化值、过期时间与浏览器存储事件的场景；需要 IndexedDB 存储时可使用前述社区库。
+**Community comparison:** [localForage](https://github.com/localForage/localForage) offers asynchronous storage abstractions; [idb-keyval](https://github.com/jakearchibald/idb-keyval) offers Promise-based IndexedDB key/value storage. `Storagefy` suits synchronous `Storage`, typed values, expiration, and browser storage events. Use those community libraries for IndexedDB storage.
 
 ```ts
 class Storagefy<T> {
@@ -569,65 +569,65 @@ class Storagefy<T> {
 }
 ```
 
-| 实例方法 | 说明 |
+| Instance method | Description |
 | --- | --- |
-| `set(arg, expires?)` | 写入值或函数式更新；更新函数接收已解码的当前值，`expires` 为过期秒数 |
-| `expire(arg)` | 更新现有值的过期秒数但不改变值；可根据已解码的当前值计算秒数，键不存在时不写入 |
-| `get()` | 读取值；过期或解析失败时自动删除并返回 `null` |
-| `subscribe(listener)` | 订阅同底层存储实例、同 key 的变化；返回取消订阅函数，不立即通知 |
-| `remove()` | 删除键并派发 `StorageEvent` |
+| `set(arg, expires?)` | Write a value or functional update; the updater receives the decoded current value, and `expires` is seconds to expiration |
+| `expire(arg)` | Update expiration without changing the value; may derive seconds from the decoded current value; does not write if the key is absent |
+| `get()` | Read a value; delete expired or unparseable entries and return `null` |
+| `subscribe(listener)` | Subscribe to changes for the same underlying storage instance and key; returns unsubscribe without immediate notification |
+| `remove()` | Delete the key and dispatch `StorageEvent` |
 
-`Storagefy.isNativeStorage` 与 `StoragefyAsync.isNativeStorage` 均为 `isStorage` 的别名。
-事件派发也使用该守卫：原生存储传入 `storageArea`，自定义存储传入 `null`。
+`Storagefy.isNativeStorage` and `StoragefyAsync.isNativeStorage` are aliases of `isStorage`.
+Event dispatch uses this guard too: native storage supplies `storageArea`, custom storage supplies `null`.
 
-| 实例属性 | 说明 |
+| Instance property | Description |
 | --- | --- |
-| `key` | 带 `Storagefy:` 命名空间的实际存储键 |
-| `storage` | 当前解析得到的底层 `Storage` 实例 |
-| `snapshot` | 只读访问器，读取无副作用的快照；原始内容未变时复用对象引用，过期或无法解析时返回 `null`，不删除条目 |
+| `key` | Actual storage key with the `Storagefy:` namespace |
+| `storage` | Currently resolved underlying `Storage` instance |
+| `snapshot` | Read-only accessor for a side-effect-free snapshot; reuses object references when raw content is unchanged; returns `null` for expired/unparseable entries without deleting them |
 
-| 静态方法 | 说明 |
+| Static method | Description |
 | --- | --- |
-| `has(key)` | 键是否存在 |
-| `keys()` | 列出命名空间下所有键 |
-| `used()` | 命名空间已用空间（KB） |
-| `clear()` | 清除命名空间下所有数据 |
+| `has(key)` | Whether a key exists |
+| `keys()` | List all keys in the namespace |
+| `used()` | Namespace storage usage in KB |
+| `clear()` | Remove all data in the namespace |
 
-`get()` 读到过期项、JSON 解析失败时会自动删除并返回 `null`；`set` 超配额会抛错。
+`get()` deletes expired or invalid-JSON entries and returns `null`; `set` throws when quota is exceeded.
 
 ```ts
 import { Storagefy } from '@momots/host/storage';
 
 const cache = new Storagefy<{ name: string }>('profile');
-cache.set({ name: 'Momo' }, 300); // 5 分钟后过期
-cache.expire(600); // 保留当前值，将过期时间刷新为 10 分钟后
+cache.set({ name: 'Momo' }, 300); // Expires in five minutes
+cache.expire(600); // Keep the value; reset expiration to ten minutes from now
 cache.get(); // => { name: 'Momo' } | null
 ```
 
-需要连接 UI 或其他外部订阅系统时，可配合 `snapshot` 与 `subscribe()`。
-快照对象应视为只读。读取 `snapshot` 不执行 `get()` 的日志和删除操作，也不启动
-过期计时器；过期状态在下一次读取快照时检查。
+Combine `snapshot` with `subscribe()` to connect UI or external subscription systems.
+Treat snapshot objects as read-only. Reading `snapshot` skips `get()` logging and deletion and starts no
+expiration timer; expiration is checked on the next snapshot read.
 
 ```ts
 const unsubscribe = cache.subscribe(() => {
   console.log(cache.snapshot);
 });
-// 不再需要监听时：unsubscribe();
+// When no longer needed: unsubscribe();
 ```
 
-订阅绑定的是底层 `Storage` 实例与完整 key，不要求使用同一个 `Storagefy` 对象。
-通过 `set()`、`remove()`、`expire()` 和 `Storagefy.clear()` 修改时，同运行时的
-订阅者会同步收到通知，包括没有浏览器事件 API 的 `MemoryStorage`。
-浏览器还会监听其他文档的同存储区域事件，包括原生 `clear()` 的空 key 事件。
-当前页面直接调用底层 `Storage` 方法不会主动通知，需通过 `Storagefy` 写入，
-或随后调用 `Storagefy.dispatch()`。
-使用存储 resolver 时，一次订阅期间应保持底层实例不变；切换实例需重新订阅。
+Subscriptions bind to the underlying `Storage` instance and full key, not a particular `Storagefy` object.
+Changes through `set()`, `remove()`, `expire()`, and `Storagefy.clear()` synchronously notify subscribers in the same
+runtime, including `MemoryStorage` without browser event APIs.
+Browsers also listen for same-storage-area events from other documents, including the null-key event from native `clear()`.
+Direct calls to underlying `Storage` methods in the current page do not notify automatically. Write through `Storagefy`
+or call `Storagefy.dispatch()` afterward.
+With a storage resolver, keep the underlying instance stable for a subscription; resubscribe when changing instances.
 
 ### StoragefyAsync&lt;T&gt;
 
-读写与过期语义与 `Storagefy` 一致，但支持可插拔的**异步** encode/decode，不提供同步 `snapshot` / `subscribe()` 接口。默认用 `JSON.parse` / `JSON.stringify`；提供 `static createAES<T>(hexKey)` 构造 AES-GCM 编解码器。`hexKey` 必须是 AES 支持的 16、24 或 32 字节 key 的十六进制字符串（分别对应 32、48 或 64 个 hex 字符）。
+Read/write and expiration semantics match `Storagefy`, but codecs can be **asynchronous**, without synchronous `snapshot` / `subscribe()` APIs. Defaults to `JSON.parse` / `JSON.stringify`; `static createAES<T>(hexKey)` creates AES-GCM codecs. `hexKey` must encode a supported 16-, 24-, or 32-byte AES key as hex (32, 48, or 64 hex characters).
 
-**社区对照：** [localForage](https://github.com/localForage/localForage) 和 [idb-keyval](https://github.com/jakearchibald/idb-keyval) 用异步 API 访问底层存储。`StoragefyAsync` 的异步部分用于编解码，例如 AES-GCM 加解密；底层仍要求同步 `Storage` 接口，不能直接传入这些库的异步存储实例。
+**Community comparison:** [localForage](https://github.com/localForage/localForage) and [idb-keyval](https://github.com/jakearchibald/idb-keyval) access underlying storage asynchronously. `StoragefyAsync` uses asynchrony for encoding/decoding, such as AES-GCM encryption; it still requires a synchronous `Storage` interface and cannot directly accept those libraries' asynchronous storage instances.
 
 ```ts
 class StoragefyAsync<T> {
@@ -646,7 +646,7 @@ class StoragefyAsync<T> {
   remove(): void;
 
   static createAES<T>(hexKey: string | (() => Promise<string>)): Promise<Codec<T>>;
-  // 静态方法同 Storagefy（namespace 为 StoragefyAsync）
+  // Static methods match Storagefy (namespace: StoragefyAsync)
 }
 ```
 
@@ -665,17 +665,17 @@ await cell.expire(600);
 await cell.get();
 ```
 
-`StoragefyAsync.expire()` 会使用实例配置的 `decode` / `encode` 重新写入条目，因此 AES 等自定义编解码器仍会保持原有存储格式。
+`StoragefyAsync.expire()` rewrites entries using the configured `decode` / `encode`, preserving formats such as AES.
 
-## 持久缓冲
+## Persistent buffers
 
-子路径：`persistent`
+Subpath: `persistent`
 
 ### PersistentBuffer&lt;T&gt;
 
-轻量的持久化 FIFO 缓冲。构造时从 storage 恢复，每次变更后同步写入。默认 storage 为 `memory` 单例；实际键名为 `${namespace}:${key}`，默认 namespace 为 `PersistentBuffer`。
+A lightweight persistent FIFO buffer. Restores from storage on construction and writes synchronously after each change. Storage defaults to the `memory` singleton; actual keys are `${namespace}:${key}`, with default namespace `PersistentBuffer`.
 
-“持久”指相对于所注入 storage 的持久性。Bun 中采用默认 `memory` 时仍是进程内缓冲，不跨重启或多进程共享。
+Persistence is relative to the injected storage. Default `memory` in Bun is still process-local and neither survives restarts nor spans processes.
 
 ```ts
 interface PersistentBufferOptions {
@@ -697,14 +697,14 @@ class PersistentBuffer<T> {
 }
 ```
 
-| 方法 | 说明 |
+| Method | Description |
 | --- | --- |
-| `push(...args)` | 追加元素到末尾 |
-| `peekAll()` | 返回所有元素的副本 |
-| `drain(count)` | 从头部移除 `count` 个已消费元素；超出大小时等效 `clear()` |
-| `clear()` | 清空缓冲区 |
+| `push(...args)` | Append items |
+| `peekAll()` | Return a copy of all items |
+| `drain(count)` | Remove `count` consumed items from the front; counts beyond size behave like `clear()` |
+| `clear()` | Empty the buffer |
 
-storage 损坏或写入失败时静默降级，不影响内存中的核心操作。
+Corrupt storage or write failures degrade silently without affecting core in-memory operations.
 
 ```ts
 import { PersistentBuffer } from '@momots/host/persistent';
@@ -713,62 +713,62 @@ import { MemoryStorage } from '@momots/host/storage';
 const buf = new PersistentBuffer<number>({ key: 'events', storage: new MemoryStorage() });
 buf.push(1, 2, 3);
 buf.peekAll(); // => [1, 2, 3]
-buf.drain(2);  // 丢弃最早的 2 个，剩 [3]
+buf.drain(2);  // Discard the oldest two items, leaving [3]
 ```
 
-## 二进制编解码
+## Binary encoding and decoding
 
-子路径：`buffer`
+Subpath: `buffer`
 
 ### blobToBytes
 
-将 `Blob` 读取为字节数组。
+Read a `Blob` into a byte array.
 
 ```ts
 function blobToBytes(blob: Blob): Promise<Uint8Array<ArrayBuffer>>;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `blob` | `Blob` | 待读取的二进制对象 |
+| `blob` | `Blob` | Binary object to read |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `Promise<Uint8Array>` | Blob 内容的字节视图 |
+| `Promise<Uint8Array>` | Byte view of Blob contents |
 
 ### bytesToHex
 
-将字节数组编码为小写十六进制字符串。
+Encode a byte array as lowercase hexadecimal.
 
 ```ts
 function bytesToHex(buffer: Uint8Array): string;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `buffer` | `Uint8Array` | 待编码的字节数组 |
+| `buffer` | `Uint8Array` | Byte array to encode |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `string` | 小写 hex 字符串，每字节两位 |
+| `string` | Lowercase hex, two digits per byte |
 
 ### hexToBytes
 
-将十六进制字符串解码为字节数组。
+Decode a hexadecimal string into a byte array.
 
 ```ts
 function hexToBytes(hex: string): Uint8Array<ArrayBuffer>;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `hex` | `string` | 偶数长度的 hex 字符串 |
+| `hex` | `string` | Even-length hexadecimal string |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `Uint8Array` | 解码后的字节数组 |
+| `Uint8Array` | Decoded byte array |
 
-长度不是偶数或含非十六进制字符时**抛出错误**。
+Odd lengths or non-hexadecimal characters **throw an error**.
 
 ```ts
 import { bytesToHex, hexToBytes } from '@momots/host/buffer';
@@ -777,13 +777,13 @@ bytesToHex(new Uint8Array([0, 15, 255])); // => '000fff'
 Array.from(hexToBytes('010203'));         // => [1, 2, 3]
 ```
 
-## CSS 颜色
+## CSS colors
 
-子路径：`css/*`
+Subpath: `css/*`
 
 ### RGBColor
 
-解析结果对象，含 `red`、`green`、`blue`、`alpha` 通道及 `toHex()`、`toString()` 方法。`toString` 可传入 `{ alpha }` 覆盖透明度。
+A parsed color object with `red`, `green`, `blue`, and `alpha` channels plus `toHex()` and `toString()`. Pass `{ alpha }` to `toString` to override opacity.
 
 ```ts
 interface RGBColor {
@@ -798,19 +798,19 @@ interface RGBColor {
 
 ### toRGB
 
-解析 CSS 颜色字符串为 `RGBColor`。支持 hex（含 alpha）、`rgb()/rgba()`（含百分比与 `/` alpha）、relative RGB、`color-mix(in srgb, ...)`、`transparent`。无法解析返回 `null`。
+Parse a CSS color string into `RGBColor`. Supports hex with alpha, `rgb()/rgba()` with percentages and `/` alpha, relative RGB, `color-mix(in srgb, ...)`, and `transparent`. Returns `null` on failure.
 
 ```ts
 function toRGB(val?: string): RGBColor | null;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `val` | `string` | CSS 颜色字符串（可选） |
+| `val` | `string` | Optional CSS color string |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `RGBColor \| null` | 解析成功返回颜色对象，否则 `null` |
+| `RGBColor \| null` | Parsed color object, or `null` |
 
 ```ts
 import { toRGB } from '@momots/host/css/to-rgb';
@@ -822,7 +822,7 @@ toRGB('color-mix(in srgb, #000000, #ffffff)')?.toHex(); // => '#808080'
 
 ### toCSSVariable
 
-从计算样式读取 CSS 自定义属性值。Bun、Node 或 SSR 没有 DOM 时返回 `initial`；未提供 `initial` 则返回 `undefined`。
+Read a CSS custom property from computed styles. Without a DOM in Bun, Node, or SSR, return `initial`, or `undefined` if not supplied.
 
 ```ts
 function toCSSVariable<T extends string>(
@@ -831,15 +831,15 @@ function toCSSVariable<T extends string>(
 ): string | undefined;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `name` | `string` | CSS 变量名（如 `--brand`） |
-| `params.initial` | `string` | 变量不存在或无值时的回退值 |
-| `params.element` | `HTMLElement` | 计算样式的元素，默认 `document.body` |
+| `name` | `string` | CSS variable name, such as `--brand` |
+| `params.initial` | `string` | Fallback when the variable is absent or empty |
+| `params.element` | `HTMLElement` | Element for computed styles, default `document.body` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `string \| undefined` | 变量值或 `initial` |
+| `string \| undefined` | Variable value or `initial` |
 
 ```ts
 import { toCSSVariable } from '@momots/host/css/to-css-variable';
@@ -849,19 +849,19 @@ toCSSVariable('--brand', { initial: '#000' });
 
 ### toCSSRGBVariable
 
-读取 CSS 变量并用 `toRGB` 解析为 `RGBColor`。变量值不可解析或为 `transparent` 时返回 `undefined`。
+Read a CSS variable and parse it with `toRGB`. Return `undefined` for unparseable values or `transparent`.
 
 ```ts
 function toCSSRGBVariable(name: string): RGBColor | undefined;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `name` | `string` | CSS 变量名 |
+| `name` | `string` | CSS variable name |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `RGBColor \| undefined` | 解析后的颜色对象 |
+| `RGBColor \| undefined` | Parsed color object |
 
 ```ts
 import { toCSSRGBVariable } from '@momots/host/css/to-css-rgb-variable';
@@ -871,11 +871,11 @@ toCSSRGBVariable('--brand')?.toString({ alpha: 0.5 });
 
 ## Canvas
 
-子路径：`canvas`
+Subpath: `canvas`
 
 ### measureText
 
-使用浏览器 `CanvasRenderingContext2D.measureText` 测量文本宽度，并额外加上 `x` 字宽四分之一作为经验补偿。该函数需要可用的 `document` 和 2D canvas context；SSR、Bun、Node 或禁用 Canvas 的环境会返回 `undefined`。
+Measure text with browser `CanvasRenderingContext2D.measureText`, adding one quarter of the width of `x` as an empirical adjustment. Requires `document` and a 2D canvas context; returns `undefined` in SSR, Bun, Node, or environments with Canvas disabled.
 
 ```ts
 function measureText(
@@ -884,17 +884,17 @@ function measureText(
 ): number | undefined;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `text` | `string` | 待测量文本；不是字符串时返回 `undefined` |
-| `font.fontStyle` | `CSSStyleDeclaration['fontStyle']` | 可选字体样式，如 `italic` |
-| `font.fontWeight` | `CSSStyleDeclaration['fontWeight']` | 可选字重，如 `600` |
-| `font.fontSize` | `CSSStyleDeclaration['fontSize']` | 字号，默认 `10px` |
-| `font.fontFamily` | `CSSStyleDeclaration['fontFamily']` | 字体族，默认 `sans-serif` |
+| `text` | `string` | Text to measure; non-strings return `undefined` |
+| `font.fontStyle` | `CSSStyleDeclaration['fontStyle']` | Optional font style, such as `italic` |
+| `font.fontWeight` | `CSSStyleDeclaration['fontWeight']` | Optional weight, such as `600` |
+| `font.fontSize` | `CSSStyleDeclaration['fontSize']` | Font size, default `10px` |
+| `font.fontFamily` | `CSSStyleDeclaration['fontFamily']` | Font family, default `sans-serif` |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `number \| undefined` | 文本宽度像素值；无 Canvas 或文本无效时为 `undefined` |
+| `number \| undefined` | Width in pixels; `undefined` without Canvas or for invalid text |
 
 ```ts
 import { measureText } from '@momots/host/canvas';
@@ -906,13 +906,13 @@ const width = measureText('Momo', {
 });
 ```
 
-## 文本截断
+## Text truncation
 
-子路径：`truncated`，也可以从 `@momots/host` 根入口导入。
+Subpath: `truncated`; also available from the `@momots/host` root.
 
 ### truncated
 
-按像素宽度从中间截断文本，保留开头和结尾。测量使用完整候选文本的原始 Canvas 宽度，不叠加经验补偿；字符数量按字素簇计算，不拆分 emoji 或组合字符。
+Truncate text in the middle by pixel width, retaining the beginning and end. Measurement uses the full candidate's raw Canvas width without empirical adjustment. Counts use grapheme clusters, preserving emoji and combining characters.
 
 ```ts
 type TruncatedParams = {
@@ -925,14 +925,14 @@ type TruncatedParams = {
 function truncated(text: string, params?: TruncatedParams): string;
 ```
 
-| 参数 | 默认值 | 说明 |
+| Parameter | Default | Description |
 | --- | --- | --- |
-| `width` | `Infinity` | 结果的最大像素宽度；`NaN` 也视为不限制 |
-| `font` | `'10px sans-serif'` | 用于测量的 CSS font 字符串 |
-| `ellipsis` | `'...'` | 中间省略符，可以为空字符串 |
-| `tail` | 未指定 | 数字表示固定保留的尾部字素数；`{ min }` 表示均分时尾部至少保留的字素数；未指定时均分 |
+| `width` | `Infinity` | Maximum pixel width; `NaN` also means unlimited |
+| `font` | `'10px sans-serif'` | CSS font string for measurement |
+| `ellipsis` | `'...'` | Middle ellipsis; may be empty |
+| `tail` | Unspecified | Number fixes the retained trailing grapheme count; `{ min }` sets a minimum when splitting evenly; unspecified splits evenly |
 
-宽度限制优先于尾部保留数量；尾部放不下时会减少，连省略符都放不下时返回空字符串。保留数量向下取整，负数及非有限值按 `0` 处理。原文能放下、未限制宽度或当前环境无法测量时返回原文。
+Width takes precedence over retained tail length; reduce the tail when necessary and return an empty string if even the ellipsis does not fit. Counts are floored; negative or nonfinite values become `0`. Return the original text if it fits, width is unlimited, or measurement is unavailable.
 
 ```ts
 import { truncated } from '@momots/host/truncated';
@@ -950,45 +950,45 @@ const minimumTail = truncated(filename, {
 });
 ```
 
-## 请求转 cURL
+## Convert requests to cURL
 
-子路径：`fetch`
+Subpath: `fetch`
 
 ### toCurl
 
-把 `fetch` 请求参数转成多行 cURL 命令（行尾 `\` 续行 + 两空格缩进）。
+Convert `fetch` arguments into multiline cURL commands with trailing `\` continuations and two-space indentation.
 
-**工具对照：** [Chrome DevTools 的 Copy as cURL](https://developer.chrome.com/docs/devtools/network/reference/) 可从 Network 面板复制已记录的请求；`toCurl` 根据调用方提供的 URL 和 `RequestInit` 生成命令，适合在应用内提供复制入口，不会自动补齐浏览器实际发送的 Cookie 或其他请求头。[qs](https://github.com/ljharb/qs/blob/main/README.md) 负责查询串解析与序列化；需要嵌套查询参数时，可先用它构造 URL，再交给 `toCurl`。
+**Tool comparison:** [Chrome DevTools Copy as cURL](https://developer.chrome.com/docs/devtools/network/reference/) copies recorded Network-panel requests; `toCurl` generates commands from a supplied URL and `RequestInit` for in-app copy controls, without automatically filling browser-sent cookies or headers. [qs](https://github.com/ljharb/qs/blob/main/README.md) parses and serializes query strings; construct nested query URLs with it before passing them to `toCurl`.
 
 ```ts
 function toCurl(uri: string | URL, init?: RequestInit): Promise<string>;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `uri` | `string \| URL` | 请求 URL |
-| `init` | `RequestInit` | 可选 fetch 初始化参数 |
+| `uri` | `string \| URL` | Request URL |
+| `init` | `RequestInit` | Optional Fetch initialization |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `Promise<string>` | 完整 cURL 命令字符串 |
+| `Promise<string>` | Complete cURL command |
 
-`body: URLSearchParams` 按原生 Fetch 表单请求体序列化，保留参数顺序、重复键与空值。
-这与 Drive 的显式 `body` 通道一致；Drive 的 `query` 和自动 `data: URLSearchParams`
-通道由 Drive 自身合并到 URL，调用 `toCurl` 时应传入已经编码完成的 URL 和请求参数。
+`body: URLSearchParams` serializes as a native Fetch form body, preserving parameter order, duplicate keys, and empty values.
+This matches Drive's explicit `body` channel. Drive merges `query` and automatic `data: URLSearchParams`
+into the URL itself; pass the already encoded URL and request options to `toCurl`.
 
-FormData 文本中的 `@`、`<`、`;type=` 按字面值发送，换行按 Fetch 规范化为 CRLF。
-文件名按 cURL multipart 语法转义。无法用该命令语法准确表达的含 `=` 字段名、
-含 NUL 的表单文本会抛出 `TypeError`；文件 MIME 类型支持主类型及可选的 charset 参数。
+FormData text containing `@`, `<`, or `;type=` is sent literally; line endings normalize to CRLF as in Fetch.
+Filenames are escaped for cURL multipart syntax. Field names containing `=` and form text containing NUL cannot be represented faithfully and
+throw `TypeError`. File MIME types support a primary media type and optional charset parameter.
 
-`Blob`、非共享 `ArrayBuffer`、TypedArray 和 DataView 使用 `--data-binary @文件`。
-`File` 引用 `./<文件名>`；其余二进制 body 和含 NUL 的文本引用 `./body.bin`。
-这些是文件引用：执行命令前需将原始字节保存到对应文件，`toCurl` 不自动创建文件。
-TypedArray / DataView 只需保存其 `byteOffset` / `byteLength` 范围，文本按 UTF-8 保存。
-FormData 中的 File 同样需要提前保存；匿名 Blob 的文件名由 FormData 提供。
+`Blob`, non-shared `ArrayBuffer`, TypedArray, and DataView use `--data-binary @file`.
+`File` references `./<filename>`; other binary bodies and NUL-containing text reference `./body.bin`.
+These are file references: save the original bytes to those files before execution; `toCurl` does not create them.
+For TypedArray / DataView, save only the `byteOffset` / `byteLength` range; save text as UTF-8.
+FormData Files must also be saved first; FormData supplies filenames for anonymous Blobs.
 
-共享 buffer 及其视图、ReadableStream 会抛出 `TypeError`，避免生成丢失 body 的命令。
-函数不会消费或锁定传入的 ReadableStream。
+Shared buffers and views, and ReadableStream, throw `TypeError` rather than generating commands that lose the body.
+The function does not consume or lock supplied ReadableStreams.
 
 ```ts
 import { toCurl } from '@momots/host/fetch';
@@ -1004,25 +1004,25 @@ await toCurl('https://api.example.com/users', {
 //   --data-raw '{"name":"Momo"}'
 ```
 
-## 滚动定位
+## Scroll positioning
 
-子路径：`nearest`
+Subpath: `nearest`
 
 ### nearestScrollable
 
-从某元素向上递归查找最近的可滚动祖先。
+Search upward recursively from an element for the nearest scrollable ancestor.
 
 ```ts
 function nearestScrollable(element: unknown): HTMLElement | undefined;
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `element` | `unknown` | 起始 DOM 元素 |
+| `element` | `unknown` | Starting DOM element |
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `HTMLElement \| undefined` | 最近可滚动祖先；找不到时 `undefined` |
+| `HTMLElement \| undefined` | Nearest scrollable ancestor, or `undefined` |
 
 ```ts
 import { nearestScrollable } from '@momots/host/nearest';
@@ -1030,33 +1030,33 @@ import { nearestScrollable } from '@momots/host/nearest';
 nearestScrollable(el)?.scrollTo({ top: 0 });
 ```
 
-## 浏览器指纹
+## Browser fingerprints
 
-根入口：`@momots/host`
+Root entry: `@momots/host`
 
-子路径：`fingerprint`
+Subpath: `fingerprint`
 
 ### projection
 
-综合 UA、语言、canvas/WebGL/audio、屏幕、字体、时区、导航计时等信息生成 SHA-1 指纹（小写 hex，40 位）。
+Generate a SHA-1 fingerprint (40 lowercase hex characters) from UA, language, canvas/WebGL/audio, screen, fonts, timezone, navigation timing, and other information.
 
-在 Bun 中该函数仍可执行，但生成的是服务端宿主/进程特征，不代表发起请求的浏览器访客。访客指纹应在浏览器端生成后再提交给服务端。
+This function also runs in Bun, but identifies the server host/process, not the requesting browser visitor. Generate visitor fingerprints in the browser before sending them to the server.
 
 ```ts
 function projection(): Promise<string>;
 ```
 
-| 返回 | 说明 |
+| Return | Description |
 | --- | --- |
-| `Promise<string>` | 40 位小写 hex 指纹字符串 |
+| `Promise<string>` | 40-character lowercase hexadecimal fingerprint |
 
-部分浏览器禁用 Canvas 或限制 AudioContext 时会回退为 `no_canvas` / `no_audio` 等占位值，仍参与哈希。
+When browsers disable Canvas or restrict AudioContext, placeholders such as `no_canvas` / `no_audio` still participate in the hash.
 
-音频信息仅读取 AudioContext 的采样率，不创建或启动音频节点。创建的 AudioContext
-会在读取成功或失败后尝试关闭，`projection()` 等待异步关闭完成；关闭失败不会中断指纹生成。
+Audio information reads only the AudioContext sample rate; no audio nodes are created or started. The created AudioContext
+is closed after reading succeeds or fails, and `projection()` awaits asynchronous closure; close failures do not interrupt fingerprint generation.
 
 ```ts
 import { projection } from '@momots/host';
 
-const fp = await projection(); // => 40 位 hex
+const fp = await projection(); // => 40 hex characters
 ```
