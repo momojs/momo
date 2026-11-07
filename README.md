@@ -55,4 +55,4 @@ bun run test:browser                            # 浏览器测试（*.spec.ts）
 bun run --filter website types:check            # 网站类型检查
 ```
 
-协作约定见 [AGENT.md](./AGENT.md)。
+协作约定见 [AGENTS.md](./AGENTS.md)。
