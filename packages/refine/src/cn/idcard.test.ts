@@ -17,6 +17,13 @@ function withChecksum(body: string) {
 }
 
 describe('China ID card', () => {
+  test('ignores ascii spaces before parsing', () => {
+    expect(isValidChinaIdCard(` ${sample} `, referenceDate)).toBe(true);
+    expect(fromChinaIdCard('110105 19491231002X', referenceDate)).toEqual(
+      fromChinaIdCard(sample, referenceDate),
+    );
+  });
+
   test('parses the fields of the standard example', () => {
     expect(fromChinaIdCard(sample, referenceDate)).toEqual({
       region: '110105',
@@ -41,9 +48,9 @@ describe('China ID card', () => {
     '',
     '110105491231002',
     '110105194912310020',
-    ` ${sample}`,
-    `${sample} `,
     `${sample}\n`,
+    `${sample}\t`,
+    `${sample[0]}\u00A0${sample.slice(1)}`,
     `prefix${sample}`,
     '11010519491231002Ｘ',
   ])('rejects invalid input without throwing: %j', (value) => {

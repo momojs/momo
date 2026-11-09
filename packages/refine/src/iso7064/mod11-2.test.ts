@@ -23,6 +23,10 @@ describe('ISO 7064 MOD 11-2', () => {
     '000000021694233X',
     '01',
     '1X',
+    ' 1X',
+    '1X ',
+    '1 X',
+    '11010519491231002 X',
   ])('accepts known checksum vectors: %s', (value) =>
     expect(mod11_2(value)).toBe(true));
 
@@ -35,9 +39,9 @@ describe('ISO 7064 MOD 11-2', () => {
     '',
     'X',
     '1',
-    ' 1X',
-    '1X ',
     '1X\n',
+    '1X\t',
+    '1\u00A0X',
     undefined,
     null,
     18,

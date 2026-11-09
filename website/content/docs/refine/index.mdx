@@ -11,18 +11,17 @@ declarations for Bun, Node.js, and browser bundlers.
 ## Installation
 
 ```bash
-bun add @momots/refine@alpha
+bun add @momots/refine@alpha @momots/core remeda
 ```
 
-The only runtime dependency, `date-fns`, is installed automatically with refine.
+`date-fns` is a direct dependency and is installed automatically with refine. `@momots/core` and `remeda` are peer dependencies.
 
 ## Entry points
 
 | Subpath | API | Purpose |
 | --- | --- | --- |
 | Root entry | `luhn`, `iso7064`, `fromChinaIdCard`, `isValidChinaIdCard` | Common utilities |
-| `luhn` | `luhn` | Luhn algorithm collection |
-| `luhn/mod10` | `mod10` | Luhn (MOD 10) validation |
+| `luhn` | `luhn` | Luhn (MOD 10) validation |
 | `iso7064` | `iso7064` | ISO 7064 check-character system collection |
 | `iso7064/mod11-2` | `mod11_2` | ISO 7064 MOD 11-2 validation |
 | `cn/idcard` | `fromChinaIdCard`, `isValidChinaIdCard`, `ChinaIdCard`, `ChinaIdCardInfo` types | 18-character Chinese citizen IDs |
@@ -33,16 +32,16 @@ dates, and field parsing while calling the algorithm layer internally.
 ## Luhn validation
 
 ```ts
-import { mod10 } from '@momots/refine/luhn/mod10';
+import { luhn } from '@momots/refine/luhn';
 
-mod10('79927398713'); // true
-mod10('79927398714'); // false
-mod10('059'); // true
-mod10('4111 1111 1111 1111'); // false
+luhn('79927398713'); // true
+luhn('79927398714'); // false
+luhn('059'); // true
+luhn('4111 1111 1111 1111'); // true
 ```
 
-Complete input includes the check digit and requires at least two ASCII digits. Nonnegative safe integers are also supported, but use strings for leading zeros
-or long numbers. Whitespace, separators, decimals, and other input return `false`.
+Complete input includes the check digit and requires at least two ASCII digits. Strings drop U+0020 spaces first. Nonnegative safe integers are also supported, but use strings for leading zeros
+or long numbers. Newlines, tabs, hyphens, decimals, and other input return `false`.
 
 Luhn checks only the checksum, not the issuer, account length, or actual allocation; `00` also satisfies
 the checksum. The [IBM documentation](https://www.ibm.com/docs/en/gdp/11.4.0?topic=policies-special-pattern-tests)
@@ -60,7 +59,7 @@ iso7064.mod11_2('0000000218250097'); // true, ORCID / ISNI
 
 The body must contain only ASCII digits, followed by a check character from `0`–`9` or case-insensitive `X`.
 Weights and check characters are fixed by ISO 7064, matching the weight table for GB 11643 citizen IDs.
-Only the checksum is checked, not the number length; invalid input returns `false`.
+Only the checksum is checked, not the number length. Strings drop ASCII spaces first and keep other whitespace and separators; invalid input returns `false`.
 
 ## Chinese citizen IDs
 
@@ -85,4 +84,4 @@ This package checks format, check digit, and birth date. Legacy 15-digit IDs are
 - The birth date must exist, with a year of at least 1800 and no later than the reference date; invalid reference dates are also rejected.
 - The reference date defaults to now. Age uses the runtime's local calendar; pass an explicit date for repeatable results.
 - The address code remains the original six-character string, age is in completed years, and the sex code follows the sequence code's parity.
-- Whitespace is not trimmed automatically. Administrative-region validity, actual issuance, and identity authenticity are not verified.
+- ASCII spaces (U+0020) are removed before checking. Newlines, tabs, and surrounding text are kept and rejected. A true result narrows the original string, which may still contain spaces. Administrative-region validity, actual issuance, and identity authenticity are not verified.

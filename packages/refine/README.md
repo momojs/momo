@@ -6,18 +6,19 @@ Luhn、MOD 11-2 与中国公民身份号码解析和校验工具。当前版本�
 ## 安装
 
 ```bash
-bun add @momots/refine@alpha
+bun add @momots/refine@alpha @momots/core remeda
 ```
 
-唯一运行时依赖 `date-fns` 会随 refine 自动安装。发布物为 ESM JavaScript
-与 TypeScript 声明文件，可在 Bun、Node.js 和浏览器打包器中使用。
+`date-fns` 是直接依赖，会随 refine 自动安装。`@momots/core` 和 `remeda` 是
+peer dependency。发布物为 ESM JavaScript 与 TypeScript 声明文件，可在 Bun、
+Node.js 和浏览器打包器中使用。
 
 ## 导入
 
 ```ts
 import { luhn, iso7064, fromChinaIdCard, isValidChinaIdCard } from '@momots/refine';
 
-import { mod10 } from '@momots/refine/luhn/mod10';
+import { luhn } from '@momots/refine/luhn';
 import { mod11_2 } from '@momots/refine/iso7064/mod11-2';
 import type { ChinaIdCard, ChinaIdCardInfo } from '@momots/refine/cn/idcard';
 ```
@@ -30,14 +31,15 @@ import type { ChinaIdCard, ChinaIdCardInfo } from '@momots/refine/cn/idcard';
 ## Luhn
 
 ```ts
-luhn.mod10('79927398713'); // true
-mod10('79927398714'); // false
-mod10('059'); // true，保留前导零
-mod10('4111 1111 1111 1111'); // false，不自动清理输入
+luhn('79927398713'); // true
+luhn('79927398714'); // false
+luhn('059'); // true，保留前导零
+luhn('4111 1111 1111 1111'); // true，删除 ASCII 空格
 ```
 
-输入包含末位校验位，必须至少有两位 ASCII 数字。支持非负安全整数，但保留
-前导零或较长号码时应使用字符串。其他输入返回 `false`。
+输入包含末位校验位，必须至少有两位 ASCII 数字。字符串会先删除 U+0020 空格，
+不删除换行、制表符、连字符或其他分隔符。支持非负安全整数，但保留前导零或
+较长号码时应使用字符串。其他输入返回 `false`。
 
 此函数只验证 Luhn 校验和，不判断发卡机构、行业规定长度或账号是否存在。
 例如 `00` 满足校验和规则。Luhn 与号码格式检查属于不同层面的检查，参见
@@ -53,7 +55,7 @@ mod11_2('0000000218250097'); // true，ORCID / ISNI
 
 输入为十进制本体码加末位校验字符，校验字符为 `0`–`9` 或 `X`，大小写不敏感。
 权重与校验字符按 ISO 7064 固定，与 GB 11643 公民身份号码的权重表一致。
-只检查校验和，不判断号码长度；不自动清理空白或分隔符，其他输入返回 `false`。
+只检查校验和，不判断号码长度。字符串会先删除 ASCII 空格，不删除其他空白或分隔符；其他输入返回 `false`。
 
 ## 公民身份号码
 
@@ -68,7 +70,8 @@ fromChinaIdCard('11010519491231002X', referenceDate);
 
 支持 18 位号码，依次检查格式、校验位、有效日历日期，以及出生年份不早于
 1800、生日不晚于参考日期。
-`x` 与 `X` 等价。当前 alpha 不支持旧 15 位号码，不自动去除空白或前后缀。
+`x` 与 `X` 等价。检查前删除 ASCII 空格；不删除换行、制表符或前后缀。
+当前 alpha 不支持旧 15 位号码。`isValidChinaIdCard` 为 true 时收窄的是原字符串，其中仍可能含有空格。
 18 位号码的字段划分可参考
 [北京市公安局说明](https://gaj.beijing.gov.cn/hudong/rddf/202003/t20200331_1771804.html)。
 

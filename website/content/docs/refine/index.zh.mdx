@@ -11,18 +11,17 @@ icon: ShieldCheck
 ## 安装
 
 ```bash
-bun add @momots/refine@alpha
+bun add @momots/refine@alpha @momots/core remeda
 ```
 
-唯一运行时依赖 `date-fns` 由 refine 自动安装。
+`date-fns` 是直接依赖，会随 refine 自动安装。`@momots/core` 和 `remeda` 是 peer dependency。
 
 ## 入口
 
 | 子路径 | API | 用途 |
 | --- | --- | --- |
 | 根入口 | `luhn`、`iso7064`、`fromChinaIdCard`、`isValidChinaIdCard` | 常用工具 |
-| `luhn` | `luhn` | Luhn 算法集合 |
-| `luhn/mod10` | `mod10` | Luhn（MOD 10）校验 |
+| `luhn` | `luhn` | Luhn（MOD 10）校验 |
 | `iso7064` | `iso7064` | ISO 7064 校验字符系统集合 |
 | `iso7064/mod11-2` | `mod11_2` | ISO 7064 MOD 11-2 校验 |
 | `cn/idcard` | `fromChinaIdCard`、`isValidChinaIdCard`、`ChinaIdCard`、`ChinaIdCardInfo` 类型 | 18 位公民身份号码 |
@@ -33,16 +32,17 @@ bun add @momots/refine@alpha
 ## Luhn 校验
 
 ```ts
-import { mod10 } from '@momots/refine/luhn/mod10';
+import { luhn } from '@momots/refine/luhn';
 
-mod10('79927398713'); // true
-mod10('79927398714'); // false
-mod10('059'); // true
-mod10('4111 1111 1111 1111'); // false
+luhn('79927398713'); // true
+luhn('79927398714'); // false
+luhn('059'); // true
+luhn('4111 1111 1111 1111'); // true
 ```
 
-完整输入包含校验位，必须至少两位 ASCII 数字。也支持非负安全整数，但前导零
-和较长号码应使用字符串。空白、分隔符、小数及其他输入返回 `false`。
+完整输入包含校验位，必须至少两位 ASCII 数字。字符串会先删除 U+0020 空格。
+也支持非负安全整数，但前导零和较长号码应使用字符串。换行、制表符、连字符、
+小数及其他输入返回 `false`。
 
 Luhn 仅检查校验和，不判断发卡机构、账号长度或实际分配情况；`00` 也满足
 校验和。[IBM 文档](https://www.ibm.com/docs/en/gdp/11.4.0?topic=policies-special-pattern-tests)
@@ -60,7 +60,7 @@ iso7064.mod11_2('0000000218250097'); // true，ORCID / ISNI
 
 本体码必须全部为 ASCII 数字，末位校验字符为 `0`–`9` 或 `X`，大小写不敏感。
 权重与校验字符按 ISO 7064 固定，与 GB 11643 公民身份号码的权重表一致。
-只检查校验和，不判断号码长度；非法输入返回 `false`。
+只检查校验和，不判断号码长度。字符串会先删除 ASCII 空格，不删除其他空白或分隔符；非法输入返回 `false`。
 
 ## 公民身份号码
 
@@ -85,4 +85,4 @@ fromChinaIdCard('11010519491231002X', referenceDate);
 - 出生日期必须存在，年份不早于 1800 且不晚于参考日期；无效参考日期也会被拒绝。
 - 参考日期默认当前时间，年龄按运行环境的本地日历计算。显式传入日期可获得可重复的结果。
 - 地址码返回六位原始字符串，年龄为周岁，性别码由顺序码奇偶性确定。
-- 不自动清理空白，不核验行政区划真实性、实际发证或身份真实性。
+- 检查前删除 ASCII 空格（U+0020），不删除换行、制表符或前后缀。true 分支收窄的是原字符串，其中仍可能含有空格。不核验行政区划真实性、实际发证或身份真实性。

@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
-import { luhn } from './index';
-import { mod10 } from './mod10';
+import { luhn } from './luhn';
 
-describe('Luhn MOD 10', () => {
+describe('Luhn', () => {
   test.each([
     '79927398713',
     '4111111111111111',
@@ -11,8 +10,11 @@ describe('Luhn MOD 10', () => {
     '059',
     '18',
     '00',
-  ])('accepts a valid checksum: %s', (value) =>
-    expect(mod10(value)).toBe(true));
+    '4111 1111 1111 1111',
+    '18 ',
+    ' 18',
+    '1 8',
+  ])('accepts a valid checksum: %s', (value) => expect(luhn(value)).toBe(true));
 
   test.each(
     [
@@ -20,10 +22,11 @@ describe('Luhn MOD 10', () => {
       '4111111111111112',
       '',
       '0',
-      '18 ',
-      ' 18',
       '18\n',
       '18\r\n',
+      '18\t',
+      '18\u00A0',
+      '18\u3000',
       '4111-1111-1111-1111',
       '１８',
       'abc',
@@ -40,11 +43,10 @@ describe('Luhn MOD 10', () => {
       Number.MAX_SAFE_INTEGER + 1,
     ].map((value) => ({ value })),
   )('rejects an invalid input: %j', ({ value }) => {
-    expect(mod10(value)).toBe(false);
+    expect(luhn(value)).toBe(false);
   });
 
-  test('supports safe integer inputs and preserves the namespace API', () => {
-    expect(mod10(79927398713)).toBe(true);
-    expect(luhn.mod10).toBe(mod10);
+  test('supports safe integer inputs', () => {
+    expect(luhn(79927398713)).toBe(true);
   });
 });
